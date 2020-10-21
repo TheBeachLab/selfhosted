@@ -92,7 +92,7 @@ bantime = 600
 
 And restart fail2ban `sudo service fail2ban restart`
 
-Now configure 2FA. Install `sudo apt install libpam-google-authenticator, run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. Now edit `sudo nano /etc/ssh/sshd_config` and add/modify:
+Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. Now edit `sudo nano /etc/ssh/sshd_config` and add/modify:
 
 ```bash
 ChallengeResponseAuthentication yes
