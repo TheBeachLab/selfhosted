@@ -6,6 +6,8 @@
 
 This is the story of how I am slowly becoming independent.
 
+![](img/suitcase.jpg)
+
 <!-- vim-markdown-toc GFM -->
 
 * [Why am I doing that](#why-am-i-doing-that)
