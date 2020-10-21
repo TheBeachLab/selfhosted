@@ -20,6 +20,9 @@ This is the story of how I am slowly becoming independent.
 * [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
 * [Set firewall rules](#set-firewall-rules)
 * [Nginx web server](#nginx-web-server)
+* [Mail servers: Postfix, Dovecot and OpenDKIM](#mail-servers-postfix-dovecot-and-opendkim)
+	* [Postfix](#postfix)
+* [Backups via NFS](#backups-via-nfs)
 
 <!-- vim-markdown-toc -->
 
@@ -188,3 +191,45 @@ My proud website hosted in my suitcase:
 
 ![screenshot](img/tbl.png)
 
+## Mail servers: Postfix, Dovecot and OpenDKIM
+
+### Postfix
+
+
+## Backups via NFS
+
+Assuming here you have a NAS or similar with NFS and appropiate user/permissions set. In ubuntu server install the nfs tools:
+
+```bash
+sudo apt update
+sudo apt install nfs-common
+```
+
+Create the local mountpoint `sudo mkdir -p /mnt/backups`
+
+Mount the NFS shared folder `sudo mount 192.168.1.100:/volume1/backups /mnt/backups` (your NFS IP and shared volume will differ). Confirm that the drive is mounted `df –h`
+
+```bash
+Filesystem                      Size  Used Avail Use% Mounted on
+udev                            3.8G     0  3.8G   0% /dev
+tmpfs                           786M  1.2M  785M   1% /run
+/dev/sda2                       469G   12G  434G   3% /
+tmpfs                           3.9G     0  3.9G   0% /dev/shm
+tmpfs                           5.0M     0  5.0M   0% /run/lock
+tmpfs                           3.9G     0  3.9G   0% /sys/fs/cgroup
+tmpfs                           786M     0  786M   0% /run/user/1000
+192.168.1.100:/volume1/backups  2.7T  1.7T  1.1T  61% /mnt/backups
+```
+
+Test your write permissions
+
+```bash
+cd /mnt/backups
+touch test
+```
+
+Check on the NFS server that the file is actually there. Now you can automate this to mount at boot time. Add this entry in `/etc/fstab`
+
+`192.168.1.100:/volume1/backups /mnt/backups nfs defaults 0 0`
+
+Next time you start your machine the NFS share will be automatically mounted at the specified mount point.
