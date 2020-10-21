@@ -6,6 +6,21 @@
 
 This is the story of how I am slowly becoming independent.
 
+<!-- vim-markdown-toc GFM -->
+
+* [Why am I doing that](#why-am-i-doing-that)
+* [Hardware](#hardware)
+* [Installing Ubuntu Server](#installing-ubuntu-server)
+* [Configure ethernet](#configure-ethernet)
+* [Upgrade](#upgrade)
+* [Get rid of snap](#get-rid-of-snap)
+* [Install sensor monitoring tools](#install-sensor-monitoring-tools)
+* [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
+* [Set firewall rules](#set-firewall-rules)
+* [Nginx web server](#nginx-web-server)
+
+<!-- vim-markdown-toc -->
+
 ## Why am I doing that
 
 My name is Francisco, in french it means "free person" . Some people in life want performance, some other want reliability. The only thing I care about is freedom. To do what I want, when I want and how I want to.
@@ -167,4 +182,6 @@ sudo certbot --nginx -d mydomain.com -d www.mydomain.com
 
 If you want to query auto the renewal timer `sudo systemctl status certbot.timer` or you can test the auto renewal process `sudo certbot renew --dry-run`
 
+My proud website hosted in my suitcase:
 
+![screenshot](img/The Beach Lab.png)
