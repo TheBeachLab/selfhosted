@@ -65,9 +65,44 @@ sudo apt install hddtemp
 sudo apt install glances
 ```
 
-## Setup remote ssh access
+## Setup and secure remote ssh access
 
-Replace the standart ssh port `Port 22` with some other in `/etc/ssh/sshd_config` and restart ssh `sudo service sshd restart`
+Replace the standard ssh port `Port 22` with some other in `/etc/ssh/sshd_config`, say 22222. restart ssh `sudo service sshd restart`. 
+
+Now ban multiple attemps to log in:
+
+```bash
+sudo apt install fail2ban
+cd /etc/fail2ban
+sudo cp fail2ban.conf fail2ban.local
+sudo nano fail2ban.local
+```
+
+And add the following
+
+```bash
+[sshd]
+enabled = true
+port = 22222
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 10
+bantime = 600
+```
+
+And restart fail2ban `sudo service fail2ban restart`
+
+Now configure 2FA. Install `sudo apt install libpam-google-authenticator, run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. Now edit `sudo nano /etc/ssh/sshd_config` and add/modify:
+
+```bash
+ChallengeResponseAuthentication yes
+UsePAM yes
+AuthenticationMethods publickey,password publickey,keyboard-interactive
+PasswordAuthentication no
+PermitRootLogin no
+```
+
+And restart the service `sudo service sshd restart`
 
 ## Set firewall rules
 
@@ -88,7 +123,4 @@ Optionally drop pings `sudo nano /etc/ufw/before.rules`
 ```
 
 And again `sudo ufw reload`
-
-
-
 
