@@ -184,4 +184,5 @@ If you want to query auto the renewal timer `sudo systemctl status certbot.timer
 
 My proud website hosted in my suitcase:
 
-![screenshot](img/The Beach Lab.png)
+![screenshot](img/tbl.png)
+
