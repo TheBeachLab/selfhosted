@@ -207,7 +207,7 @@ sudo apt install nfs-common
 
 Create the local mountpoint `sudo mkdir -p /mnt/backups`
 
-Mount the NFS shared folder `sudo mount 192.168.1.100:/volume1/backups /mnt/backups` (your NFS IP and shared volume will differ). Confirm that the drive is mounted `df –h`
+Mount the NFS shared folder `sudo mount 192.168.1.100:/volume1/backups/ubuntu-server /mnt/backups` (your NFS IP and shared volume will differ). Confirm that the drive is mounted `df –h`
 
 ```bash
 Filesystem                      Size  Used Avail Use% Mounted on
@@ -230,6 +230,21 @@ touch test
 
 Check on the NFS server that the file is actually there. Now you can automate this to mount at boot time. Add this entry in `/etc/fstab`
 
-`192.168.1.100:/volume1/backups /mnt/backups nfs defaults 0 0`
+`192.168.1.100:/volume1/backups/ubuntu-server /mnt/backups nfs defaults 0 0`
 
 Next time you start your machine the NFS share will be automatically mounted at the specified mount point.
+
+Install rsnapshot `sudo apt install rsnapshot` and configure it `sudo nano /etc/rsnapshot.conf` and check for errors `rsnapshot configtest`. It is advisable also to test the backup levels/intervals specified in the config file `rsnapshot -t beta`.
+
+Automate your backups in ` crontab -e`
+
+```bash
+@daily /usr/bin/rsnapshot beta &> /dev/null
+@weekly /usr/bin/rsnapshot gamma &> /dev/null
+```
+
+
+
+
+
+
