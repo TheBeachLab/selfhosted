@@ -92,7 +92,13 @@ bantime = 600
 
 And restart fail2ban `sudo service fail2ban restart`
 
-Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. Now edit `sudo nano /etc/ssh/sshd_config` and add/modify:
+Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. 
+
+We won't  use our password to login via ssh. Instead we will import our public ssh keys from github or gitlab to log in via ssh. In my case I am importing my public keys from github.
+
+`ssh-import-id gh:thebeachlab`
+
+Now edit `sudo nano /etc/ssh/sshd_config` and add/modify:
 
 ```bash
 ChallengeResponseAuthentication yes
@@ -102,7 +108,7 @@ PasswordAuthentication no
 PermitRootLogin no
 ```
 
-And restart the service `sudo service sshd restart`
+Restart the service `sudo service sshd restart`
 
 ## Set firewall rules
 
@@ -123,4 +129,42 @@ Optionally drop pings `sudo nano /etc/ufw/before.rules`
 ```
 
 And again `sudo ufw reload`
+
+## Nginx web server
+
+```bash
+sudo apt install nginx
+sudo ufw allow 'Nginx Full'
+```
+
+Create your website(s) `sudo mkdir -p /var/www/yourdomain.com` and edit `sudo nano /etc/nginx/sites-available/yourdomain.com` with this content
+
+```bash
+server {
+listen 80;
+listen [::]:80;
+root /var/www/mydomain.com;
+index index.html;
+server_name mydomain.com www.mydomain.com;
+location / {
+try_files $uri $uri/ =404;
+}
+}
+```
+
+Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` anc create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com`. Finally reload nginx `sudo systemctl reload nginx`
+
+Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` and point it to the fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
+
+> Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
+
+The following step is to create SSL certificates. For that you will need to create A records for @ and www pointing to your IP. In my case since I don't have a fixed public IP address I have created a dynamic A record in namecheap (where my domains are registered). Then I use a daemon that uses namecheap API to update the IP address. Look for a solution that works for you.
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d mydomain.com -d www.mydomain.com
+```
+
+If you want to query auto the renewal timer `sudo systemctl status certbot.timer` or you can test the auto renewal process `sudo certbot renew --dry-run`
+
 
