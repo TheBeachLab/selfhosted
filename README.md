@@ -1,6 +1,6 @@
 # Selfhosted
 
-> To become independent, you don't have to  ask for independence. To become independent you have *to be* independent. 
+> To become independent, you don't have to  ask for independence. To become independent you have *to be* independent.
 >
 > Fran Sanchez
 
@@ -10,8 +10,8 @@ This is the story of how I am slowly becoming independent.
 
 <!-- vim-markdown-toc GFM -->
 
-* [Why am I doing that](#why-am-i-doing-that)
-* [Hardware](#hardware)
+* [Why am I doing this](#why-am-i-doing-this)
+* [What hardware do you need](#what-hardware-do-you-need)
 * [Installing Ubuntu Server](#installing-ubuntu-server)
 * [Configure ethernet](#configure-ethernet)
 * [Upgrade](#upgrade)
@@ -26,13 +26,13 @@ This is the story of how I am slowly becoming independent.
 
 <!-- vim-markdown-toc -->
 
-## Why am I doing that
+## Why am I doing this
 
 My name is Francisco, in french it means "free person" . Some people in life want performance, some other want reliability. The only thing I care about is freedom. To do what I want, when I want and how I want to.
 
-## Hardware
+## What hardware do you need
 
-My server is an oldie i3-3220 (4 cores?) @ 3.300GHz with 8GB RAM and 500GB SSD running Ubuntu Server 20.04 LTS. It has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
+You will be surprised how low-tech this whole thing can go. Of course the better hardware you have the longer you will travel. But for most common needs like website, mail and so, any computer from 10 years ago will be fine. You can even use a raspberry py and have your server in your pocket!! My server is a 2015 Skylake i3-6100 (2 cores/4 threads) @ 3.700GHz with 8GB RAM and 500GB SSD running Ubuntu Server 20.04 LTS. It has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
 
 - TODO: Convert a powerbank to 12V UPS for the router using a [Pololu Adjustable Boost Regulator 4-25V](https://www.pololu.com/product/799/specs)
 
@@ -87,7 +87,7 @@ sudo apt install glances
 
 ## Setup and secure remote ssh access
 
-Replace the standard ssh port `Port 22` with some other in `/etc/ssh/sshd_config`, say 22222. restart ssh `sudo service sshd restart`. 
+Replace the standard ssh port `Port 22` with some other in `/etc/ssh/sshd_config`, say 22222. restart ssh `sudo service sshd restart`.
 
 Now ban multiple attemps to log in:
 
@@ -112,7 +112,7 @@ bantime = 600
 
 And restart fail2ban `sudo service fail2ban restart`
 
-Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`. 
+Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`.
 
 We won't  use our password to login via ssh. Instead we will import our public ssh keys from github or gitlab to log in via ssh. In my case I am importing my public keys from github.
 
@@ -198,9 +198,9 @@ My proud website hosted in my suitcase:
 
 ## Backups with rsnapshot
 
-> There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up. 
+> There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up.
 >
-> Videogame "Getting Over It with Bennett Foddy"
+> Videogame "Getting Over It with Bennett Foddyd"
 
 Assuming here you have a NAS or similar with NFS and appropiate user/permissions set. In ubuntu server install the nfs tools:
 
@@ -246,9 +246,3 @@ Automate your backups in ` crontab -e`
 @daily /usr/bin/rsnapshot beta &> /dev/null
 @weekly /usr/bin/rsnapshot gamma &> /dev/null
 ```
-
-
-
-
-
-
