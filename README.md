@@ -29,9 +29,11 @@ This is the story of how I am slowly becoming independent.
 	* [Point your domain to your machine](#point-your-domain-to-your-machine)
 	* [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
 	* [The result](#the-result)
-* [Mail servers: Postfix, Dovecot and OpenDKIM](#mail-servers-postfix-dovecot-and-opendkim)
-	* [Postfix](#postfix)
 * [Backups with rsnapshot](#backups-with-rsnapshot)
+	* [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
+	* [Install and setup rsnapshot](#install-and-setup-rsnapshot)
+* [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
+	* [Postfix](#postfix)
 
 <!-- vim-markdown-toc -->
 
@@ -197,9 +199,9 @@ Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` anc cr
 
 ### Point your domain to your machine
 
-For that you will need to create A records for `@` and `www` pointing to your IP. If your ISP provides you with a fixed public IP that's all you need to do. 
+For that you will need to create A records for `@` and `www` pointing to your IP. If your ISP provides you with a fixed public IP that's all you need to do.
 
-In my case since I don't have a fixed public IP address I have [created a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered). 
+In my case since I don't have a fixed public IP address I have [created a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered).
 
 Then I use a daemon `ddclient` that uses namecheap API (it also has several others) to update the IP address in namecheap records. Install `sudo apt-get install ddclient` and configure `sudo nano /etc/ddclient/ddclient.conf`
 
@@ -226,7 +228,7 @@ Point your local IP address to your machine. Get your local machine name `cat /e
 ### Get free trusted SSL certificates for your websites
 
 The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason no have an
- 
+
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d mydomain.com -d www.mydomain.com
@@ -242,16 +244,13 @@ My proud website hosted in my suitcase:
 
 ![screenshot](img/tbl.png)
 
-## Mail servers: Postfix, Dovecot and OpenDKIM
-
-### Postfix
-
-
 ## Backups with rsnapshot
 
 > There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up.
 >
-> Videogame "Getting Over It with Bennett Foddyd"
+> From the videogame "Getting Over It with Bennett Foddyd"
+
+### Optional. Accessing NFS drives
 
 Assuming here you have a NAS or similar with NFS and appropiate user/permissions set. In ubuntu server install the nfs tools:
 
@@ -289,7 +288,11 @@ Check on the NFS server that the file is actually there. Now you can automate th
 
 Next time you start your machine the NFS share will be automatically mounted at the specified mount point.
 
-Install rsnapshot `sudo apt install rsnapshot` and configure it `sudo nano /etc/rsnapshot.conf` and check for errors `rsnapshot configtest`. It is advisable also to test the backup levels/intervals specified in the config file `rsnapshot -t beta`.
+### Install and setup rsnapshot
+
+rsnapshot is a backup tool based on rsync. It's fast and can do incremental backups. Install rsnapshot `sudo apt install rsnapshot` and configure it `sudo nano /etc/rsnapshot.conf`. The most important thing to remember is **use tabs instead of spaces to separate keys and values**. Set your intervals and folders to backup. I have created 7 `beta` which I will use for the daily backups and 4 `gamma` that I will use for the weekly backups. At the moment I do not need to create any hourly backup. Also specify what to backup. rsnapshot can backup from anything to anything. In my case I hace rsnapshot locally installed and I am pushing the backups to a NFS. But I could also use a remote server with rsnapshot to pull my files via ssh.
+
+After saving the configuration file check for errors `rsnapshot configtest`. It is advisable also to dry-run test the backup levels/intervals specified in the config file `rsnapshot -t beta`.
 
 Automate your backups in ` crontab -e`
 
@@ -297,3 +300,8 @@ Automate your backups in ` crontab -e`
 @daily /usr/bin/rsnapshot beta &> /dev/null
 @weekly /usr/bin/rsnapshot gamma &> /dev/null
 ```
+
+## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
+
+### Postfix
+
