@@ -18,8 +18,17 @@ This is the story of how I am slowly becoming independent.
 * [Get rid of snap](#get-rid-of-snap)
 * [Install sensor monitoring tools](#install-sensor-monitoring-tools)
 * [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
-* [Set firewall rules](#set-firewall-rules)
+	* [Don't use the default port 22](#dont-use-the-default-port-22)
+	* [Ban brute force attackers](#ban-brute-force-attackers)
+	* [Use 2FA verification codes](#use-2fa-verification-codes)
+	* [Use ssh keys instead of password to log in via ssh](#use-ssh-keys-instead-of-password-to-log-in-via-ssh)
+* [Set basic firewall rules](#set-basic-firewall-rules)
 * [Nginx web server](#nginx-web-server)
+	* [Install nginx and create firewall rules](#install-nginx-and-create-firewall-rules)
+	* [Create and configure your websites](#create-and-configure-your-websites)
+	* [Point your domain to your machine](#point-your-domain-to-your-machine)
+	* [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
+	* [The result](#the-result)
 * [Mail servers: Postfix, Dovecot and OpenDKIM](#mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 * [Backups with rsnapshot](#backups-with-rsnapshot)
@@ -32,7 +41,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 ## What hardware do you need
 
-You will be surprised how low-tech this whole thing can go. Of course the better hardware you have the longer you will travel. But for most common needs like website, mail and so, any computer from 10 years ago will be fine. You can even use a raspberry py and have your server in your pocket!! My server is a 2015 Skylake i3-6100 (2 cores/4 threads) @ 3.700GHz with 8GB RAM and 500GB SSD running Ubuntu Server 20.04 LTS. It has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
+You will be surprised how low-tech this whole thing can go. Of course the better hardware you have the longer you will travel. But for most common needs like website, mail and so, any computer from 10 years ago will be fine. You can even use a raspberry pi and carry your server in your pocket!! My server is a 2015 Skylake i3-6100 (2 cores/4 threads) @ 3.700GHz with 8GB RAM and 500GB SSD running Ubuntu Server 20.04 LTS. It has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
 
 - TODO: Convert a powerbank to 12V UPS for the router using a [Pololu Adjustable Boost Regulator 4-25V](https://www.pololu.com/product/799/specs)
 
@@ -87,9 +96,13 @@ sudo apt install glances
 
 ## Setup and secure remote ssh access
 
+### Don't use the default port 22
+
 Replace the standard ssh port `Port 22` with some other in `/etc/ssh/sshd_config`, say 22222. restart ssh `sudo service sshd restart`.
 
-Now ban multiple attemps to log in:
+### Ban brute force attackers
+
+Now ban for 10 minutes if someone makes multiple (10) attemps to log in:
 
 ```bash
 sudo apt install fail2ban
@@ -112,7 +125,11 @@ bantime = 600
 
 And restart fail2ban `sudo service fail2ban restart`
 
+### Use 2FA verification codes
+
 Now configure 2FA. Install `sudo apt install libpam-google-authenticator`, Run `google-authenticator` and scan the qr in your mobile phone app. Edit `sudo nano /etc/pam.d/sshd` and comment out `@include common-auth`. At the bottom of the file add `auth required pam_google_authenticator.so`.
+
+### Use ssh keys instead of password to log in via ssh
 
 We won't  use our password to login via ssh. Instead we will import our public ssh keys from github or gitlab to log in via ssh. In my case I am importing my public keys from github.
 
@@ -130,7 +147,7 @@ PermitRootLogin no
 
 Restart the service `sudo service sshd restart`
 
-## Set firewall rules
+## Set basic firewall rules
 
 ```bash
 sudo ufw default deny incoming
@@ -142,7 +159,7 @@ sudo ufw enable
 sudo ufw reload
 ```
 
-Optionally drop pings `sudo nano /etc/ufw/before.rules`
+Optionally drop pings `sudo nano /etc/ufw/before.rules` and add
 
 ```bash
 -A ufw-before-input -p icmp --icmp-type echo-request -j DROP
@@ -152,10 +169,14 @@ And again `sudo ufw reload`
 
 ## Nginx web server
 
+### Install nginx and create firewall rules
+
 ```bash
 sudo apt install nginx
 sudo ufw allow 'Nginx Full'
 ```
+
+### Create and configure your websites
 
 Create your website(s) `sudo mkdir -p /var/www/yourdomain.com` and edit `sudo nano /etc/nginx/sites-available/yourdomain.com` with this content
 
@@ -174,18 +195,48 @@ try_files $uri $uri/ =404;
 
 Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` anc create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com`. Finally reload nginx `sudo systemctl reload nginx`
 
-Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` and point it to the fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
+### Point your domain to your machine
+
+For that you will need to create A records for `@` and `www` pointing to your IP. If your ISP provides you with a fixed public IP that's all you need to do. 
+
+In my case since I don't have a fixed public IP address I have [created a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered). 
+
+Then I use a daemon `ddclient` that uses namecheap API (it also has several others) to update the IP address in namecheap records. Install `sudo apt-get install ddclient` and configure `sudo nano /etc/ddclient/ddclient.conf`
+
+```bash
+#### Global Settings
+# How often to update (seconds)
+daemon=300
+ssl=yes
+use=web
+web=dynamicdns.park-your-domain.com/getip
+protocol=namecheap
+server=dynamicdns.park-your-domain.com
+
+#### beachlab.org
+login=beachlab.org
+password='PUT-YOUR-DOMAIN-KEY-HERE'
+@.beachlab.org, www
+```
+
+Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
 
 > Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
 
-The following step is to create SSL certificates. For that you will need to create A records for @ and www pointing to your IP. In my case since I don't have a fixed public IP address I have created a dynamic A record in namecheap (where my domains are registered). Then I use a daemon that uses namecheap API to update the IP address. Look for a solution that works for you.
+### Get free trusted SSL certificates for your websites
 
+The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason no have an
+ 
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d mydomain.com -d www.mydomain.com
 ```
 
-If you want to query auto the renewal timer `sudo systemctl status certbot.timer` or you can test the auto renewal process `sudo certbot renew --dry-run`
+> Do I really need to remind you to replace `mydomain.com` with your actual domain name?
+
+If you want to query the status of the auto renewal timer `sudo systemctl status certbot.timer` or you can test the auto renewal process `sudo certbot renew --dry-run`
+
+### The result
 
 My proud website hosted in my suitcase:
 
