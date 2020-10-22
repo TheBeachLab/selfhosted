@@ -236,7 +236,7 @@ sudo update-rc.d ddclient enable
 
 ### Get free trusted SSL certificates for your websites
 
-The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason no have an
+The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason to have an unencrypted connection anymore.
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
