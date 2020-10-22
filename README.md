@@ -221,8 +221,17 @@ password='PUT-YOUR-DOMAIN-KEY-HERE'
 @.beachlab.org, www
 ```
 
-Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
+Finally make `ddclient` start when you boot up your ubuntu system
 
+```bash
+sudo update-rc.d ddclient defaults
+sudo update-rc.d ddclient enable
+```
+
+> Is this necessary? 
+> 
+> Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
+> 
 > Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
 
 ### Get free trusted SSL certificates for your websites
@@ -264,15 +273,15 @@ Create the local mountpoint `sudo mkdir -p /mnt/backups`
 Mount the NFS shared folder `sudo mount 192.168.1.100:/volume1/backups/ubuntu-server /mnt/backups` (your NFS IP and shared volume will differ). Confirm that the drive is mounted `df –h`
 
 ```bash
-Filesystem                      Size  Used Avail Use% Mounted on
-udev                            3.8G     0  3.8G   0% /dev
-tmpfs                           786M  1.2M  785M   1% /run
-/dev/sda2                       469G   12G  434G   3% /
-tmpfs                           3.9G     0  3.9G   0% /dev/shm
-tmpfs                           5.0M     0  5.0M   0% /run/lock
-tmpfs                           3.9G     0  3.9G   0% /sys/fs/cgroup
-tmpfs                           786M     0  786M   0% /run/user/1000
-192.168.1.100:/volume1/backups  2.7T  1.7T  1.1T  61% /mnt/backups
+Filesystem                                    Size  Used Avail Use% Mounted on
+udev                                          3.8G     0  3.8G   0% /dev
+tmpfs                                         786M  1.2M  785M   1% /run
+/dev/sda2                                     469G   12G  434G   3% /
+tmpfs                                         3.9G     0  3.9G   0% /dev/shm
+tmpfs                                         5.0M     0  5.0M   0% /run/lock
+tmpfs                                         3.9G     0  3.9G   0% /sys/fs/cgroup
+192.168.1.100:/volume1/backups/ubuntu-server  2.7T  1.7T  1.1T  61% /mnt/backups
+tmpfs                                         786M     0  786M   0% /run/user/1000
 ```
 
 Test your write permissions
@@ -304,4 +313,3 @@ Automate your backups in ` crontab -e`
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
 ### Postfix
-
