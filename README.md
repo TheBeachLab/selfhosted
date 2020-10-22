@@ -22,7 +22,7 @@ This is the story of how I am slowly becoming independent.
 * [Nginx web server](#nginx-web-server)
 * [Mail servers: Postfix, Dovecot and OpenDKIM](#mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
-* [Backups via NFS](#backups-via-nfs)
+* [Backups with rsnapshot](#backups-with-rsnapshot)
 
 <!-- vim-markdown-toc -->
 
@@ -196,7 +196,11 @@ My proud website hosted in my suitcase:
 ### Postfix
 
 
-## Backups via NFS
+## Backups with rsnapshot
+
+> There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up. 
+>
+> Videogame "Getting Over It with Bennett Foddy"
 
 Assuming here you have a NAS or similar with NFS and appropiate user/permissions set. In ubuntu server install the nfs tools:
 
