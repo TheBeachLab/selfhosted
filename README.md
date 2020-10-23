@@ -39,6 +39,7 @@ This is the story of how I am slowly becoming independent.
 	* [Setup a plain git server](#setup-a-plain-git-server)
 	* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
 	* [Create a bare repository](#create-a-bare-repository)
+	* [Web Interface](#web-interface)
 
 <!-- vim-markdown-toc -->
 
@@ -327,6 +328,8 @@ I initially started installing gitlab but I abandon. It's so, so, so, so bloated
 
 ### Setup a plain git server
 
+If you don't have it already `sudo apt install git`
+
 Begin with adding a git user `sudo adduser git` and set up a password for it. Log into the user `su git` and navigate to it's home folder `cd`. Let's now set it up to use ssh keys to log in instead of the password.
 
 ```bash
@@ -392,7 +395,36 @@ To add the remote pointing to that repository
 
 `git remote add home ssh://git@git.beachlab.org:22222/var/www/git.beachlab.org/myrepo.git` 
 
+### Web Interface
 
+If you want to go to something like <https://git.beachlab.org> and have a simple web frontend of your repos keep reading. There are [a number of options](https://git.wiki.kernel.org/index.php/Interfaces,_frontends,_and_tools#Web_Interfaces), I use [gitweb](https://git.wiki.kernel.org/index.php/Gitweb) `sudo apt install gitweb fcgiwrap`. The main config file is `/etc/gitweb.conf` and change:
 
+`$projectroot = "/var/www/git.beachlab.org/";`
 
-Remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`
+Create a new site in `/etc/nginx/sites-available/git.beachlab.org`:
+
+```bash
+server {
+        listen 80;
+        listen [::]:80;
+        root /usr/share/gitweb;
+        index index.cgi;
+        server_name git.beachlab.org;
+        location / {
+                try_files $uri $uri/ /index.cgi =404;
+        }
+        location /index.cgi {
+                root /usr/share/gitweb/;
+                include fastcgi_params;
+                gzip off;
+                fastcgi_param SCRIPT_NAME $uri;
+                fastcgi_param GITWEB_CONFIG /etc/gitweb.conf;
+                fastcgi_pass unix:/var/run/fcgiwrap.socket;
+        }
+}
+```
+Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` and create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/git.beachlab.org /etc/nginx/sites-enabled/git.beachlab.org`. Reload nginx `sudo systemctl reload nginx`.
+
+Add ssl certificates `sudo certbot --nginx -d git.beachlab.org`
+
+Now test the site by accessing the URL over browser(after adding dns/host file entries). Remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`
