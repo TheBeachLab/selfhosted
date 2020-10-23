@@ -37,6 +37,7 @@ This is the story of how I am slowly becoming independent.
 * [Git server](#git-server)
 	* [Gitlab? No, thanks](#gitlab-no-thanks)
 	* [Setup a plain git server](#setup-a-plain-git-server)
+	* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
 	* [Create a bare repository](#create-a-bare-repository)
 
 <!-- vim-markdown-toc -->
@@ -346,18 +347,9 @@ And paste it in the server
 
 `git@thebeachlab:~$ nano .ssh/authorized_keys`
 
-Alternatively you can import you public keys from github or gitlab `ssh-import-id gh:thebeachlab`. You should be able now to ssh into git user.
+Alternatively you can import you public keys from github or gitlab `ssh-import-id gh:thebeachlab`. You should be able now to ssh into git user (or not, read the next section).
 
-> Warning: If you have configured the ssh server for key and 2FA (with google auth) you will get this error
->
-> ```bash
-> [unix ~]$ ssh -p 22222 git@beachlab.org
-> git@thebeachlab: Permission denied (keyboard-interactive).
-> ```
->
-> This is because you need to enable 2FA for each user. Remember to run google-authenticator and follow instructions.
-
-Let's create a folder where we can create our bare repositories. I create them inside /var/www
+Meanwhile, let's create a folder where we can create our bare repositories. I create them inside /var/www
 
 ```bash
 cd /var/www
@@ -365,7 +357,24 @@ sudo mkdir git.beachlab.org
 sudo chown git:git git.beachlab.org/
 ```
 
-Now because this folder belongs to git user, from now on you can ssh and create your bare repositories
+Now, because this folder belongs to git user, from now on you can ssh to this user and create your bare repositories. To enter this folder automatically at login add `cd /var/www/git.beachlab.org/` to it's `~/.profile`.
+
+### Optional. Disable 2FA for some users
+
+If you have configured the ssh server for key and 2FA (with google auth) and you try to ssh into this new git user you will get this error:
+
+```bash
+[unix ~]$ ssh -p 22222 git@beachlab.org
+git@thebeachlab: Permission denied (keyboard-interactive).
+```
+
+This is because after enabling Google authenticator (2 step authentication) you need to enable 2FA for each user. So you have 2 options to run google-authenticator and follow instructions. Pretty secure but you will have to enter the verification code at every push, pull or any other operation. That's quite annoying actually.
+
+Another option is disable 2FA for specific users. In this case I am disabling 2FA for all users in the git group `sudo nano /etc/pam.d/sshd` and add the following just above `auth required pam_google_authenticator.so`:
+
+`auth [success=done default=ignore] pam_succeed_if.so user ingroup git`
+
+And restart sshd `sudo service sshd restart`. You are welcome.
 
 ### Create a bare repository
 
@@ -383,7 +392,6 @@ To add the remote pointing to that repository
 
 `git remote add home ssh://git@git.beachlab.org:22222/var/www/git.beachlab.org/myrepo.git` 
 
-You will have to enter the verification code at every push, pull or any other operation. That's quite annoying actually, but I haven't figured out any workaround yet.
 
 
 
