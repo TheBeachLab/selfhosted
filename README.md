@@ -36,7 +36,8 @@ This is the story of how I am slowly becoming independent.
 	* [Postfix](#postfix)
 * [Git server](#git-server)
 	* [Gitlab? No, thanks](#gitlab-no-thanks)
-	* [Plain git server](#plain-git-server)
+	* [Setup a plain git server](#setup-a-plain-git-server)
+	* [Create a bare repository](#create-a-bare-repository)
 
 <!-- vim-markdown-toc -->
 
@@ -321,9 +322,9 @@ Automate your backups in ` crontab -e`
 
 ### Gitlab? No, thanks
 
-I initially started installing gitlab but I abandon. It'so, so, so, so bloated with features I don't need. It'a pain in the a$$ to configure with an already existing nginx server. And its a nightmare to later maintain it. So I uninstalled gitlab, reverted all changes and I installed a plain git server. Because in the end. all I want is a place to store my repos. This is not a multiuser environment.
+I initially started installing gitlab but I abandon. It's so, so, so, so bloated with features I don't need. It's a pain in the a$$ to configure with an already existing nginx server. And its a nightmare to later maintain it. So I uninstalled gitlab, reverted all changes and I installed a plain git server. Because in the end. all I want is a place to store my repos. This is not a multiuser environment.
 
-### Plain git server
+### Setup a plain git server
 
 Begin with adding a git user `sudo adduser git` and set up a password for it. Log into the user `su git` and navigate to it's home folder `cd`. Let's now set it up to use ssh keys to log in instead of the password.
 
@@ -365,6 +366,8 @@ sudo chown git:git git.beachlab.org/
 ```
 
 Now because this folder belongs to git user, from now on you can ssh and create your bare repositories
+
+### Create a bare repository
 
 ```bash
 [unix ~]$ ssh -p 22222 git@beachlab.org
