@@ -402,9 +402,9 @@ To add the remote pointing to that repository
 
 ### Web Interface
 
-If you want to go to something like <https://git.beachlab.org> and have a simple web frontend of your repos keep reading. There are [a number of options](https://git.wiki.kernel.org/index.php/Interfaces,_frontends,_and_tools#Web_Interfaces), I use [gitweb](https://git.wiki.kernel.org/index.php/Gitweb) `sudo apt install gitweb fcgiwrap`. The main config file is `/etc/gitweb.conf` and change:
+If you want to go to something like <https://git.beachlab.org> and have a simple web frontend of your repos keep reading. There are [a number of options](https://git.wiki.kernel.org/index.php/Interfaces,_frontends,_and_tools#Web_Interfaces), I use [gitweb](https://git.wiki.kernel.org/index.php/Gitweb) `sudo apt install gitweb fcgiwrap`. The main config file is `/etc/gitweb.conf`. Make sure you only list public repos:
 
-`$projectroot = "/var/www/git.beachlab.org/";`
+`$projectroot = "/var/www/git.beachlab.org/public/";`
 
 Create a new site in `/etc/nginx/sites-available/git.beachlab.org`:
 
@@ -432,4 +432,6 @@ Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` and cr
 
 Add ssl certificates `sudo certbot --nginx -d git.beachlab.org`
 
-Now test the site by accessing the URL over browser(after adding dns/host file entries). Remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`
+Now test the site by accessing the URL over browser(after adding dns/host file entries). Namecheap users with dynamic A records (me) remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`.
+
+There are many other things you can customize in `etc/gitweb.conf`. Check it out.
