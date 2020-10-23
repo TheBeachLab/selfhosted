@@ -381,19 +381,24 @@ And restart sshd `sudo service sshd restart`. You are welcome.
 
 ### Create a bare repository
 
+We are going to create 2 main folders. One for public repos that we will share on a website and another for private repos. Then we create a sample repo on the public folder.
+
 ```bash
 [unix ~]$ ssh -p 22222 git@beachlab.org
 git@thebeachlab:~$ cd /var/www/git.beachlab.org/
+git@thebeachlab:~$ mkdir public
+git@thebeachlab:~$ mkdir private
+git@thebeachlab:~$ cd public
 git@thebeachlab:~$ mkdir myrepo.git
 git@thebeachlab:~$ cd myrepo.git
 git@thebeachlab:~$ git init --bare
 ```
 
-Everytime you want to create a repo you have to ssh into git user and repeat these steps.
+Everytime you want to create a repo you have to ssh into git user and repeat the last 4  steps.
 
 To add the remote pointing to that repository
 
-`git remote add home ssh://git@git.beachlab.org:22222/var/www/git.beachlab.org/myrepo.git` 
+`git remote add home git@git.beachlab.org:22222/var/www/git.beachlab.org/public/myrepo.git` 
 
 ### Web Interface
 
