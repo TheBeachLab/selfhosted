@@ -34,6 +34,9 @@ This is the story of how I am slowly becoming independent.
 	* [Install and setup rsnapshot](#install-and-setup-rsnapshot)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
+* [Git server](#git-server)
+	* [Gitlab? No, thanks](#gitlab-no-thanks)
+	* [Plain git server](#plain-git-server)
 
 <!-- vim-markdown-toc -->
 
@@ -228,10 +231,10 @@ sudo update-rc.d ddclient defaults
 sudo update-rc.d ddclient enable
 ```
 
-> Is this necessary? 
-> 
+> Is this necessary?
+>
 > Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
-> 
+>
 > Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
 
 ### Get free trusted SSL certificates for your websites
@@ -313,3 +316,72 @@ Automate your backups in ` crontab -e`
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
 ### Postfix
+
+## Git server
+
+### Gitlab? No, thanks
+
+I initially started installing gitlab but I abandon. It'so, so, so, so bloated with features I don't need. It'a pain in the a$$ to configure with an already existing nginx server. And its a nightmare to later maintain it. So I uninstalled gitlab, reverted all changes and I installed a plain git server. Because in the end. all I want is a place to store my repos. This is not a multiuser environment.
+
+### Plain git server
+
+Begin with adding a git user `sudo adduser git` and set up a password for it. Log into the user `su git` and navigate to it's home folder `cd`. Let's now set it up to use ssh keys to log in instead of the password.
+
+```bash
+git@thebeachlab:~$ mkdir .ssh
+git@thebeachlab:~$ chmod 700 .ssh/
+git@thebeachlab:~$ touch .ssh/authorized_keys
+git@thebeachlab:~$ chmod 600 .ssh/authorized_keys
+```
+
+Now copy one of your public keys in this file. For example I will copy my public key
+
+```bash
+[unix ~]$ cat .ssh/id_rsa.pub
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDfuWDpvaOf5T3f5E7bt22p6Irww2x5dx8HK1yGYvO85Gl9AZriR9+k7vj4Arlth4Zn3/VDe/PWXJ23xSdi1xPcu1lZJvRF7dctw59BAfX946R2wRTdTsxCO5XDYbIjX0vLopbw5B/lFd8jIr0vgcFNswtGTagvYcLnPERZzmR5fQ2cRLURUSD7axZjOv3cL2vUxdHEmUar6YG7/9eHJVHqjYSsOK68x8vpLQmm7SMfbrUIDTyCuEOujkeoRW8JDzO878zGFYtlOZuBCM72WqltmYnVRuJOyeY9AQHoVAWHcS9nj5RN1l8yJllaeJUTfRCJeH+FlOBNmhN4MQP3dwwyJR8sUyuM4qOzCdvpiuQj4P5xWQj60Su74JQcI86g0Qvtz+jnpoRwVKISgyUKjgT9OpAZV6L1ftxNVoUjvUYfkZZD7ZFGM4leDXfJYzKpo9hxLSwtLR/3R9YKnjjMS0H9r8SAaQIZKSol49BcU5QDVtx/ikczstQEVVTUwMvhMXECE0ENuAlSJZmdziyNcJzvquWOM6+TgiBT9rQNtFLmX6uv6bJN6ExyBWpMQeS9Ri1MPuHGJfFahoKd+YRkr6MHYobnHyKDQ3HaC2Y5JY+o+pHEuyz5Q0FGztzlSQ9zrNBsj4fjBuJNohNMYmjPjYRgNFFXlE/Ay2IjU7QiyR4v2Q== hola@beachlab.org
+```
+
+And paste it in the server
+
+`git@thebeachlab:~$ nano .ssh/authorized_keys`
+
+Alternatively you can import you public keys from github or gitlab `ssh-import-id gh:thebeachlab`. You should be able now to ssh into git user.
+
+> Warning: If you have configured the ssh server for key and 2FA (with google auth) you will get this error
+>
+> ```bash
+> [unix ~]$ ssh -p 22222 git@beachlab.org
+> git@thebeachlab: Permission denied (keyboard-interactive).
+> ```
+>
+> This is because you need to enable 2FA for each user. Remember to run google-authenticator and follow instructions.
+
+Let's create a folder where we can create our bare repositories. I create them inside /var/www
+
+```bash
+cd /var/www
+sudo mkdir git.beachlab.org
+sudo chown git:git git.beachlab.org/
+```
+
+Now because this folder belongs to git user, from now on you can ssh and create your bare repositories
+
+```bash
+[unix ~]$ ssh -p 22222 git@beachlab.org
+git@thebeachlab:~$ cd /var/www/git.beachlab.org/
+git@thebeachlab:~$ mkdir myrepo.git
+git@thebeachlab:~$ cd myrepo.git
+git@thebeachlab:~$ git init --bare
+```
+
+Everytime you want to create a repo you have to ssh into git user and repeat these steps.
+
+To add the remote pointing to that repository
+
+`git remote add home ssh://git@git.beachlab.org:22222/var/www/git.beachlab.org/myrepo.git` 
+
+You will have to enter the verification code at every push, pull or any other operation. That's quite annoying actually, but I haven't figured out any workaround yet.
+
+
+
+Remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`
