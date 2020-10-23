@@ -434,4 +434,4 @@ Add ssl certificates `sudo certbot --nginx -d git.beachlab.org`
 
 Now test the site by accessing the URL over browser(after adding dns/host file entries). Namecheap users with dynamic A records (me) remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`.
 
-There are many other things you can customize in `etc/gitweb.conf`. Check it out.
+There are many other things you can customize in `etc/gitweb.conf` and the files in `/usr/share/gitweb`. Check it out. I use this theme <http://kogakure.github.io/gitweb-theme/>
