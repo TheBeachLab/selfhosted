@@ -38,7 +38,8 @@ This is the story of how I am slowly becoming independent.
 	* [Gitlab? No, thanks](#gitlab-no-thanks)
 	* [Setup a plain git server](#setup-a-plain-git-server)
 	* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
-	* [Create a bare repository](#create-a-bare-repository)
+	* [Create or clone a bare repository](#create-or-clone-a-bare-repository)
+	* [Working repositories](#working-repositories)
 	* [Web Interface](#web-interface)
 
 <!-- vim-markdown-toc -->
@@ -339,28 +340,16 @@ git@thebeachlab:~$ touch .ssh/authorized_keys
 git@thebeachlab:~$ chmod 600 .ssh/authorized_keys
 ```
 
-Now copy one of your public keys in this file. For example I will copy my public key
+Now copy one of your public keys in `~/.ssh/authorized_keys`. Alternatively you can import you public keys from github or gitlab
+
+`ssh-import-id gh:thebeachlab`
+
+You should be able now to ssh into git user (or not, read the next section). Meanwhile, we are going to create 2 main folders. One for public repos that we will share on a website and another for private repos.
 
 ```bash
-[unix ~]$ cat .ssh/id_rsa.pub
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDfuWDpvaOf5T3f5E7bt22p6Irww2x5dx8HK1yGYvO85Gl9AZriR9+k7vj4Arlth4Zn3/VDe/PWXJ23xSdi1xPcu1lZJvRF7dctw59BAfX946R2wRTdTsxCO5XDYbIjX0vLopbw5B/lFd8jIr0vgcFNswtGTagvYcLnPERZzmR5fQ2cRLURUSD7axZjOv3cL2vUxdHEmUar6YG7/9eHJVHqjYSsOK68x8vpLQmm7SMfbrUIDTyCuEOujkeoRW8JDzO878zGFYtlOZuBCM72WqltmYnVRuJOyeY9AQHoVAWHcS9nj5RN1l8yJllaeJUTfRCJeH+FlOBNmhN4MQP3dwwyJR8sUyuM4qOzCdvpiuQj4P5xWQj60Su74JQcI86g0Qvtz+jnpoRwVKISgyUKjgT9OpAZV6L1ftxNVoUjvUYfkZZD7ZFGM4leDXfJYzKpo9hxLSwtLR/3R9YKnjjMS0H9r8SAaQIZKSol49BcU5QDVtx/ikczstQEVVTUwMvhMXECE0ENuAlSJZmdziyNcJzvquWOM6+TgiBT9rQNtFLmX6uv6bJN6ExyBWpMQeS9Ri1MPuHGJfFahoKd+YRkr6MHYobnHyKDQ3HaC2Y5JY+o+pHEuyz5Q0FGztzlSQ9zrNBsj4fjBuJNohNMYmjPjYRgNFFXlE/Ay2IjU7QiyR4v2Q== hola@beachlab.org
+git@thebeachlab:~$ mkdir public
+git@thebeachlab:~$ mkdir private
 ```
-
-And paste it in the server
-
-`git@thebeachlab:~$ nano .ssh/authorized_keys`
-
-Alternatively you can import you public keys from github or gitlab `ssh-import-id gh:thebeachlab`. You should be able now to ssh into git user (or not, read the next section).
-
-Meanwhile, let's create a folder where we can create our bare repositories. I create them inside /var/www
-
-```bash
-cd /var/www
-sudo mkdir git.beachlab.org
-sudo chown git:git git.beachlab.org/
-```
-
-Now, because this folder belongs to git user, from now on you can ssh to this user and create your bare repositories. To enter this folder automatically at login add `cd /var/www/git.beachlab.org/` to it's `~/.profile`.
 
 ### Optional. Disable 2FA for some users
 
@@ -379,26 +368,36 @@ Another option is disable 2FA for specific users. In this case I am disabling 2F
 
 And restart sshd `sudo service sshd restart`. You are welcome.
 
-### Create a bare repository
+### Create or clone a bare repository
 
-We are going to create 2 main folders. One for public repos that we will share on a website and another for private repos. Then we create a sample repo on the public folder.
+It is important that you understand the difference between a **bare repository** and a **working repository**. If not, read [this](https://www.saintsjd.com/2011/01/what-is-a-bare-git-repository/). **In the ubuntu server all the repositories must be bare**.
+
+To create a bare repository  you have to ssh into git user and:
 
 ```bash
-[unix ~]$ ssh -p 22222 git@beachlab.org
-git@thebeachlab:~$ cd /var/www/git.beachlab.org/
-git@thebeachlab:~$ mkdir public
-git@thebeachlab:~$ mkdir private
 git@thebeachlab:~$ cd public
 git@thebeachlab:~$ mkdir myrepo.git
 git@thebeachlab:~$ cd myrepo.git
 git@thebeachlab:~$ git init --bare
 ```
 
-Everytime you want to create a repo you have to ssh into git user and repeat the last 4  steps.
+To clone a bare repository:
 
-To add the remote pointing to that repository
+`git@thebeachlab:~$ git clone --bare repo-address.git`
 
-`git remote add home git@git.beachlab.org:22222/var/www/git.beachlab.org/public/myrepo.git` 
+> **Beware!** If the repo is private you will need either the login/password (for https address) or a private key (for the ssh address). To send a ssh private key to your server you can use the scp command
+>
+> scp -P 22222 .ssh/private-key git@git.beachlab.org:/home/git/.ssh/
+
+### Working repositories
+
+Once you have the bare repositories in your server, you can clone a working repository in your computer.
+
+`git clone ssh://git@git.beachlab.org:22222/home/git/public/myrepo.git`
+
+Or if the working repo already exist in your computer. you can add a new remote pointing to your suitcase.
+
+`git remote add suitcase ssh://git@git.beachlab.org:22222/home/git/public/myrepo.git`
 
 ### Web Interface
 
@@ -406,7 +405,7 @@ To add the remote pointing to that repository
 
 If you want to go to something like <https://git.beachlab.org> and have a simple web frontend of your repos keep reading. There are [a number of options](https://git.wiki.kernel.org/index.php/Interfaces,_frontends,_and_tools#Web_Interfaces), I use [gitweb](https://git.wiki.kernel.org/index.php/Gitweb) `sudo apt install gitweb fcgiwrap`. The main config file is `/etc/gitweb.conf`. Make sure you only list public repos:
 
-`$projectroot = "/var/www/git.beachlab.org/public/";`
+`$projectroot = "/home/git/public/";`
 
 Create a new site in `/etc/nginx/sites-available/git.beachlab.org`:
 
