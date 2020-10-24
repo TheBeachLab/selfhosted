@@ -16,7 +16,7 @@ This is the story of how I am slowly becoming independent.
 * [Configure ethernet](#configure-ethernet)
 * [Upgrade](#upgrade)
 * [Get rid of snap](#get-rid-of-snap)
-* [Install sensor monitoring tools](#install-sensor-monitoring-tools)
+* [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
 * [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
 	* [Don't use the default port 22](#dont-use-the-default-port-22)
 	* [Ban brute force attackers](#ban-brute-force-attackers)
@@ -60,12 +60,15 @@ First step is installing Ubuntu Server. I installed 20.04 LTS. There are plenty 
 
 ## Configure ethernet
 
-Check your ethernet interface name with `ip address` and run `sudo nano /etc/netplan/00-installer-config.yaml`. I have it configured with fixed IP:
+Check your ethernet interface name with `ip address` and run `sudo nano /etc/netplan/00-installer-config.yaml`. I have it configured with fixed IP and fixed interface name tied to the mac address.:
 
 ```bash
 network:
   ethernets:
-    enp4s0:
+    lan:
+      match:
+        macaddress: 00:ab:cd:ef:12:34
+      set-name: cable
       dhcp4: no
       addresses:
         - 192.168.1.50/24
@@ -94,9 +97,10 @@ sudo apt purge snapd
 rm -rf ~/snap
 ```
 
-## Install sensor monitoring tools
+## Install sensor monitoring tools and hwinfo
 
 ```bash
+sudo apt install hwinfo
 sudo apt install lm-sensors
 sudo sensors-detect
 sudo apt install hddtemp
