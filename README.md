@@ -10,40 +10,39 @@ This is the story of how I am slowly becoming independent.
 
 <!-- vim-markdown-toc GFM -->
 
-	* [Why am I doing this](#why-am-i-doing-this)
-	* [What hardware do you need](#what-hardware-do-you-need)
-	* [Installing Ubuntu Server](#installing-ubuntu-server)
-	* [Configure ethernet](#configure-ethernet)
-	* [Upgrade](#upgrade)
-	* [Get rid of snap](#get-rid-of-snap)
-	* [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
-	* [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
-		* [Don't use the default port 22](#dont-use-the-default-port-22)
-		* [Ban brute force attackers](#ban-brute-force-attackers)
-		* [Use 2FA verification codes](#use-2fa-verification-codes)
-		* [Use ssh keys instead of password to log in via ssh](#use-ssh-keys-instead-of-password-to-log-in-via-ssh)
-	* [Set basic firewall rules](#set-basic-firewall-rules)
-	* [Nginx web server](#nginx-web-server)
-		* [Install nginx and create firewall rules](#install-nginx-and-create-firewall-rules)
-		* [Create and configure your websites](#create-and-configure-your-websites)
-		* [Point your domain to your machine](#point-your-domain-to-your-machine)
-		* [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
-		* [The result](#the-result)
-	* [Backups with rsnapshot](#backups-with-rsnapshot)
-		* [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
-		* [Install and setup rsnapshot](#install-and-setup-rsnapshot)
-	* [Git server](#git-server)
-		* [Gitlab? No, thanks](#gitlab-no-thanks)
-		* [Setup a plain git server](#setup-a-plain-git-server)
-		* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
-		* [Create or clone a bare repository](#create-or-clone-a-bare-repository)
-		* [Working repositories](#working-repositories)
-		* [Web Interface](#web-interface)
-	* [Optional. Nvidia and Cuda](#optional-nvidia-and-cuda)
-* [= Summary =](#-summary-)
-	* [Mumble Server (murmur)](#mumble-server-murmur)
-	* [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
-		* [Postfix](#postfix)
+* [Why am I doing this](#why-am-i-doing-this)
+* [What hardware do you need](#what-hardware-do-you-need)
+* [Installing Ubuntu Server](#installing-ubuntu-server)
+* [Configure ethernet](#configure-ethernet)
+* [Upgrade](#upgrade)
+* [Get rid of snap](#get-rid-of-snap)
+* [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
+* [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
+	* [Don't use the default port 22](#dont-use-the-default-port-22)
+	* [Ban brute force attackers](#ban-brute-force-attackers)
+	* [Use 2FA verification codes](#use-2fa-verification-codes)
+	* [Use ssh keys instead of password to log in via ssh](#use-ssh-keys-instead-of-password-to-log-in-via-ssh)
+* [Set basic firewall rules](#set-basic-firewall-rules)
+* [Nginx web server](#nginx-web-server)
+	* [Install nginx and create firewall rules](#install-nginx-and-create-firewall-rules)
+	* [Create and configure your websites](#create-and-configure-your-websites)
+	* [Point your domain to your machine](#point-your-domain-to-your-machine)
+	* [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
+	* [The result](#the-result)
+* [Backups with rsnapshot](#backups-with-rsnapshot)
+	* [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
+	* [Install and setup rsnapshot](#install-and-setup-rsnapshot)
+* [Git server](#git-server)
+	* [Gitlab? No, thanks](#gitlab-no-thanks)
+	* [Setup a plain git server](#setup-a-plain-git-server)
+	* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
+	* [Create or clone a bare repository](#create-or-clone-a-bare-repository)
+	* [Working repositories](#working-repositories)
+	* [Web Interface](#web-interface)
+* [Optional. Nvidia and Cuda](#optional-nvidia-and-cuda)
+* [Mumble Server (murmur)](#mumble-server-murmur)
+* [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
+	* [Postfix](#postfix)
 
 <!-- vim-markdown-toc -->
 
@@ -443,24 +442,6 @@ There are many other things you can customize in `etc/gitweb.conf` and the files
 ## Optional. Nvidia and Cuda
 
 This is just in case you need gpu accelerated encoders or decoders for video server. [Remove the nouveau kernel](https://tutorials.technology/tutorials/85-How-to-remove-Nouveau-kernel-driver-Nvidia-install-error.html) then download and install cuda and the driver from nvidia page. Check version `nvcc --version`.
-
-===========
-= Summary =
-===========
-
-Driver:   Installed
-Toolkit:  Installed in /usr/local/cuda-11.1/
-Samples:  Installed in /home/pink/, but missing recommended libraries
-
-Please make sure that
- -   PATH includes /usr/local/cuda-11.1/bin
- -   LD_LIBRARY_PATH includes /usr/local/cuda-11.1/lib64, or, add /usr/local/cuda-11.1/lib64 to /etc/ld.so.conf and run ldconfig as root
-
-To uninstall the CUDA Toolkit, run cuda-uninstaller in /usr/local/cuda-11.1/bin
-To uninstall the NVIDIA Driver, run nvidia-uninstall
-Logfile is /var/log/cuda-installer.log
-
-
 
 ## Mumble Server (murmur)
 
