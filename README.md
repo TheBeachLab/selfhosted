@@ -265,20 +265,25 @@ sudo update-rc.d ddclient enable
 
 ### Get free trusted SSL certificates for your websites
 
-The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason to have an unencrypted connection anymore.
+The following step is to create free trusted SSL certificates. This thing used to cost quite a lot of money but now it's pretty straight forward and there's no reason to have an unencrypted connection anymore. Install certbot:
 
-```bash
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d mydomain.com -d www.mydomain.com
-```
-
-> Do I really need to remind you to replace `mydomain.com` with your actual domain name?
+`sudo apt install certbot python3-certbot-nginx`
 
 Make sure that the auto renewal timer is running `sudo systemctl status certbot.timer` otherwise start and enable it `sudo systemctl enable --now certbot.timer`.
 
+To get certificates for your websites
+
+`sudo certbot --nginx -d mydomain.com -d www.mydomain.com`
+
+To obtain a standalone certificate
+
+`sudo certbot certonly --nginx -d whatever.mydomain.com`
+
+> Do I really need to remind you to replace `mydomain.com` with your actual domain name?
+
 Other tasks you can do:
 
-- Check your certificates `sudo certbot certificates`
+- View your certificates `sudo certbot certificates`
 - Test the auto renewal process `sudo certbot renew --dry-run`
 - Delete a certificate `sudo certbot delete`
 
