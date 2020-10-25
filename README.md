@@ -53,6 +53,7 @@ This is the story of how I am slowly becoming independent.
 		* [Install and test](#install-and-test)
 		* [Secure mosquitto](#secure-mosquitto)
 		* [Configure MQTT SSL](#configure-mqtt-ssl)
+		* [Enable MQTT over websockets](#enable-mqtt-over-websockets)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -692,8 +693,42 @@ The message should have been received! The only problem remains is that I am sen
 
 Let's generate the certificates
 
+`sudo certbot certonly --nginx -d mosquitto.beachlab.org`
 
+Open the config file and specify the location of the certificates and the port to use `sudo nano /etc/mosquitto/conf.d/default.conf` and add
 
+```bash
+listener 1883 localhost
+
+listener 8883
+certfile /etc/letsencrypt/live/mosquitto.beachlab.org/cert.pem
+cafile /etc/letsencrypt/live/mosquitto.beachlab.org/chain.pem
+keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
+```
+
+1883 will now be unencrypted just for the localhost. Remember to update the firewall rules and the NAT. Reload mosquitto
+
+`sudo systemctl restart mosquitto`
+
+Now subscribe from localhost:
+
+`mosquitto_sub -h localhost -t test -u "fran" -P "password"`
+
+Publish from outside
+
+```bash
+[unix ~]$ mosquitto_pub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -m "hello ssl" -u "fran" -P "password"
+Error: Connection refused
+[unix ~]$ mosquitto_pub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -m "hello ssl" -u "fran" -P "password"
+```
+
+The message should have arrived. To subscribe from outside
+
+`mosquitto_sub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -u "fran" -P "password"`
+
+#### Enable MQTT over websockets
+
+`sudo nano /etc/mosquitto/conf.d/default.conf`
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
