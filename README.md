@@ -42,6 +42,13 @@ This is the story of how I am slowly becoming independent.
 	* [Web Interface](#web-interface)
 * [Optional. Nvidia and Cuda](#optional-nvidia-and-cuda)
 * [Mumble Server (murmur)](#mumble-server-murmur)
+* [IoT](#iot)
+	* [Node Red](#node-red)
+		* [Prepare](#prepare)
+		* [Install](#install)
+		* [Usage](#usage)
+		* [Secure with https](#secure-with-https)
+	* [Mosquitto broker](#mosquitto-broker)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -267,7 +274,13 @@ sudo certbot --nginx -d mydomain.com -d www.mydomain.com
 
 > Do I really need to remind you to replace `mydomain.com` with your actual domain name?
 
-If you want to query the status of the auto renewal timer `sudo systemctl status certbot.timer` or you can test the auto renewal process `sudo certbot renew --dry-run`
+Make sure that the auto renewal timer is running `sudo systemctl status certbot.timer` otherwise start and enable it `sudo systemctl enable --now certbot.timer`.
+
+Other tasks you can do:
+
+- Check your certificates `sudo certbot certificates`
+- Test the auto renewal process `sudo certbot renew --dry-run`
+- Delete a certificate `sudo certbot delete`
 
 ### The result
 
@@ -509,6 +522,47 @@ registerName=Beach Lab Fun
 ```
 
 Reload the server if you make changes `sudo service mumble-server restart`
+
+## IoT
+
+### Node Red
+
+#### Prepare
+
+Create a CNAME for this host like `node` and forward port 1880 to the server. Edit the `/etc/hosts` accordingly. Also create a firewall rule.
+
+#### Install
+
+```bash
+sudo apt install build-essential git
+bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
+```
+
+#### Usage
+
+Autostart on boot `sudo systemctl enable nodered.service`
+
+Manual commands:
+
+```bash
+node-red-start
+node-red-stop
+node-red-restart
+node-red-log
+```
+
+#### Secure with https
+
+`sudo certbot certonly --nginx -d node.beachlab.org`
+
+Note where the certificates are located `/etc/letsencrypt/live/node.beachlab.org/`. Certificates will renew automatically. But we need node-red to
+
+
+### Mosquitto broker
+
+In this IoT world, who doesn't need a mosquitto broker? Create a CNAME for the host `mosquitto` in your domain registrar. In yoour router, forward NAT port 1883 to your server.
+
+
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
