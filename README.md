@@ -560,8 +560,40 @@ node-red-log
 
 `sudo certbot certonly --nginx -d node.beachlab.org`
 
-Note where the certificates are located `/etc/letsencrypt/live/node.beachlab.org/`. Certificates will renew automatically. But we need node-red to
+Note where the certificates are located `/etc/letsencrypt/live/node.beachlab.org/`. Certificates will renew automatically, but we need to create a hook to reload node-red, when certificate is renewed..
 
+`sudo nano /etc/letsencrypt/renewal/node.beachlab.org.conf`
+
+add
+
+`renew_hook = systemctl restart nodered`
+
+test
+
+`sudo certbot renew --dry-run`
+
+Now, this is a bit strange. To enable https you have to modify the `settings.js` file. This file lives in the home folder of the user who installed node red (???). There is no system wide settings. Either I am missing something or tnis is silly. In any case to make https work I had to do this:
+
+```bash
+sudo cp /etc/letsencrypt/live/node.beachlab.org/privkey.pem .
+sudo chown pink:pink privkey.pe
+sudo cp /etc/letsencrypt/live/node.beachlab.org/cert.pem .
+sudo chown pink:pink cert.pem
+nano settings.js
+```
+
+and uncomment/edit the following lines
+
+```js
+https: {
+    key: require("fs").readFileSync('/home/pink/.node-red/privkey.pem'),
+    cert: require("fs").readFileSync('/home/pink/.node-red/cert.pem')
+},
+
+requireHttps: true,
+```
+
+![https-nodered](img/https-nodered.png)
 
 ### Mosquitto broker
 
