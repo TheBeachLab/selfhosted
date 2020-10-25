@@ -48,6 +48,7 @@ This is the story of how I am slowly becoming independent.
 		* [Install](#install)
 		* [Usage](#usage)
 		* [Secure with https](#secure-with-https)
+		* [Secure](#secure)
 	* [Mosquitto broker](#mosquitto-broker)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
@@ -594,6 +595,10 @@ requireHttps: true,
 ```
 
 ![https-nodered](img/https-nodered.png)
+
+> Note: http to https redirection is not working but I don't know why
+
+#### Secure
 
 ### Mosquitto broker
 
