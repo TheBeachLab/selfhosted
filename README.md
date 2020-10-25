@@ -63,7 +63,7 @@ First step is installing Ubuntu Server. I installed 20.04 LTS. There are plenty 
 
 ## Set the root password
 
-`sudo passwd root`
+`sudo passwd root`. **Do not** forget the root password.
 
 ## Configure ethernet
 
