@@ -217,11 +217,13 @@ Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` anc cr
 
 ### Point your domain to your machine
 
-For that you will need to create A records for `@` and `www` pointing to your IP. If your ISP provides you with a fixed public IP that's all you need to do.
+For that you will need to create an A record for `@` (the domain) which points to your public IP and CNAMES for `www` and other hosts pointing to your your domain. If your ISP provides you with a fixed public IP that's all you need to do.
 
-In my case since I don't have a fixed public IP address I have [created a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered).
+I **don't** have a fixed public IP address though. So instead of an A record  I have [a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered).
 
-Then I use a daemon `ddclient` that uses namecheap API (it also has several others) to update the IP address in namecheap records. Install `sudo apt-get install ddclient` and configure `sudo nano /etc/ddclient/ddclient.conf`
+![records](img/dns-records.png)
+
+Then I use a daemon `ddclient` that uses namecheap API (it can also query several others registrars) to update the IP address in namecheap dynamic A records. Unlike changing an A record, **the dynamic A record propagates instantly**. Install `sudo apt-get install ddclient` and configure `sudo nano /etc/ddclient/ddclient.conf`
 
 ```bash
 #### Global Settings
@@ -236,7 +238,7 @@ server=dynamicdns.park-your-domain.com
 #### beachlab.org
 login=beachlab.org
 password='PUT-YOUR-DOMAIN-KEY-HERE'
-@.beachlab.org, www
+@.beachlab.org
 ```
 
 Finally make `ddclient` start when you boot up your ubuntu system
@@ -246,9 +248,11 @@ sudo update-rc.d ddclient defaults
 sudo update-rc.d ddclient enable
 ```
 
-> Is this necessary?
+> Is this true?
 >
-> Point your local IP address to your machine. Get your local machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`. I have `192.168.1.50 thebeachlab` in my case.
+> If the server is in your local network, and you want to reach it by it's hostname, you must point the server local IP address to the server hostname. Get your server machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`.
+> 
+> `192.168.1.50 thebeachlab`
 >
 > Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
 
@@ -328,8 +332,8 @@ Automate your backups in ` crontab -e` **as the root user**
 @weekly /usr/bin/rsnapshot gamma &> /dev/null
 ```
 
-> To Fix: I am experiencing error in the crontab logs like:  
-> `/bin/cp: failed to preserve ownership for '/mnt/backups/alpha.1/localhost/var': Operation not permitted`  
+> To Fix: I am experiencing error in the crontab logs like:
+> `/bin/cp: failed to preserve ownership for '/mnt/backups/alpha.1/localhost/var': Operation not permitted`
 > Also rare `cp_al1` folders are created along the backups. I read [it is a problem with the way nfs has been mounted](https://serverfault.com/questions/941332/rsnapshot-through-nfs-failed-to-preserve-ownershipcannot-access-errors). Need to investigate more.
 
 ## Git server
@@ -444,7 +448,7 @@ Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` and cr
 
 Add ssl certificates `sudo certbot --nginx -d git.beachlab.org`
 
-Now test the site by accessing the URL over browser(after adding dns/host file entries). Namecheap users with dynamic A records (me) remember to update ddclient `sudo nano /etc/ddclient/ddclient.conf` and your `/etc/hosts`.
+Now test the site by accessing the URL over browser (after adding CNAME record and entries in `/etc/hosts`).
 
 There are many other things you can customize in `etc/gitweb.conf` and the files in `/usr/share/gitweb`. Check it out. I use this theme <http://kogakure.github.io/gitweb-theme/>
 
@@ -454,7 +458,7 @@ This is just in case you need gpu accelerated encoders or decoders for video ser
 
 ## Mumble Server (murmur)
 
-Mumble is a low latency voice chat service. Before you start, decide the host (walkie.beachlab.org) and the port (50000) and modify your `/etc/hosts/`, A records, NAT port forwarding, ddns client and create a firewall rule.
+Mumble is a low latency voice chat service. Before you start, decide the host (walkie.beachlab.org) and the port (50000) and modify your `/etc/hosts/`, add an CNAME record, set up NAT port forwarding and create a firewall rule.
 
 ```bash
 sudo ufw allow 50000
