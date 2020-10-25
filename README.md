@@ -50,6 +50,9 @@ This is the story of how I am slowly becoming independent.
 		* [Secure with https](#secure-with-https)
 		* [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
 	* [Mosquitto broker](#mosquitto-broker)
+		* [Install and test](#install-and-test)
+		* [Secure mosquitto](#secure-mosquitto)
+		* [Configure MQTT SSL](#configure-mqtt-ssl)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -627,7 +630,68 @@ To generate the password hash use `node-red admin hash-pw`
 
 ### Mosquitto broker
 
-In this IoT world, who doesn't need a mosquitto broker? Create a CNAME for the host `mosquitto` in your domain registrar. In yoour router, forward NAT port 1883 to your server.
+In this IoT world, who doesn't need a mosquitto broker? Create a CNAME for the host `mosquitto` in your domain registrar. In your router, forward NAT port 1883 to your server. Create a firewall rule to allow 1883/tcp.
+
+#### Install and test
+
+`sudo apt install mosquitto mosquitto-clients`
+
+In another computer try to subscribe to your mosquitto broker
+
+`mosquitto_sub -h mosquitto.beachlab.org -t test`
+
+In the server publish something to the broker
+
+`mosquitto_pub -h localhost -t test -m "hello world"`
+
+This was my first MQTT message!
+
+#### Secure mosquitto
+
+Generate a password for a specific user, in this case me, and store it in /etc/mosquitto/passwd
+
+`sudo mosquitto_passwd -c /etc/mosquitto/passwd fran`
+
+Create a config file to deny anonymous users
+
+`sudo nano /etc/mosquitto/conf.d/default.conf`
+
+And paste
+
+```bash
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+
+```
+
+Make sure there is a new line at the end of the file. Restart mosquitto `sudo systemctl restart mosquitto`. Now try to subscribe again to test
+
+```bash
+[unix ~]$ mosquitto_sub -h mosquitto.beachlab.org -t test
+Connection error: Connection Refused: not authorised.
+```
+
+Try to send a message to this topic
+
+```bash
+pink@thebeachlab:~$ mosquitto_pub -h localhost -t test -m "hello world"
+Connection error: Connection Refused: not authorised.
+```
+
+We are good. Subscribe with username and password
+
+`mosquitto_sub -h mosquitto.beachlab.org -t test -u "fran" -P "password"`
+
+Should be good now. And try to publish
+
+`mosquitto_pub -h localhost -t test -u "fran" -P "password" -m "hello world"`
+
+The message should have been received! The only problem remains is that I am sending tthe password unencrypted over the internet. Oh boy....
+
+#### Configure MQTT SSL
+
+Let's generate the certificates
+
 
 
 
