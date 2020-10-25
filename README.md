@@ -48,7 +48,7 @@ This is the story of how I am slowly becoming independent.
 		* [Install](#install)
 		* [Usage](#usage)
 		* [Secure with https](#secure-with-https)
-		* [Secure](#secure)
+		* [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
 	* [Mosquitto broker](#mosquitto-broker)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
@@ -598,7 +598,32 @@ requireHttps: true,
 
 > Note: http to https redirection is not working but I don't know why
 
-#### Secure
+#### Secure the editor with username and password
+
+If you use node red without user authentication anyone can take over the whole system.
+
+`nano .node-red/settings.js`
+
+and uncomment/edit
+
+```js
+    // Securing Node-RED
+    // -----------------
+    // To password protect the Node-RED editor and admin API, the following
+    // property can be used. See http://nodered.org/docs/security.html for details.
+    adminAuth: {
+        type: "credentials",
+        users: [{
+            username: "admin",
+            password: "$2a$08$zZWtXTja0fB1pzD4sHCMyOCMYz2Z6dNbM6tl8sJogENOMcxWV9DN.",
+            permissions: "*"
+        }]
+    },
+```
+
+> Note: The above are not my real username/password. Do you think I am idiot?
+
+To generate the password hash use `node-red admin hash-pw`
 
 ### Mosquitto broker
 
