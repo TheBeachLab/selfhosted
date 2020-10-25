@@ -13,6 +13,7 @@ This is the story of how I am slowly becoming independent.
 * [Why am I doing this](#why-am-i-doing-this)
 * [What hardware do you need](#what-hardware-do-you-need)
 * [Installing Ubuntu Server](#installing-ubuntu-server)
+* [Set the root password](#set-the-root-password)
 * [Configure ethernet](#configure-ethernet)
 * [Upgrade](#upgrade)
 * [Get rid of snap](#get-rid-of-snap)
@@ -59,6 +60,10 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 ## Installing Ubuntu Server
 
 First step is installing Ubuntu Server. I installed 20.04 LTS. There are plenty of tutorials on how to do this, so I won't explain it here.
+
+## Set the root password
+
+`sudo passwd root`
 
 ## Configure ethernet
 
@@ -312,11 +317,11 @@ Next time you start your machine the NFS share will be automatically mounted at 
 
 ### Install and setup rsnapshot
 
-rsnapshot is a backup tool based on rsync. It's fast and can do incremental backups. Install rsnapshot `sudo apt install rsnapshot` and configure it `sudo nano /etc/rsnapshot.conf`. The most important thing to remember is **use tabs instead of spaces to separate keys and values**. Set your intervals and folders to backup. I have created 7 `beta` which I will use for the daily backups and 4 `gamma` that I will use for the weekly backups. At the moment I do not need to create any hourly backup. Also specify what to backup. rsnapshot can backup from anything to anything. In my case I hace rsnapshot locally installed and I am pushing the backups to a NFS. But I could also use a remote server with rsnapshot to pull my files via ssh.
+rsnapshot is a **backup tool based on rsync**. It's fast and can do incremental backups. Install rsnapshot `sudo apt install rsnapshot` and configure it `sudo nano /etc/rsnapshot.conf`. The most important thing to remember is **use tabs instead of spaces to separate keys and values**. Set your intervals and folders to backup. I have created 7 `beta` which I will use for the daily backups and 4 `gamma` that I will use for the weekly backups. At the moment I do not need to create any hourly backup. Also specify what to backup. rsnapshot can backup from anything to anything. In my case I hace rsnapshot locally installed and I am pushing the backups to a NFS. But I could also use a remote server with rsnapshot to pull my files via ssh.
 
 After saving the configuration file check for errors `rsnapshot configtest`. It is advisable also to dry-run test the backup levels/intervals specified in the config file `rsnapshot -t beta`.
 
-Automate your backups in ` crontab -e`
+Automate your backups in ` crontab -e` **as the root user**
 
 ```bash
 @daily /usr/bin/rsnapshot beta &> /dev/null
@@ -327,7 +332,7 @@ Automate your backups in ` crontab -e`
 
 ### Gitlab? No, thanks
 
-I initially started installing gitlab but I abandon. It's so, so, so, so bloated with features I don't need. It's a pain in the a$$ to configure with an already existing nginx server. And its a nightmare to later maintain it. So I uninstalled gitlab, reverted all changes and I installed a plain git server. Because in the end. all I want is a place to store my repos. This is not a multiuser environment.
+I started installing gitlab but I abandon. It's so, so, so, so bloated with features I don't need. It's a pain in the a$$ to configure with an already existing nginx server. And its a nightmare to later maintain it. So I uninstalled gitlab, reverted all changes and I installed a plain git server. Because in the end. all I want is a place to store my repos. This is not a multiuser environment.
 
 ### Setup a plain git server
 
@@ -501,3 +506,12 @@ sudo ufw status
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
 ### Postfix
+
+Postfix is a MTA mail transfer agent, it receives the emails from the Internet and stores them until you retrieve them.
+
+```bash
+sudo apt update
+sudo DEBIAN_PRIORITY=low apt install postfix
+```
+
+Whenever you need to reconfigure postfix `sudo dpkg-reconfigure postfix`
