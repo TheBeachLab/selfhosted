@@ -450,16 +450,25 @@ This is just in case you need gpu accelerated encoders or decoders for video ser
 
 ## Mumble Server (murmur)
 
-Mumble is a low latency voice chat service.
+Mumble is a low latency voice chat service. Before you start, decide the host (walkie.beachlab.org) and the port (50000) and modify your `/etc/hosts/`, A records, NAT port forwarding, ddns client and create a firewall rule.
+
+```bash
+sudo ufw allow 50000
+sudo ufw reload
+sudo ufw status
+```
+
+Install the required packages and perform initial configuration
 
 ```bash
 sudo add-apt-repository ppa:mumble/release
 sudo apt update
 sudo apt install mumble-server
+sudo apt install sqlite
 sudo dpkg-reconfigure mumble-server
 ```
 
-Check the config `sudo nano /etc/mumble-server.ini`. Change the port, the host and other parameters
+Dig in more advanced config `sudo nano /etc/mumble-server.ini`. Change the port, the host and other parameters
 
 ```
 ; Port to bind TCP and UDP sockets to.
@@ -493,15 +502,6 @@ registerName=Beach Lab Fun
 ```
 
 Reload the server if you make changes `sudo service mumble-server restart`
-
-
-Remember, to be reachable you have to modify your `/etc/hosts/`, A records, NAT port forwarding, ddns client and create a firewall rule.
-
-```bash
-sudo ufw allow 50000
-sudo ufw reload
-sudo ufw status
-```
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
