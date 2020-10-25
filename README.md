@@ -332,9 +332,8 @@ Automate your backups in ` crontab -e` **as the root user**
 @weekly /usr/bin/rsnapshot gamma &> /dev/null
 ```
 
-> To Fix: I am experiencing error in the crontab logs like:
+> Make sure that root will have read/write **and admin (change permissions, take ownership)** permissions on the NFS drive. Otherwise you will get errors like:  
 > `/bin/cp: failed to preserve ownership for '/mnt/backups/alpha.1/localhost/var': Operation not permitted`
-> Also rare `cp_al1` folders are created along the backups. I read [it is a problem with the way nfs has been mounted](https://serverfault.com/questions/941332/rsnapshot-through-nfs-failed-to-preserve-ownershipcannot-access-errors). Need to investigate more.
 
 ## Git server
 
