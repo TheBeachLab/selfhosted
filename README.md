@@ -600,7 +600,7 @@ requireHttps: true,
 
 ![https-nodered](img/https-nodered.png)
 
-> Note: http to https redirection is not working but I don't know why. [Here they propose] a workaround.
+> Note: http to https redirection is not working but I don't know why. [Here they propose](https://stackoverflow.com/questions/53808673/node-red-requirehttps-does-not-work-accessing-http-does-not-redirect-to-https) a workaround.
 
 #### Secure the editor with username and password
 
