@@ -54,6 +54,11 @@ This is the story of how I am slowly becoming independent.
 		* [Secure mosquitto](#secure-mosquitto)
 		* [Configure MQTT SSL](#configure-mqtt-ssl)
 		* [Enable MQTT over websockets](#enable-mqtt-over-websockets)
+	* [PostgreSQL](#postgresql)
+		* [Install](#install-1)
+		* [Create a new role](#create-a-new-role)
+		* [Create a new database](#create-a-new-database)
+		* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -741,7 +746,70 @@ keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
 
 ```
 
-Add firewall rules. Adjust NAT or just like me setup a DMZ host for the damn server.
+Add firewall rules. Adjust NAT or just like me setup a DMZ host for the damn server. I have tested it with the mobile app [owntracks](https://owntracks.org/) and it works like a charm. Coming up in IoT, storing your precious data in a database.
+
+### PostgreSQL
+
+#### Install
+
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+```
+
+Check
+
+```bash
+pink@thebeachlab:~$ sudo -u postgres psql
+psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
+Type "help" for help.
+
+postgres=# 
+```
+
+Exit with `\q`
+
+#### Create a new role
+
+```bash
+pink@thebeachlab:~$ sudo -u postgres createuser --interactive
+Enter name of role to add: iot
+Shall the new role be a superuser? (y/n) y
+```
+
+#### Create a new database
+
+A postgres assumption is that a role will have a database with the same name which it can access. That means `iot` role will attempt to connect to `iot` database by default. So let's create `iot` database.
+
+`sudo -u postgres createdb iot`
+
+#### Open a postgres prompt with `iot` role
+
+Due to the ident based authentication, you need a Linux user with the same name as your postgres role and database.
+
+`sudo adduser iot`
+
+Now you can connect to the `iot` database with
+
+`sudo -u iot psql`
+
+Check your connection with `\connifo`
+
+```bash
+iot=# \conninfo
+You are connected to database "iot" as user "iot" via socket in "/var/run/postgresql" at port "5432"
+```
+
+Exit with `\q`. A role can also connect to a different database
+
+```bash
+pink@thebeachlab:~$ sudo -u iot psql -d postgres
+psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
+Type "help" for help.
+
+postgres=# \conninfo
+You are connected to database "postgres" as user "iot" via socket in "/var/run/postgresql" at port "5432".
+```
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
