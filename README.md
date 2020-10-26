@@ -730,6 +730,19 @@ The message should have arrived. To subscribe from outside
 
 `sudo nano /etc/mosquitto/conf.d/default.conf`
 
+Add
+
+```bash
+listener 8083
+protocol websockets
+certfile /etc/letsencrypt/live/mosquitto.beachlab.org/cert.pem
+cafile /etc/letsencrypt/live/mosquitto.beachlab.org/chain.pem
+keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
+
+```
+
+Add firewall rules. Adjust NAT or just like me setup a DMZ host for the damn server.
+
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
 ### Postfix
