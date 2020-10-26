@@ -61,6 +61,7 @@ This is the story of how I am slowly becoming independent.
 		* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
 		* [TimescaleDB](#timescaledb)
 		* [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
+	* [Managing PostgreSQL with pdAdmin](#managing-postgresql-with-pdadmin)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -955,6 +956,18 @@ pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 ```
 
 > To be continued...
+
+### Managing PostgreSQL with pdAdmin
+
+```bash
+curl https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo apt-key add
+sudo sh -c 'echo "deb https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list && apt update'
+sudo apt install pgadmin4-web
+```
+
+> Note: It gave error regarding missing Apache. Need to finish the [hosting section with nginx](https://www.pgadmin.org/docs/pgadmin4/latest/server_deployment.html#hosting) but I don't fully understand it yet.
+>
+> I also have to install pgAgent
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
