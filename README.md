@@ -942,6 +942,18 @@ For more information and how to disable, please see our docs https://docs.timesc
 CREATE EXTENSION
 ```
 
+Disable telemetry (sending data to Timescale) and restart postgres
+
+```bash
+pink@thebeachlab:~$ sudo -u postgres psql
+psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
+Type "help" for help.
+
+postgres=# ALTER SYSTEM SET timescaledb.telemetry_level=off
+postgres-# \q
+pink@thebeachlab:~$ sudo systemctl restart postgresql.service
+```
+
 > To be continued...
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
