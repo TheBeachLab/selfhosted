@@ -600,7 +600,7 @@ requireHttps: true,
 
 ![https-nodered](img/https-nodered.png)
 
-> Note: http to https redirection is not working but I don't know why
+> Note: http to https redirection is not working but I don't know why. [Here they propose] a workaround.
 
 #### Secure the editor with username and password
 
