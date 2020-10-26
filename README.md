@@ -59,6 +59,8 @@ This is the story of how I am slowly becoming independent.
 		* [Create a new role](#create-a-new-role)
 		* [Create a new database](#create-a-new-database)
 		* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
+		* [TimescaleDB](#timescaledb)
+		* [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
 * [WIP. Mail servers: Postfix, Dovecot and OpenDKIM](#wip-mail-servers-postfix-dovecot-and-opendkim)
 	* [Postfix](#postfix)
 
@@ -810,6 +812,137 @@ Type "help" for help.
 postgres=# \conninfo
 You are connected to database "postgres" as user "iot" via socket in "/var/run/postgresql" at port "5432".
 ```
+
+#### TimescaleDB
+
+IoT stores huge time series data. Relational databases can be used to store the data but processing can be slow. TimescaleDB is an NoSQL database optimized to store time-series data. It is implemented as an extension of PostgreSQL combining the ease of use of relational databases and the speed of NoSQL databases.
+
+Install
+
+```bash
+sudo add-apt-repository ppa:timescale/timescaledb-ppa
+sudo apt update
+sudo apt install timescaledb-postgresql-12
+```
+
+Configure and optimize
+
+```bash
+pink@thebeachlab:~$ sudo timescaledb-tune
+Using postgresql.conf at this path:
+/etc/postgresql/12/main/postgresql.conf
+
+Is this correct? [(y)es/(n)o]: y
+Writing backup to:
+/tmp/timescaledb_tune.backup202010261003
+
+shared_preload_libraries needs to be updated
+Current:
+#shared_preload_libraries = ''
+Recommended:
+shared_preload_libraries = 'timescaledb'
+Is this okay? [(y)es/(n)o]: y
+success: shared_preload_libraries will be updated
+
+Tune memory/parallelism/WAL and other settings? [(y)es/(n)o]: y
+Recommendations based on 7.74 GB of available memory and 4 CPUs for PostgreSQL 12
+
+Memory settings recommendations
+Current:
+shared_buffers = 128MB
+#effective_cache_size = 4GB
+#maintenance_work_mem = 64MB
+#work_mem = 4MB
+Recommended:
+shared_buffers = 1981MB
+effective_cache_size = 5944MB
+maintenance_work_mem = 1014453kB
+work_mem = 5072kB
+Is this okay? [(y)es/(s)kip/(q)uit]: y
+success: memory settings will be updated
+
+Parallelism settings recommendations
+Current:
+missing: timescaledb.max_background_workers
+#max_worker_processes = 8
+#max_parallel_workers_per_gather = 2
+#max_parallel_workers = 8
+Recommended:
+timescaledb.max_background_workers = 8
+max_worker_processes = 15
+max_parallel_workers_per_gather = 2
+max_parallel_workers = 4
+Is this okay? [(y)es/(s)kip/(q)uit]: y
+success: parallelism settings will be updated
+
+WAL settings recommendations
+Current:
+#wal_buffers = -1
+min_wal_size = 80MB
+Recommended:
+wal_buffers = 16MB
+min_wal_size = 512MB
+Is this okay? [(y)es/(s)kip/(q)uit]: y
+success: WAL settings will be updated
+
+Miscellaneous settings recommendations
+Current:
+#default_statistics_target = 100
+#random_page_cost = 4.0
+#checkpoint_completion_target = 0.5
+#max_locks_per_transaction = 64
+#autovacuum_max_workers = 3
+#autovacuum_naptime = 1min
+#effective_io_concurrency = 1
+Recommended:
+default_statistics_target = 500
+random_page_cost = 1.1
+checkpoint_completion_target = 0.9
+max_locks_per_transaction = 64
+autovacuum_max_workers = 10
+autovacuum_naptime = 10
+effective_io_concurrency = 200
+Is this okay? [(y)es/(s)kip/(q)uit]: y
+success: miscellaneous settings will be updated
+Saving changes to: /etc/postgresql/12/main/postgresql.conf
+```
+
+If you are going to say yes to all you could also do `sudo timescaledb-tune --quiet --yes`. Now restart postpres
+
+`sudo systemctl restart postgresql.service`
+
+#### Create a hypertable in `iot` database
+
+First connect to `iot`
+
+`sudo -u iot psql`
+
+Enable the TimescaleDB extension
+
+```bash
+iot=# CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+WARNING:  
+WELCOME TO
+ _____ _                               _     ____________  
+|_   _(_)                             | |    |  _  \ ___ \ 
+  | |  _ _ __ ___   ___  ___  ___ __ _| | ___| | | | |_/ / 
+  | | | |  _ ` _ \ / _ \/ __|/ __/ _` | |/ _ \ | | | ___ \ 
+  | | | | | | | | |  __/\__ \ (_| (_| | |  __/ |/ /| |_/ /
+  |_| |_|_| |_| |_|\___||___/\___\__,_|_|\___|___/ \____/
+               Running version 1.7.4
+For more information on TimescaleDB, please visit the following links:
+
+ 1. Getting started: https://docs.timescale.com/getting-started
+ 2. API reference documentation: https://docs.timescale.com/api
+ 3. How TimescaleDB is designed: https://docs.timescale.com/introduction/architecture
+
+Note: TimescaleDB collects anonymous reports to better understand and assist our users.
+For more information and how to disable, please see our docs https://docs.timescaledb.com/using-timescaledb/telemetry.
+
+CREATE EXTENSION
+```
+
+> To be continued...
 
 ## WIP. Mail servers: Postfix, Dovecot and OpenDKIM
 
