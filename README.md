@@ -233,7 +233,11 @@ try_files $uri $uri/ =404;
 }
 ```
 
-Check for mistakes in the syntax `sudo nginx -t -c /etc/nginx/nginx.conf` anc create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com`. Finally reload nginx `sudo systemctl reload nginx`
+Check for mistakes in the syntax `sudo nginx -t`
+
+Create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com` 
+
+Finally reload nginx `sudo systemctl reload nginx`
 
 ### Point your domain to your machine
 
