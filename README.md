@@ -270,7 +270,7 @@ sudo update-rc.d ddclient enable
 
 > Is this true?
 >
-> If the server is in your local network, and you want to reach it by it's hostname, you must point the server local IP address to the server hostname. Get your server machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/host`.
+> If the server is in your local network, and you want to reach it by it's hostname, you must point the server local IP address to the server hostname. Get your server machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/hosts`.
 > 
 > `192.168.1.50 thebeachlab`
 >
@@ -291,8 +291,6 @@ To get certificates for your websites
 To obtain a standalone certificate
 
 `sudo certbot certonly --nginx -d whatever.mydomain.com`
-
-> Do I really need to remind you to replace `mydomain.com` with your actual domain name?
 
 Other tasks you can do:
 
@@ -547,7 +545,7 @@ Reload the server if you make changes `sudo service mumble-server restart`
 
 #### Prepare
 
-Create a CNAME for this host like `node` and forward port 1880 to the server. Edit the `/etc/hosts` accordingly. Also create a firewall rule.
+Create a CNAME for this host like `node` and forward port 1880 to the server in the NAT. Edit the `/etc/hosts` accordingly. Also create a firewall rule.
 
 #### Install
 
@@ -609,6 +607,18 @@ requireHttps: true,
 ![https-nodered](img/https-nodered.png)
 
 > Note: http to https redirection is not working but I don't know why. [Here they propose](https://stackoverflow.com/questions/53808673/node-red-requirehttps-does-not-work-accessing-http-does-not-redirect-to-https) a workaround.
+>
+> I ended up redirecting http://node.beachlab.org to https://node.beachlab.org:1880 in by creating and enabling a site in nginx
+>
+> ```bash
+> server {
+>	listen 80;
+>	listen [::]:80;
+>	server_name node.beachlab.org;
+>	return 301 https://$host:1880$request_uri;
+> }
+> ```
+
 
 #### Secure the editor with username and password
 
