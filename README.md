@@ -247,7 +247,7 @@ I **don't** have a fixed public IP address though. So instead of an A record  I 
 
 ![records](img/dns-records.png)
 
-Then I use a daemon `ddclient` that uses namecheap API (it can also query several others registrars) to update the IP address in namecheap dynamic A records. Unlike changing an A record, **the dynamic A record propagates instantly**. Install `sudo apt-get install ddclient` and configure `sudo nano /etc/ddclient/ddclient.conf`
+Then I use a daemon `ddclient` that uses namecheap API (it can also query several others registrars) to update the IP address in namecheap dynamic A records. Unlike changing an A record, **the dynamic A record propagates instantly**. Install `sudo apt-get install ddclient` and configure ~~`Sudo nano /etc/ddclient/ddclient.conf`~~ `sudo nano /etc/ddclient.conf`
 
 ```bash
 #### Global Settings
