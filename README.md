@@ -150,7 +150,7 @@ This was one of the most difficult parts to undertand for me. Actually one of th
 
 ### A little bit of history
 
-> If you skip this section you might not undersand the mess of DNS servers. 
+> If you skip this section you might not undersand the mess of DNS servers.
 
 Initially (in the 1970s) there was a single file HOSTS.TXT that could be downloaded by FTP from a computer at Stanford. This contained a name-to-address mapping of all the (few hundred) hosts on the then [ARPAnet](https://en.wikipedia.org/wiki/ARPANET). The Linux `/etc/hosts` is the residual decedent of the original HOSTS.TXT.
 
@@ -598,6 +598,8 @@ Reload the server if you make changes `sudo service mumble-server restart`
 
 ### Node Red
 
+> I installed node red as a root service
+
 #### Prepare
 
 Create a CNAME for this host like `node` and forward port 1880 to the server in the NAT. Edit the `/etc/hosts` accordingly. Also create a firewall rule.
@@ -607,6 +609,7 @@ Create a CNAME for this host like `node` and forward port 1880 to the server in 
 ```bash
 sudo apt install build-essential git
 bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
+npm install -g node-red-admin
 ```
 
 #### Usage
@@ -638,22 +641,12 @@ test
 
 `sudo certbot renew --dry-run`
 
-Now, this is a bit strange. To enable https you have to modify the `settings.js` file. This file lives in the home folder of the user who installed node red (???). There is no system wide settings. Either I am missing something or tnis is silly. In any case to make https work I had to do this:
-
-```bash
-sudo cp /etc/letsencrypt/live/node.beachlab.org/privkey.pem .
-sudo chown pink:pink privkey.pe
-sudo cp /etc/letsencrypt/live/node.beachlab.org/cert.pem .
-sudo chown pink:pink cert.pem
-nano settings.js
-```
-
 and uncomment/edit the following lines
 
 ```js
 https: {
-    key: require("fs").readFileSync('/home/pink/.node-red/privkey.pem'),
-    cert: require("fs").readFileSync('/home/pink/.node-red/cert.pem')
+    key: require("fs").readFileSync('/etc/letsencrypt/live/node.beachlab.org/privkey.pem'),
+    cert: require("fs").readFileSync('/etc/letsencrypt/live/node.beachlab.org/cert.pem')
 },
 
 requireHttps: true,
@@ -700,7 +693,7 @@ and uncomment/edit
 
 > Note: The above are not my real username/password. Do you think I am idiot?
 
-To generate the password hash use `node-red admin hash-pw`
+To generate the password hash use `node-red-admin hash-pw`
 
 ### Mosquitto broker
 
