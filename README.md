@@ -92,6 +92,7 @@ Check your ethernet interface name with `ip address` and run `sudo nano /etc/net
 
 ```bash
 network:
+  version: 2
   ethernets:
     lan:
       match:
@@ -103,7 +104,6 @@ network:
       gateway4: 192.168.1.1
       nameservers:
           addresses: [1.0.0.1, 1.1.1.1]
-  version: 2
 ```
 
 Then `sudo netplan apply` you should be connected now.
