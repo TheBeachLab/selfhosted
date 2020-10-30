@@ -18,9 +18,10 @@ This is the story of how I am slowly becoming independent.
 * [Upgrade](#upgrade)
 * [Get rid of snap](#get-rid-of-snap)
 * [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
-* [Setup an auhoritative DNS server (WIP)](#setup-an-auhoritative-dns-server-wip)
-	* [Litle bit of history](#litle-bit-of-history)
-	* [What is a domain](#what-is-a-domain)
+* [Setup an DNS server (WIP)](#setup-an-dns-server-wip)
+	* [A little bit of history](#a-little-bit-of-history)
+	* [Split Horizon name server](#split-horizon-name-server)
+	* [Installing the DNS server](#installing-the-dns-server)
 * [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
 	* [Don't use the default port 22](#dont-use-the-default-port-22)
 	* [Ban brute force attackers](#ban-brute-force-attackers)
@@ -137,30 +138,40 @@ sudo apt install hddtemp
 sudo apt install glances
 ```
 
-## Setup an auhoritative DNS server (WIP)
+## Setup an DNS server (WIP)
 
 This was one of the most difficult parts to undertand for me. Actually one of the last parts I did even though you see it at the beginning of this doc. The difficulty was a naming convention. DNS server, like mail server, has multiple meanings. Hence the confusion while reading. BTW, a DNS is a yellow pages book of The Internet.
 
-### Litle bit of history
+### A little bit of history
+
+> If you skip this section you might not undersand the mess of DNS servers. 
 
 Initially (in the 1970s) there was a single file HOSTS.TXT that could be downloaded by FTP from a computer at Stanford. This contained a name-to-address mapping of all the (few hundred) hosts on the then [ARPAnet](https://en.wikipedia.org/wiki/ARPANET). The Linux `/etc/hosts` is the residual decedent of the original HOSTS.TXT.
 
 > If you are passionate of the early days of Internet do read <http://www.byte.org/one-history-of-dns.pdf>
 
-The use of an FTP copy of HOSTS.TXT quickly became difficult to maintain, with the growth of the number of hosts, by the time an update had been copied to the far reaches, it was out of date! In 1984 Paul Mockapetris (University of Southern California) created DNS, a distributed database of servers called *name servers*. Each keep details about some segment of the Internet. There are 13 root name servers (designated A-M)
+The use of an FTP copy of HOSTS.TXT quickly became difficult to maintain, with the growth of the number of hosts, by the time an update had been copied to the far reaches, it was out of date! In 1984 Paul Mockapetris (University of Southern California) created DNS, a hyerarchical distributed database of servers called *name servers*. Clients called resolvers query the database by means of calls to name servers.
+
+At the top of the hyerarchy there are the **root name servers**. Each keep details about some segment of the Internet. There are 13 root name servers (designated A-M). The root nameservers are overseen by a nonprofit called the Internet Corporation for Assigned Names and Numbers (ICANN).
+
+> In reality there are more instances of these 13 nameservers seamlessly spread across the world with [anycast](https://en.wikipedia.org/wiki/Anycast) addressing.
 
 ![domain levels](img/rootdns.png)
 
-Clients called resolvers query the database by means of calls to name servers.
-
-### What is a domain
-
-
-
+Looking at this map you will realise that the location of these servers are 10% technical and 90% political. The purpose of the root name servers is to answer requests for records in the root zone and to answer other requests by returning a list of the **TLD name servers** for the appropriate top-level domain (TLD).
 
 ![domain levels](img/domain-levels.jpg)
 
+A TLD nameserver maintains information for all the domain names that share a common domain extension, such as `.com`, `.net`, or whatever comes after the last dot in a url. For example, a `.com` TLD nameserver contains information for every website that ends in `.com`. Management of TLD nameservers is handled by the Internet Assigned Numbers Authority (IANA), which is a branch of ICANN.
 
+
+When the client (recursive resolver) receives a response from a root nameserver, it would send a query to the appropiate TLD nameserver, which would lookup at the **glue records** (NS records) and respond by pointing to the **authoritative nameserver** (ns1.yourdomain.com, ns2.yourdomain.com). The authoritative nameserver contains information specific to the domain name it serves (e.g. yourdomain.com) and it can provide a recursive resolver with the IP address of that server found in the DNS A record, or if the domain has a CNAME record (alias). When you buy a domain you can set glue records of the authoritative nameserver or use the ones they provide. To host an authoritative nameserver must have a fixed IP address, as this address needs to be known by the TLD nameserver.
+
+### Split Horizon name server
+
+To be continued...
+
+### Installing the DNS server
 
 
 `sudo apt install bind9 bind9utils`
@@ -269,7 +280,7 @@ try_files $uri $uri/ =404;
 
 Check for mistakes in the syntax `sudo nginx -t`
 
-Create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com` 
+Create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomain.com /etc/nginx/sites-enabled/mydomain.com`
 
 Finally reload nginx `sudo systemctl reload nginx`
 
@@ -309,7 +320,7 @@ sudo update-rc.d ddclient enable
 > Is this true?
 >
 > If the server is in your local network, and you want to reach it by it's hostname, you must point the server local IP address to the server hostname. Get your server machine name `cat /etc/hostname` which in my case returns `thebeachlab` and point it to the **local network** fixed ip address that you set at the beginning `sudo nano /etc/hosts`.
-> 
+>
 > `192.168.1.50 thebeachlab`
 >
 > Warning: Still not sure why but 127.0.0.1 will not work. You have to use the network ip.
@@ -399,7 +410,7 @@ Automate your backups in ` crontab -e` **as the root user**
 @weekly /usr/bin/rsnapshot gamma &> /dev/null
 ```
 
-> Make sure that root will have read/write **and admin (change permissions, take ownership)** permissions on the NFS drive. Otherwise you will get errors like:  
+> Make sure that root will have read/write **and admin (change permissions, take ownership)** permissions on the NFS drive. Otherwise you will get errors like:
 > `/bin/cp: failed to preserve ownership for '/mnt/backups/alpha.1/localhost/var': Operation not permitted`
 
 ## Git server
@@ -815,7 +826,7 @@ pink@thebeachlab:~$ sudo -u postgres psql
 psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
 Type "help" for help.
 
-postgres=# 
+postgres=#
 ```
 
 Exit with `\q`
@@ -970,12 +981,12 @@ Enable the TimescaleDB extension
 
 ```bash
 iot=# CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-WARNING:  
+WARNING:
 WELCOME TO
- _____ _                               _     ____________  
-|_   _(_)                             | |    |  _  \ ___ \ 
-  | |  _ _ __ ___   ___  ___  ___ __ _| | ___| | | | |_/ / 
-  | | | |  _ ` _ \ / _ \/ __|/ __/ _` | |/ _ \ | | | ___ \ 
+ _____ _                               _     ____________
+|_   _(_)                             | |    |  _  \ ___ \
+  | |  _ _ __ ___   ___  ___  ___ __ _| | ___| | | | |_/ /
+  | | | |  _ ` _ \ / _ \/ __|/ __/ _` | |/ _ \ | | | ___ \
   | | | | | | | | |  __/\__ \ (_| (_| | |  __/ |/ /| |_/ /
   |_| |_|_| |_| |_|\___||___/\___\__,_|_|\___|___/ \____/
                Running version 1.7.4
