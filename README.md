@@ -607,14 +607,15 @@ Create a CNAME for this host like `node` and forward port 1880 to the server in 
 #### Install
 
 ```bash
-sudo apt install build-essential git
+su
+apt install build-essential git
 bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
 npm install -g node-red-admin
 ```
 
 #### Usage
 
-Autostart on boot `sudo systemctl enable nodered.service`
+Autostart on boot `systemctl enable nodered.service`
 
 Manual commands:
 
@@ -622,16 +623,17 @@ Manual commands:
 node-red-start
 node-red-stop
 node-red-restart
+node-red-admin
 node-red-log
 ```
 
 #### Secure with https
 
-`sudo certbot certonly --nginx -d node.beachlab.org`
+`certbot certonly --nginx -d node.beachlab.org`
 
 Note where the certificates are located `/etc/letsencrypt/live/node.beachlab.org/`. Certificates will renew automatically, but we need to create a hook to reload node-red, when certificate is renewed..
 
-`sudo nano /etc/letsencrypt/renewal/node.beachlab.org.conf`
+`nano /etc/letsencrypt/renewal/node.beachlab.org.conf`
 
 add
 
@@ -639,7 +641,7 @@ add
 
 test
 
-`sudo certbot renew --dry-run`
+`certbot renew --dry-run`
 
 and uncomment/edit the following lines
 
@@ -666,7 +668,6 @@ requireHttps: true,
 >	return 301 https://$host:1880$request_uri;
 > }
 > ```
-
 
 #### Secure the editor with username and password
 
