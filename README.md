@@ -18,6 +18,7 @@ This is the story of how I am slowly becoming independent.
 * [Upgrade](#upgrade)
 * [Get rid of snap](#get-rid-of-snap)
 * [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
+* [Setup a DNS server (WIP)](#setup-a-dns-server-wip)
 * [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
 	* [Don't use the default port 22](#dont-use-the-default-port-22)
 	* [Ban brute force attackers](#ban-brute-force-attackers)
@@ -101,7 +102,7 @@ network:
         - 192.168.1.50/24
       gateway4: 192.168.1.1
       nameservers:
-          addresses: [8.8.8.8, 1.1.1.1]
+          addresses: [1.0.0.1, 1.1.1.1]
   version: 2
 ```
 
@@ -133,6 +134,14 @@ sudo sensors-detect
 sudo apt install hddtemp
 sudo apt install glances
 ```
+
+## Setup a DNS server (WIP)
+
+This was one of the most difficult parts to undertand for me. Actually one of the last parts I did even though you see it at the beginning of this doc. The difficulty was a naming convention. DNS server, like mail server, has multiple meanings. Hence the confusion while reading.
+
+
+
+
 
 ## Setup and secure remote ssh access
 
