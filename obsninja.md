@@ -18,7 +18,7 @@ server {
   index index.html;
 
   location ~ ^/([^/]+)/([^/?]+)$ {
-          root /var/www/html/obs.ninja;
+          root /var/www/obsninja;
           try_files /$1/$2 /$1/$2.html /$1/$2/ /$2 /$2/ /$1/index.html;
           add_header Access-Control-Allow-Origin *;
   }
