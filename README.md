@@ -31,4 +31,5 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [IoT related](iot.md)
 - [GPU related](gpu.md)
 - [Taskserver](taskserver.md)
+- [OBS ninja](obsninja.md)
 - Minecraft server
