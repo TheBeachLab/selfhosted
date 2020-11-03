@@ -8,6 +8,7 @@
 * [Upgrade](#upgrade)
 * [Get rid of snap](#get-rid-of-snap)
 * [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
+* [Configure Wake on LAN](#configure-wake-on-lan)
 
 <!-- vim-markdown-toc -->
 
@@ -32,6 +33,7 @@ network:
         macaddress: 00:ab:cd:ef:12:34
       set-name: cable
       dhcp4: no
+      wakeonlan: true
       addresses:
         - 192.168.1.50/24
       gateway4: 192.168.1.1
@@ -68,4 +70,10 @@ sudo apt install hddtemp
 sudo apt install glances
 ```
 
+## Configure Wake on LAN
 
+Check if the adapter supports WOL `sudo ethtool cable` and look for `Supports Wake-on: <letters>`. If `g` is among the letters, then it supports the *magic packet*. Also check if WoL is enabled `Wake-on: <letters>`. If letters contain `g` and not `d` then WoL is enabled. However, if letters contain `d` you need to enable WoL by running:
+
+`sudo ethtool -s cable wol g`
+
+You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above).
