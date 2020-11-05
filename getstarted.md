@@ -77,3 +77,5 @@ Check if the adapter supports WOL `sudo ethtool cable` and look for `Supports Wa
 `sudo ethtool -s cable wol g`
 
 You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above).
+
+> WoL is enabled but does not seem to work. Need to investigate further in BIOS
