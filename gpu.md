@@ -6,6 +6,8 @@
 * [Allow SSH UDP](#allow-ssh-udp)
 * [Nvidia and Cuda](#nvidia-and-cuda)
 * [Python](#python)
+* [Create ML user](#create-ml-user)
+* [Install jupyterlab and pytorch](#install-jupyterlab-and-pytorch)
 
 <!-- vim-markdown-toc -->
 
@@ -32,12 +34,58 @@ This is just in case you need gpu accelerated encoders or decoders for video ser
 
 ```bash
 sudo apt update
-sudo apt install python3-pip python3-dev
+sudo apt install python3-pip python3-dev python-is-python3
 sudo -H pip3 install virtualenv
 ```
 
-TODO 
-Create ML user
-Install jupyterlab and pytorch
+## Create ML user
+
+```bash
+sudo adduser mlgpu
+sudo usermod -a -G sudo mlgpu
+mkdir .ssh
+chmod 700 .ssh/
+touch .ssh/authorized_keys
+chmod 600 .ssh/authorized_keys
+ssh-import-id gh:thebeachlab
+```
+
+If you want to disable 2FA for this user, edit `sudo nano /etc/pam.d/sshd` and add
+
+`auth [success=done default=ignore] pam_succeed_if.so user ingroup mlgpu`
+
+before `auth required pam_google_authenticator.so`. Make sure you reload the ssh daemon `sudo service sshd restart`
+
+Check the connection `ssh -p 22 mlgpu@beachlab.org`
+
+## Install jupyterlab and pytorch
+
+```bash
+su mlgpu
+pip3 install torch torchvision
+```
+
+Check that pytorch with cuda is accessible
+
+```bash
+mlgpu@thebeachlab:~$ python
+Python 3.8.5 (default, Jul 28 2020, 12:59:40) 
+[GCC 9.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import torch
+>>> print (torch.rand(5,3))
+tensor([[0.8937, 0.2411, 0.1159],
+        [0.9376, 0.5696, 0.0137],
+        [0.7617, 0.7618, 0.3687],
+        [0.1805, 0.9064, 0.2470],
+        [0.9646, 0.5219, 0.2525]])
+>>> torch.cuda.is_available()
+True
+```
+
+Install jupyterlab `pip3 install jupyterlab`
+
+> Note: Multiple warnings about `/home/ml/.local/bin` not in your lab.
+
 
 
