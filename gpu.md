@@ -95,7 +95,6 @@ From your laptop `ssh -p 22 -CNL 8899:localhost:8899 mlgpu@beachlab.org` or add 
 
 - `-C` for data compression
 - `-L listen-port:host:port` for port forwarding
-- `-N` for not executing remote commands
 
 `jupyter lab --no-browser --port=8899` or `jl` if you create an `alias jl="jupyter lab --no-browser --port=8899` in the mlgpu `.bash_aliases`
 
