@@ -91,9 +91,9 @@ Install jupyterlab `pip3 install jupyterlab`
 
 ## Open a remote jupyterlab session
 
-From your laptop `ssh -p 22 -L 8899:localhost:8899 mlgpu@beachlab.org` and start jupyter lab
+From your laptop `ssh -p 22 -L 8899:localhost:8899 mlgpu@beachlab.org` or add an `ml` alias to connect to the server and then start jupyter lab
 
-`jupyter lab --no-browser --port=8899`
+`jupyter lab --no-browser --port=8899` or `jl` if you create an `alias jl="jupyter lab --no-browser --port=8899` in the mlgpu `.bash_aliases`
 
 Then in your laptop browser open the notebook with the provided token:
 
