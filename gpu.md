@@ -112,7 +112,7 @@ Logout and login for the changes to apply. Now you can create the mount point an
 
 ```bash
 sudo mkdir /mnt/mlgpu
-sudo sshfs -p 22 -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),default_permissions,IdentityFile=~/.ssh/id_rsa ml@beachlab.org:/home/mlgpu /mnt/mlgpu
+sudo sshfs -p 22 -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),default_permissions,IdentityFile=/home/unix/.ssh/id_rsa ml@beachlab.org:/home/mlgpu /mnt/mlgpu
 ```
 
 And you will see that the files are mounted as if you were the owner
@@ -131,4 +131,4 @@ total 4
 drwxrwxr-x 3 ml ml 4096 Nov  6 09:54 data
 ```
 
-Unmount when not needed `sudo umount /mnt/mlgpu`
+Unmount when not needed `sudo umount /mnt/mlgpu/`
