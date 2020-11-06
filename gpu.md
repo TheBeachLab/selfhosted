@@ -8,6 +8,8 @@
 * [Python](#python)
 * [Create ML user](#create-ml-user)
 * [Install jupyterlab and pytorch](#install-jupyterlab-and-pytorch)
+* [Open a remote jupyterlab session](#open-a-remote-jupyterlab-session)
+* [Mount remote folder via SSHFS](#mount-remote-folder-via-sshfs)
 
 <!-- vim-markdown-toc -->
 
@@ -69,7 +71,7 @@ Check that pytorch with cuda is accessible
 
 ```bash
 mlgpu@thebeachlab:~$ python
-Python 3.8.5 (default, Jul 28 2020, 12:59:40) 
+Python 3.8.5 (default, Jul 28 2020, 12:59:40)
 [GCC 9.3.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import torch
@@ -87,5 +89,46 @@ Install jupyterlab `pip3 install jupyterlab`
 
 > Note: Multiple warnings about `/home/ml/.local/bin` not in your lab.
 
+## Open a remote jupyterlab session
 
+From your laptop `ssh -p 22 -L 8899:localhost:8899 mlgpu@beachlab.org` and start jupyter lab
 
+`jupyter lab --no-browser --port=8899`
+
+Then in your laptop browser open the notebook with the provided token:
+
+`http://localhost:8899/?token=LOTS-OF-NUMBERS-AND-LETTERS`
+
+## Mount remote folder via SSHFS
+
+In your laptop install `sshfs`, then add a `fuse` group and add yourself to that group
+
+```bash
+[unix ~]$ sudo groupadd fuse
+[unix ~]$ sudo usermod -a -G fuse unix
+```
+
+Logout and login for the changes to apply. Now you can create the mount point and mount the `mlgpu` home folder
+
+```bash
+sudo mkdir /mnt/mlgpu
+sudo sshfs -p 22 -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),default_permissions,IdentityFile=~/.ssh/id_rsa ml@beachlab.org:/home/mlgpu /mnt/mlgpu
+```
+
+And you will see that the files are mounted as if you were the owner
+
+```bash
+[unix /mnt/mlgpu]$ ls -l
+total 4.0K
+drwxrwxr-x 1 unix users 4.0K Nov  6 10:54 data
+```
+
+And in the remote server
+
+```bash
+mlgpu@thebeachlab:~$ ls -l
+total 4
+drwxrwxr-x 3 ml ml 4096 Nov  6 09:54 data
+```
+
+Unmount when not needed `sudo umount /mnt/mlgpu`
