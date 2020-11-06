@@ -91,7 +91,7 @@ Install jupyterlab `pip3 install jupyterlab`
 
 ## Open a remote jupyterlab session
 
-From your laptop `ssh -p 22 -CNL 8899:localhost:8899 mlgpu@beachlab.org` or add an `ml` alias to connect to the server and then start jupyter lab
+From your laptop `ssh -p 22 -CL 8899:localhost:8899 mlgpu@beachlab.org` or add an `ml` alias to connect to the server and then start jupyter lab
 
 - `-C` for data compression
 - `-L listen-port:host:port` for port forwarding
@@ -101,6 +101,8 @@ From your laptop `ssh -p 22 -CNL 8899:localhost:8899 mlgpu@beachlab.org` or add 
 Then in your laptop browser open the notebook with the provided token:
 
 `http://localhost:8899/?token=LOTS-OF-NUMBERS-AND-LETTERS`
+
+To **access without token** generate a config file `jupyter lab --generate-config` and set a password  `jupyter notebook password`. Then modify `nano ~/.jupyter/jupyter_notebook_config.py` to set an empty token `c.NotebookApp.token = ''`
 
 ## Mount remote folder via SSHFS
 
