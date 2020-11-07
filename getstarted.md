@@ -72,10 +72,9 @@ sudo apt install glances
 
 ## Configure Wake on LAN
 
-Check if the adapter supports WOL `sudo ethtool cable` and look for `Supports Wake-on: <letters>`. If `g` is among the letters, then it supports the *magic packet*. Also check if WoL is enabled `Wake-on: <letters>`. If letters contain `g` and not `d` then WoL is enabled. However, if letters contain `d` you need to enable WoL by running:
+First enable this feature in the BIOS. Check if the adapter supports WOL `sudo ethtool cable` and look for `Supports Wake-on: <letters>`. If `g` is among the letters, then it supports the *magic packet*. Also check if WoL is enabled `Wake-on: <letters>`. If letters contain `g` and not `d` then WoL is enabled. However, if letters contain `d` you need to enable WoL by running:
 
 `sudo ethtool -s cable wol g`
 
-You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above).
+You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above). Finally in your computer issue the command `wol 00:ab:cd:ef:12:34` and the server should wake.
 
-> WoL is enabled but does not seem to work. Need to investigate further in BIOS
