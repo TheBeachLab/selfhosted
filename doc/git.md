@@ -89,7 +89,7 @@ Or if the working repo already exist in your computer. you can add a new remote 
 
 ## Web Interface
 
-![gitweb](img/gitweb.png)
+![gitweb](../img/gitweb.png)
 
 If you want to go to something like <https://git.beachlab.org> and have a simple web frontend of your repos keep reading. There are [a number of options](https://git.wiki.kernel.org/index.php/Interfaces,_frontends,_and_tools#Web_Interfaces), I use [gitweb](https://git.wiki.kernel.org/index.php/Gitweb) `sudo apt install gitweb fcgiwrap`. The main config file is `/etc/gitweb.conf`. Make sure you only list public repos:
 

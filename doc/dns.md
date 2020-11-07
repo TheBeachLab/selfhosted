@@ -27,11 +27,11 @@ At the top of the hyerarchy of the DNS system there are the **root name servers*
 
 > In reality there are more instances of these 13 nameservers seamlessly spread across the world with [anycast](https://en.wikipedia.org/wiki/Anycast) addressing.
 
-![domain levels](img/rootdns.png)
+![domain levels](../img/rootdns.png)
 
 Looking at this map you will realise that the location of these servers are 10% technical and 90% political. The purpose of the root name servers is to answer requests for records in the root zone and to answer other requests by returning a list of the **TLD name servers** for the appropriate top-level domain (TLD).
 
-![domain levels](img/domain-levels.jpg)
+![domain levels](../img/domain-levels.jpg)
 
 A TLD nameserver maintains information for all the domain names that share a common domain extension, such as `.com`, `.net`, or whatever comes after the last dot in a url. For example, a `.com` TLD nameserver contains information for every website that ends in `.com`. Management of TLD nameservers is handled by the Internet Assigned Numbers Authority (IANA), which is a branch of ICANN.
 

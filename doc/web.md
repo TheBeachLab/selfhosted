@@ -46,7 +46,7 @@ For that you will need to create an A record for `@` (the domain) which points t
 
 I **don't** have a fixed public IP address though. So instead of an A record  I have [a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered).
 
-![records](img/dns-records.png)
+![records](../img/dns-records.png)
 
 Then I use a daemon `ddclient` that uses namecheap API (it can also query several others registrars) to update the IP address in namecheap dynamic A records. Unlike changing an A record, **the dynamic A record propagates instantly**. Install `sudo apt-get install ddclient` and configure ~~`Sudo nano /etc/ddclient/ddclient.conf`~~ `sudo nano /etc/ddclient.conf`
 
@@ -107,6 +107,6 @@ Other tasks you can do:
 
 My proud website hosted in my suitcase:
 
-![screenshot](img/tbl.png)
+![screenshot](../img/tbl.png)
 
 
