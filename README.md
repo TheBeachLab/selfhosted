@@ -32,6 +32,6 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [GPU related](gpu.md)
 - [Taskserver](taskserver.md)
 - [OBS ninja](obsninja.md)
-- Minecraft server
+- [Minecraft server](minecraft.md)
 - [Troubleshooting](troubleshooting.md)
 
