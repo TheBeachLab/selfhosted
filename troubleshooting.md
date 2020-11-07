@@ -2,7 +2,7 @@
 
 ## Computer shutdowns after exactly 20 minutes
 
-This started happenning when I replaced the Nvidia drivers from nvidia page with the ones in the ubuntu repository.
+This started happenning when I replaced the Nvidia drivers from nvidia page with the ones in the ubuntu repository. I issue the command `watch uptime` and everytime after 20 minutes, the computer shut downs.
 
 Action | Result
 ---|---
@@ -12,5 +12,12 @@ Remove the GPU | Same
 Disable WoL | Same
 Change power supply | Same
 Remove cuda 11.1 and nvidia 455 | Same
-Check BIOS settings | TODO
-Check scheduled events | TODO
+Check BIOS settings | Done (1)
+Check crontabs | Nothing scheduled
+`shutdown -c` | Same
+Replace CMOS battery | TODO
+Without HDD | **It stays on**
+With USB Live Ubuntu | **It stays on**
+(1) Wake by LAN card was disabled. I reenabled it
+
+That confirms to be a software issue. I remember when I installed the nvidia drivers. Something related with Xorg and gnome-shell. Let's see what I can see there.
