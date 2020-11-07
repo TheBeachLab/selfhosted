@@ -33,3 +33,5 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Taskserver](taskserver.md)
 - [OBS ninja](obsninja.md)
 - Minecraft server
+- [Troubleshooting](troubleshooting.md)
+
