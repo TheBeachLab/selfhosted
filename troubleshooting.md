@@ -20,4 +20,8 @@ Without HDD | **It stays on**
 With USB Live Ubuntu | **It stays on**
 (1) Wake by LAN card was disabled. I reenabled it
 
-That confirms to be a software issue. I remember when I installed the nvidia drivers. Something related with Xorg and gnome-shell. Let's see what I can see there.
+That confirms to be a software issue. I remember when I installed the nvidia drivers. Something related with Xorg and gnome-shell. Let's see what I can do there. In fact now when I log in with screen and keyboard it jumps to gnome login screen. Maybe it was not shut down. Could it be that if you don't log in in 20 minutes it hybernates? I did not realise because the server is headless.
+
+`sudo apt purge gnome-shell && sudo apt autoremove`
+
+> **SOLVED!** Removing gnome-shell solved the issue!
