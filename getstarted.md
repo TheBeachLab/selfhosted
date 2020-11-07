@@ -4,8 +4,9 @@
 
 * [Installing Ubuntu Server](#installing-ubuntu-server)
 * [Set the root password](#set-the-root-password)
-* [Configure ethernet](#configure-ethernet)
 * [Upgrade](#upgrade)
+* [Enable beep](#enable-beep)
+* [Configure ethernet](#configure-ethernet)
 * [Get rid of snap](#get-rid-of-snap)
 * [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
 * [Configure Wake on LAN](#configure-wake-on-lan)
@@ -19,6 +20,25 @@ First step is installing Ubuntu Server. I installed 20.04 LTS. There are plenty 
 ## Set the root password
 
 `sudo passwd root`. **Do not** forget the root password.
+
+## Upgrade
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+## Enable beep
+
+You might think that's silly, but it helps me a lot when debugging or as notification.
+
+```bash
+sudo apt install beep
+sudo modprobe pcspkr
+```
+
+Test it with the `beep` command. That will work for the current session. To make the beeping persistent comment the line `blacklist pcspkr` from `/etc/modprobe.d/blacklist.conf`. 
+
+> TODO: Non root users see `beep: Error: Could not open any device` and running with sudo outputs `beep: Error: Running under sudo, which is not supported for security reasons. beep: Error: Set up permissions for the pcspkr evdev device file instead.`
 
 ## Configure ethernet
 
@@ -43,12 +63,6 @@ network:
 
 Then `sudo netplan apply` you should be connected now.
 
-## Upgrade
-
-```bash
-sudo apt update
-sudo apt upgrade
-```
 
 ## Get rid of snap
 
@@ -77,4 +91,3 @@ First enable this feature in the BIOS. Check if the adapter supports WOL `sudo e
 `sudo ethtool -s cable wol g`
 
 You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above). Finally in your computer issue the command `wol 00:ab:cd:ef:12:34` and the server should wake.
-
