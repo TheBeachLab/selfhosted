@@ -97,7 +97,7 @@ tensor([[0.8937, 0.2411, 0.1159],
 True
 ```
 
-Install jupyterlab `pip3 install jupyterlab`
+Install jupyterlab `pip3 install jupyterlab ipywidgets`
 
 > Note: Multiple warnings about `/home/ml/.local/bin` not in your lab.
 
