@@ -109,4 +109,6 @@ My proud website hosted in my suitcase:
 
 ![screenshot](../img/tbl.png)
 
+To deploy your website with git check the [git](git.md) section.
+
 

@@ -8,6 +8,7 @@
 * [Create or clone a bare repository](#create-or-clone-a-bare-repository)
 * [Working repositories](#working-repositories)
 * [Web Interface](#web-interface)
+* [Deploy your website with git](#deploy-your-website-with-git)
 
 <!-- vim-markdown-toc -->
 
@@ -75,13 +76,13 @@ To clone a bare repository:
 
 > **Beware!** If the repo is private you will need either the login/password (for https address) or a private key (for the ssh address). To send a ssh private key to your server you can use the scp command
 >
-> scp -P 22222 .ssh/private-key git@git.beachlab.org:/home/git/.ssh/
+> scp -P 22222 .ssh/private-key git@beachlab.org:/home/git/.ssh/
 
 ## Working repositories
 
 Once you have the bare repositories in your server, you can clone a working repository in your computer.
 
-`git clone ssh://git@git.beachlab.org:22222/home/git/public/myrepo.git`
+`git clone ssh://git@beachlab.org:22222/home/git/public/myrepo.git`
 
 Or if the working repo already exist in your computer. you can add a new remote pointing to your suitcase.
 
@@ -124,5 +125,57 @@ Add ssl certificates `sudo certbot --nginx -d git.beachlab.org`
 Now test the site by accessing the URL over browser (after adding CNAME record and entries in `/etc/hosts`).
 
 There are many other things you can customize in `etc/gitweb.conf` and the files in `/usr/share/gitweb`. Check it out. I use this theme <http://kogakure.github.io/gitweb-theme/>
+
+## Deploy your website with git
+
+You can deploy and update your website to your nginx server using a bare repository and git hooks. Here's how I do it.
+
+- Init or clone a bare repository in your public folder. In my case, I cloned the one I already have from github `git clone --bare git@github.com:TheBeachLab/BeachLab_website.git`. I later renamed `BeachLab_website.git` to `blweb.git` as my life is shortening and every character I save counts.
+- Enter the hooks folder `cd blweb.git/hooks`
+- Create a new hook `touch post-receive`
+- **WARNING: This option is probably not a good idea for you**. Make `/var/www` writable by everyone. `sudo chmod 777 /var/www`. I am assuming here you already have a website up and running and configured as `/var/www/beachlab.org`, if not check the [web](web.md) section.
+- Create the following hook `nano post-receive`. This will copy the current version of the repository files to the folder where the website is being served everytime you push to it.
+
+```bash
+ #!/bin/sh
+
+# The production directory
+TARGET="/var/www/beachlab.org"
+
+# A temporary directory for deployment
+TEMP="/home/git/tmp/beachlab.org"
+
+# The Git repo
+REPO="/home/git/public/blweb.git"
+
+# Deploy the content to the temporary directory
+mkdir -p $TEMP
+git --work-tree=$TEMP --git-dir=$REPO checkout -f
+
+# Do stuffs, like npm install…
+
+# Replace the production directory
+# with the temporary directory
+
+rm -rf $TARGET
+mv $TEMP $TARGET
+```
+
+In your local machine you will have a working copy of your repository that you can push to your suitcase and/or to github. Actually you can push to both at the same time or separately depending upon how you configure your remotes and the default upstream
+
+```bash
+[unix ~/Repositories/Beach Lab/website]$ git remote -v
+github	git@github.com:TheBeachLab/BeachLab_website.git (fetch)
+github	git@github.com:TheBeachLab/BeachLab_website.git (push)
+origin	git@github.com:TheBeachLab/BeachLab_website.git (fetch)
+origin	git@github.com:TheBeachLab/BeachLab_website.git (push)
+origin	ssh://git@beachlab.org:22222/home/git/public/blweb.git (push)
+suitcase	ssh://git@beachlab.org:22222/home/git/public/blweb.git (fetch)
+suitcase	ssh://git@beachlab.org:22222/home/git/public/blweb.git (push)
+```
+
+In this case I can push to github `git push github master` or to the suitcase `git push suitcase master` or to both `git push origin master`. You can also set what is the default upstream when you just do a `git push` by doing `git push --set-upstream origin master`.
+
+> TODO: Rename all my `master` branches to `main` in all repositories. And set default to `main`
 
 
