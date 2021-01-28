@@ -176,6 +176,8 @@ suitcase	ssh://git@beachlab.org:22222/home/git/public/blweb.git (push)
 
 In this case I can push to github `git push github master` or to the suitcase `git push suitcase master` or to both `git push origin master`. You can also set what is the default upstream when you just do a `git push` by doing `git push --set-upstream origin master`.
 
+Notice that `origin` has multiple remotes. You can add a remote by using `git remote set-url --add --push origin git://another/repo.git`
+
 > TODO: Rename all my `master` branches to `main` in all repositories. And set default to `main`
 
 
