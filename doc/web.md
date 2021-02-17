@@ -6,6 +6,12 @@
 * [Create and configure your websites](#create-and-configure-your-websites)
 * [Point your domain to your machine](#point-your-domain-to-your-machine)
 * [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
+* [Create your own video streaming server](#create-your-own-video-streaming-server)
+	* [Install nginx RTMP module](#install-nginx-rtmp-module)
+	* [Setup the firewall](#setup-the-firewall)
+	* [Stream with OBS](#stream-with-obs)
+	* [Watch on VLC](#watch-on-vlc)
+	* [TODO](#todo)
 * [The result](#the-result)
 
 <!-- vim-markdown-toc -->
@@ -102,6 +108,65 @@ Other tasks you can do:
 - View your certificates `sudo certbot certificates`
 - Test the auto renewal process `sudo certbot renew --dry-run`
 - Delete a certificate `sudo certbot delete`
+
+## Create your own video streaming server
+
+### Install nginx RTMP module
+
+This is very cool to watch a movie with someone remotely. First install the RTMP module for nginx
+
+```bash
+sudo add-apt-repository universe
+sudo apt install libnginx-mod-rtmp
+```
+
+Adjust your web server's configuration so it can accept and deliver your media stream.
+
+`sudo nano /etc/nginx/nginx.conf`
+
+And add the following to the bottom of the config file:
+
+```bash
+rtmp {
+        server {
+                listen 21935;
+                chunk_size 4096;
+
+                application live {
+                        live on;
+                        record off;
+                }
+        }
+}
+```
+
+Restart the server `sudo systemctl restart nginx`. 
+
+### Setup the firewall
+
+Adjust the firewall rules to accept TCP connections on port 21935.
+
+```bash
+sudo ufw add 21935
+sudo ufw reload
+```
+
+### Stream with OBS
+
+Now setup your OBS streaming software and add this streaming server
+
+`rtmp://192.168.1.50/live` replacing with the server IP address,
+
+Add a stream_key if you want and start streaming
+
+### Watch on VLC
+
+Launch VLC, open your stream by clicking on Media > Open Network Stream. Enter the path to your stream, adding the Stream Key you set up in OBS, then click Play. For example, rtmp://IP-ADDRESS/live/SECRET-KEY. You should now be viewing your very own live video stream!
+
+### TODO
+
+- How to protect the stream server so no one can stream to it without a stream key.
+- Record videos
 
 ## The result
 
