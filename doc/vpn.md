@@ -40,5 +40,5 @@ Get the configuration file from the client computer
 
 And stablish a connection when needed
 
-`sudo openvpn tblvpn,ovpn`
+`sudo openvpn tblvpn.ovpn`
 
