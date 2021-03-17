@@ -25,3 +25,50 @@ That confirms to be a software issue. I remember when I installed the nvidia dri
 `sudo apt purge gnome-shell && sudo apt autoremove`
 
 > **SOLVED!** Removing gnome-shell solved the issue!
+
+## Updates cannot be automatically installed
+
+This message appears when I log in sometimes:
+
+```
+0 updates can be installed immediately.
+0 of these updates are security updates.
+
+
+16 updates could not be installed automatically. For more details,
+see /var/log/unattended-upgrades/unattended-upgrades.log
+```
+
+And the file `/var/log/unattended-upgrades/unattended-upgrades.log` says
+
+```
+2021-03-01 03:47:00,154 INFO Starting unattended upgrades script
+2021-03-01 03:47:00,155 INFO Allowed origins are: o=Ubuntu,a=focal, o=Ubuntu,a=focal-security, o=UbuntuESMApps,a=focal-apps-security, o=UbuntuESM,a=focal-infra-security
+2021-03-01 03:47:00,155 INFO Initial blacklist: 
+2021-03-01 03:47:00,155 INFO Initial whitelist (not strict): 
+2021-03-01 06:58:49,709 INFO Starting unattended upgrades script
+2021-03-01 06:58:49,710 INFO Allowed origins are: o=Ubuntu,a=focal, o=Ubuntu,a=focal-security, o=UbuntuESMApps,a=focal-apps-security, o=UbuntuESM,a=focal-infra-security
+2021-03-01 06:58:49,710 INFO Initial blacklist: 
+2021-03-01 06:58:49,710 INFO Initial whitelist (not strict): 
+2021-03-01 06:58:50,397 INFO No packages found that can be upgraded unattended and no pending auto-removals
+2021-03-01 06:58:50,469 INFO Package libnvidia-cfg1-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,470 INFO Package libnvidia-common-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,472 INFO Package libnvidia-compute-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,473 INFO Package libnvidia-decode-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,475 INFO Package libnvidia-encode-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,476 INFO Package libnvidia-extra-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,478 INFO Package libnvidia-fbc1-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,479 INFO Package libnvidia-gl-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,481 INFO Package libnvidia-ifr1-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,516 INFO Package nvidia-compute-utils-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,518 INFO Package nvidia-dkms-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,519 INFO Package nvidia-driver-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,521 INFO Package nvidia-kernel-common-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,522 INFO Package nvidia-kernel-source-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,524 INFO Package nvidia-utils-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-01 06:58:50,559 INFO Package xserver-xorg-video-nvidia-460 is kept back because a related package is kept back or due to local apt_preferences(5).
+2021-03-02 00:27:38,410 INFO Starting unattended upgrades script
+...
+```
+
+I haven't found a way to solve it yet.
