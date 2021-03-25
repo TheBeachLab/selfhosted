@@ -28,7 +28,7 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Mail server](doc/mail.md)
 - [Git server](doc/git.md)
 - [Mumble server](doc/mumble.md)
-- [VPN Sersver](doc/vpn.md)
+- [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
 - [GPU related](doc/gpu.md)
 - [Taskserver](doc/taskserver.md)
