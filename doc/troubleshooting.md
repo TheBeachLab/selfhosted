@@ -71,4 +71,4 @@ And the file `/var/log/unattended-upgrades/unattended-upgrades.log` says
 ...
 ```
 
-I haven't found a way to solve it yet.
+Try to manually update the packages listed. If it says already the latest version it is safe to just remove the keptback file `sudo rm /var/lib/unattended-upgrades/kept-back`
