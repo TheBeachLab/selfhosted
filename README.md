@@ -31,6 +31,7 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
 - [GPU related](doc/gpu.md)
+- [Cloud server](doc/cloud.md)
 - [Taskserver](doc/taskserver.md)
 - [OBS ninja](doc/obsninja.md)
 - [Minecraft server](doc/minecraft.md)

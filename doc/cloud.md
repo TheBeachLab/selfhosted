@@ -82,3 +82,27 @@ Finally restart postgres service `sudo systemctl restart postgresql.service`
 ## Install
 
 Go to cloud.beachlab.org and enter the required data
+
+## Status 
+
+Missconfiguration. The server throws
+
+```
+Internal Server Error
+
+The server was unable to complete your request.
+
+If this happens again, please send the technical details below to the server administrator.
+
+More details can be found in the server log.
+Technical details
+
+    Remote Address: 37.135.193.89
+    Request ID: 6nBf3q5CwcAromYidTcz
+```
+
+Nginx error log `/var/log/nginx/error.log` shows
+
+```
+2021/05/06 14:49:46 [error] 814#814: *62 connect() failed (111: Connection refused) while connecting to upstream, client: 37.135.193.89, server: cloud.beachlab.org, request: "GET /index.php HTTP/2.0", upstream: "fastcgi://127.0.0.1:9000", host: "cloud.beachlab.org"
+```
