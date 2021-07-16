@@ -130,7 +130,7 @@ There are many other things you can customize in `etc/gitweb.conf` and the files
 
 You can deploy and update your website to your nginx server using a bare repository and git hooks. Here's how I do it.
 
-- Init or clone a bare repository in your public folder. In my case, I cloned the one I already have from github `git clone --bare git@github.com:TheBeachLab/BeachLab_website.git`. I later renamed `BeachLab_website.git` to `blweb.git` as my life is shortening and every character I save counts.
+- Init or clone a bare repository in your public folder `/home/git/public`. In my case, I cloned the one I already have from github `git clone --bare git@github.com:TheBeachLab/BeachLab_website.git`. I later renamed `BeachLab_website.git` to `blweb.git` as my life is shortening and every character I save counts.
 - Enter the hooks folder `cd blweb.git/hooks`
 - Create a new hook `touch post-receive`
 - **WARNING: This option is probably not a good idea for you**. Make `/var/www` writable by everyone. `sudo chmod 777 /var/www`. I am assuming here you already have a website up and running and configured as `/var/www/beachlab.org`, if not check the [web](web.md) section.
