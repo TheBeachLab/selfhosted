@@ -15,6 +15,8 @@
 	* [Enable MQTT over websockets](#enable-mqtt-over-websockets)
 * [PostgreSQL](#postgresql)
 	* [Install](#install-1)
+	* [Remote connection](#remote-connection)
+	* [Common psql commands](#common-psql-commands)
 	* [Create a new role](#create-a-new-role)
 	* [Create a new database](#create-a-new-database)
 	* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
@@ -258,6 +260,22 @@ postgres=#
 ```
 
 Exit with `\q`
+
+### Remote connection
+
+- Add a firewall rule `sudo ufw allow 5432 comment 'postgres'`and `sudo ufw reload`
+- Listen connections in `/etc/postgresql/12/main/postgresql.conf`
+- Accept connections on `/etc/postgresql/12/main/pg_hba.conf` from local network `192.168.1.0/24`
+- On remote (arch) install `postgresql-libs` package
+- Test `psql -h 192.168.1.50 -U postgres`
+
+### Common psql commands
+
+- List databases `\l`
+- List databases with size, tablespace and description `\l+`
+- Connect to database `\c database`
+- Display tables `\dt` and `\dt+`
+- Display users `\du`
 
 ### Create a new role
 
