@@ -20,7 +20,7 @@
 	* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
 	* [TimescaleDB](#timescaledb)
 	* [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
-* [Managing PostgreSQL with pdAdmin](#managing-postgresql-with-pdadmin)
+* [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
 
 <!-- vim-markdown-toc -->
 
@@ -444,7 +444,7 @@ pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 
 > To be continued...
 
-## Managing PostgreSQL with pdAdmin
+## Managing PostgreSQL with pgAdmin
 
 ```bash
 curl https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo apt-key add
