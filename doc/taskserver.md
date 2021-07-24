@@ -22,7 +22,7 @@ sudo apt install cmake
 sudo apt install gnutls-bin
 ```
 
-## Install
+## Install the server
 
 ```bash
 sudo adduser taskmaster
@@ -38,7 +38,7 @@ cd ..
 sudo make install
 ```
 
-## Configure
+## Configure the server
 
 ```bash
 export TASKDDATA=~/taskd
@@ -114,6 +114,8 @@ systemctl enable taskd.service
 systemctl enable taskd.service
 ```
 
+## Generate certificate files for each client
+
 Add org and users
 
 ```bash
@@ -125,7 +127,7 @@ cd taskd/pki
 
 This will generate a certificate and a private key for the user fran_sanchez
 
-## Copy the certificates in the machine/device where client taskwarrior is
+## Copy the certificates to the client machine/device (taskwarrior)
 
 Remember taskmaster user must have keys in .ssh folder and 2FA enabled
 
@@ -149,8 +151,7 @@ Set the server parameters
 task config taskd.server      -- beachlab.org:53589
 task config taskd.credentials -- TBL/Fran Sanchez/YOUR-CREDENTIALS-HERE
 ```
-
-> TODO: Where did the credentials come from?
+Credentials where shown when creating the user.
 
 ## Sync
 
