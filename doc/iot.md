@@ -23,6 +23,10 @@
 	* [TimescaleDB](#timescaledb)
 	* [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
 * [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
+	* [Install pgadmin4](#install-pgadmin4)
+	* [Apache and nginx together](#apache-and-nginx-together)
+	* [Configure](#configure)
+	* [Running pgadmin](#running-pgadmin)
 
 <!-- vim-markdown-toc -->
 
@@ -464,15 +468,58 @@ pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 
 ## Managing PostgreSQL with pgAdmin
 
+### Install pgadmin4
+
 ```bash
-curl https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo apt-key add
+#
+# Setup the repository
+#
+
+# Install the public key for the repository (if not done previously):
+sudo curl https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo apt-key add
+
+# Create the repository configuration file:
 sudo sh -c 'echo "deb https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list && apt update'
+
+#
+# Install pgAdmin
+#
+# Install for web mode only:
 sudo apt install pgadmin4-web
-sudo /usr/pgadmin4/bin/setup-web.sh
 ```
 
-> Note: It gave error regarding missing Apache. Need to finish the [hosting section with nginx](https://www.pgadmin.org/docs/pgadmin4/latest/server_deployment.html#hosting) but I don't fully understand it yet.
->
-> I also have to install pgAgent
+### Apache and nginx together
 
+To avoid both web servers listening to the same port change the default listening port from 80 to 5050 and 443 to 8090 in `/etc/apache2/ports.conf`
 
+```bash
+Listen 5050
+
+<IfModule ssl_module>
+        Listen 8090
+</IfModule>
+
+<IfModule mod_gnutls.c>
+        Listen 8090
+</IfModule>
+```
+
+and `sudo nano /etc/apache2/sites-available/000-default.conf` and set
+
+```<VirtualHost *:5050>```
+
+Then reload the service `sudo systemctl restart apache2` and verify Apache is listening to 8080 `sudo netstat -tlpn`
+
+Also create the ufw rules `sudo ufw allow 5050 comment 'apache pgadmin'` and `sudo ufw reload`
+
+### Configure
+
+Run `/usr/pgadmin4/bin/setup-web.sh`
+
+### Running pgadmin
+
+Go to `http://server-ip:5050/pgadmin4`
+
+if you don't remember the credentials `mv /var/lib/pgadmin/pgadmin4.db /var/lib/pgadmin/pgadmin4.db.backup` and run `/usr/pgadmin4/bin/setup-web.sh` again.
+
+Add a server and enter the connection details
