@@ -536,7 +536,7 @@ ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
 
 #### For every table
 
-- create a column named `id` with `bigserial` datatype and primary key
+- create a column named `id` with `bigint` datatype and IDENTITY. This will be the primary key
 - create a column named `created` of `timestamp with timezone` datatype and default value `now()`
 - create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
 
@@ -576,3 +576,5 @@ CREATE TABLE template (LIKE users INCLUDING ALL);
 ```
 
 Does not copy triggers and seems to be a problem with serials? #TOFIX
+
+
