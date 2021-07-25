@@ -27,6 +27,9 @@
 	* [Apache and nginx together](#apache-and-nginx-together)
 	* [Configure](#configure)
 	* [Running pgadmin](#running-pgadmin)
+	* [Tips and tricks](#tips-and-tricks)
+		* [For every table](#for-every-table)
+		* [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
 
 <!-- vim-markdown-toc -->
 
@@ -506,7 +509,9 @@ Listen 5050
 
 and `sudo nano /etc/apache2/sites-available/000-default.conf` and set
 
-```<VirtualHost *:5050>```
+```
+<VirtualHost *:5050>
+```
 
 Then reload the service `sudo systemctl restart apache2` and verify Apache is listening to 8080 `sudo netstat -tlpn`
 
@@ -525,3 +530,40 @@ if you don't remember the credentials `mv /var/lib/pgadmin/pgadmin4.db /var/lib/
 Add a server and enter the connection details. You might have to connect to `sudo -u postgres psql` and `ALTER USER postgres PASSWORD 'mynewpassword';` if you don't remember your credentials.
 
 ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
+
+### Tips and tricks
+
+#### For every table
+
+- create a column named `id` with `bigserial` datatype and primary key
+- create a column named `created` of `timestamp with timezone` datatype and default value `now()`
+- create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
+
+Probably best to set all these in a table template.
+
+#### Autoupdate the modified timestamp when a record is updated
+
+Using pgadmin query tool create a function `update_timestamp_modified_column()`
+
+```sql
+CREATE OR REPLACE FUNCTION update_timestamp_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  CASE WHEN OLD.* IS DISTINCT FROM NEW.* THEN
+    NEW.modified = NOW();
+    RETURN NEW;
+  ELSE
+    RETURN OLD;
+  END CASE;
+END;
+$$ LANGUAGE 'plpgsql';
+```
+
+This function will appear under `trigger functions`. Now, for every table, we create a trigger for each table
+
+```sql
+CREATE TRIGGER update_users_modified
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE PROCEDURE update_timestamp_modified_column();
+```
