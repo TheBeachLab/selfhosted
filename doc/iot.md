@@ -30,6 +30,7 @@
 	* [Tips and tricks](#tips-and-tricks)
 		* [For every table](#for-every-table)
 		* [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
+		* [New template from table](#new-template-from-table)
 
 <!-- vim-markdown-toc -->
 
@@ -567,3 +568,11 @@ BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE PROCEDURE update_timestamp_modified_column();
 ```
+
+#### New template from table
+
+```sql
+CREATE TABLE template (LIKE users INCLUDING ALL);
+```
+
+Does not copy triggers and seems to be a problem with serials? #TOFIX
