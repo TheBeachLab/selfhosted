@@ -536,7 +536,7 @@ ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
 
 #### For every table
 
-- create a column named `id` with `bigint` datatype and IDENTITY. This will be the primary key
+- create a column named `id` with `bigint` or `int` datatype and IDENTITY. This will be the primary key
 - create a column named `created` of `timestamp with timezone` datatype and default value `now()`
 - create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
 
@@ -563,7 +563,7 @@ $$ LANGUAGE 'plpgsql';
 This function will appear under `trigger functions`. Now, for every table, we create a trigger for each table
 
 ```sql
-CREATE TRIGGER update_users_modified
+CREATE TRIGGER update_modified
 BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE PROCEDURE update_timestamp_modified_column();
