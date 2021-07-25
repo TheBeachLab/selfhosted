@@ -582,7 +582,7 @@ Does not copy triggers. You will have to do this manually
 Here adding a foreign key
 
 ```sql
-ALTER TABLE user_interest ADD COLUMN IF NOT EXISTS interest_id INTEGER NOT NULL;
+ALTER TABLE interests ADD COLUMN IF NOT EXISTS interest_group_id INTEGER NOT NULL;
 ```
 
 #### Add one to many
@@ -590,9 +590,9 @@ ALTER TABLE user_interest ADD COLUMN IF NOT EXISTS interest_id INTEGER NOT NULL;
 Altered table has the many, select the foreign key. The reference table and (id) has the one
 
 ```sql
-ALTER TABLE public.user_interest
-    ADD FOREIGN KEY (interest_id)
-    REFERENCES public.interests (id)
+ALTER TABLE public.interests
+    ADD FOREIGN KEY (interest_group_id)
+    REFERENCES public.interest_group (id)
     NOT VALID;
 ```
 
