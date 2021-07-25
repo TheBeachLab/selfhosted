@@ -575,6 +575,6 @@ EXECUTE PROCEDURE update_timestamp_modified_column();
 CREATE TABLE template (LIKE users INCLUDING ALL);
 ```
 
-Does not copy triggers and seems to be a problem with serials? #TOFIX
+Does not copy triggers
 
 
