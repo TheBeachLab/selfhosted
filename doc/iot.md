@@ -536,7 +536,7 @@ ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
 
 #### For every table
 
-- create a column named `id` with `bigint` or `int` datatype and IDENTITY. This will be the primary key
+- create a column named `id` with `bigint` or `int` datatype and IDENTITY. This will be the primary key. Enroll tables, also known as join tables will have more records than other records.
 - create a column named `created` of `timestamp with timezone` datatype and default value `now()`
 - create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
 
