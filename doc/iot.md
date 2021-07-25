@@ -569,12 +569,31 @@ FOR EACH ROW
 EXECUTE PROCEDURE update_timestamp_modified_column();
 ```
 
-#### New template from table
+#### New table from existing table
 
 ```sql
 CREATE TABLE template (LIKE users INCLUDING ALL);
 ```
 
-Does not copy triggers
+Does not copy triggers. You will have to do this manually
+
+#### Add new column to existing table
+
+Here adding a foreign key
+
+```sql
+ALTER TABLE user_interest ADD COLUMN IF NOT EXISTS interest_id INTEGER NOT NULL;
+```
+
+#### Add one to many
+
+Altered table has the many, select the foreign key. The reference table and (id) has the one
+
+```sql
+ALTER TABLE public.user_interest
+    ADD FOREIGN KEY (interest_id)
+    REFERENCES public.interests (id)
+    NOT VALID;
+```
 
 
