@@ -25,7 +25,9 @@
 * [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
 	* [Install pgadmin4](#install-pgadmin4)
 	* [Apache and nginx together](#apache-and-nginx-together)
-	* [Configure](#configure)
+	* [Creating a subdomain (optional)](#creating-a-subdomain-optional)
+	* [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
+	* [Configure pgadmin](#configure-pgadmin)
 	* [Running pgadmin](#running-pgadmin)
 	* [Tips and tricks](#tips-and-tricks)
 		* [For every table](#for-every-table)
@@ -518,7 +520,42 @@ Then reload the service `sudo systemctl restart apache2` and verify Apache is li
 
 Also create the ufw rules `sudo ufw allow 5050 comment 'apache pgadmin'` and `sudo ufw reload`
 
-### Configure
+pgadmin will be located at `http://server-address:5050/pgadmin4`
+
+### Creating a subdomain (optional)
+
+I created and enabled `/etc/nginx/sites-available/postgres.beachlab.org` with this content
+
+```bash
+server {
+        listen 80;
+        listen [::]:80;
+        server_name postgres.beachlab.org;
+        return 301 http://beachlab.org:5050/pgadmin4;
+}
+```
+
+If you don't require https that's all.
+
+### Securing pgadmin with https (optional)
+
+NOT WORKING YET. Check modules /etc/apache2/ports.conf and files in /etc/apache2/sites-enabled then change redisect in /etc/nginx/sites-available/postgres.beachlab.org (and remove ufw apache full rules?)
+
+`sudo certbot certonly --standalone -d postgres.beachlab.org` which creates certificates in `/etc/letsencrypt/live/postgres.beachlab.org/`. Certificates will renew automatically.
+
+Set
+
+```bash
+ServerName beachlab.org
+ServerAlias postgres.beachlab.org
+```
+
+in `/etc/apache2/sites-available/000-default.conf`. Check syntax `sudo apache2ctl configtest` and `sudo systemctl reload apache2`
+
+Install certbot apache plugin `sudo apt install certbot python3-certbot-apache` and run `sudo certbot --apache` but not redirect`
+
+
+### Configure pgadmin
 
 Run `/usr/pgadmin4/bin/setup-web.sh`
 
