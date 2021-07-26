@@ -573,7 +573,7 @@ ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
 
 #### For every table
 
-- create a column named `id` with `bigserial` datatype and primary key
+- create a column named `id` with `bigint` or `int` datatype and IDENTITY. This will be the primary key. Enroll tables, also known as join tables will have more records than other records.
 - create a column named `created` of `timestamp with timezone` datatype and default value `now()`
 - create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
 
@@ -600,16 +600,37 @@ $$ LANGUAGE 'plpgsql';
 This function will appear under `trigger functions`. Now, for every table, we create a trigger for each table
 
 ```sql
-CREATE TRIGGER update_users_modified
+CREATE TRIGGER update_modified
 BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE PROCEDURE update_timestamp_modified_column();
 ```
 
-#### New template from table
+#### New table from existing table
 
 ```sql
 CREATE TABLE template (LIKE users INCLUDING ALL);
 ```
 
-Does not copy triggers and seems to be a problem with serials? #TOFIX
+Does not copy triggers. You will have to do this manually
+
+#### Add new column to existing table
+
+Here adding a foreign key
+
+```sql
+ALTER TABLE interests ADD COLUMN IF NOT EXISTS interest_group_id INTEGER NOT NULL;
+```
+
+#### Add one to many
+
+Altered table has the many, select the foreign key. The reference table and (id) has the one
+
+```sql
+ALTER TABLE public.interests
+    ADD FOREIGN KEY (interest_group_id)
+    REFERENCES public.interest_group (id)
+    NOT VALID;
+```
+
+
