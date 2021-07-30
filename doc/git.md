@@ -99,7 +99,7 @@ git config user.email no.email.yet
 git commit -m 'added file'
 ```
 
-Now `git branch` returns `master`. So we can push it to the bare repo `git push origin master`. And master branch will be created in bare repo. Now the bare repo is fully functional.
+Now `git branch` returns `master`. So we can push it to the bare repo `git push origin master`. And master branch will be created in bare repo. Now the bare repo is fully functional. You can now delete the server working copy and clone it from outside.
 
 ### Clone bare
 
@@ -194,7 +194,7 @@ rm -rf $TARGET
 mv $TEMP $TARGET
 ```
 
-In your local machine you will have a working copy of your repository that you can push to your suitcase and/or to github. Actually you can push to both at the same time or separately depending upon how you configure your remotes and the default upstream
+Make this hook executable. In your local machine you will have a working copy of your repository that you can push to your suitcase and/or to github. Actually you can push to both at the same time or separately depending upon how you configure your remotes and the default upstream
 
 ```bash
 [unix ~/Repositories/Beach Lab/website]$ git remote -v
