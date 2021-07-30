@@ -6,6 +6,8 @@
 * [Setup a plain git server](#setup-a-plain-git-server)
 * [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
 * [Create or clone a bare repository](#create-or-clone-a-bare-repository)
+	* [Create bare](#create-bare)
+	* [Clone bare](#clone-bare)
 * [Working repositories](#working-repositories)
 * [Web Interface](#web-interface)
 * [Deploy your website with git](#deploy-your-website-with-git)
@@ -29,7 +31,7 @@ git@thebeachlab:~$ touch .ssh/authorized_keys
 git@thebeachlab:~$ chmod 600 .ssh/authorized_keys
 ```
 
-Now copy one of your public keys in `~/.ssh/authorized_keys`. Alternatively you can import you public keys from github or gitlab
+Now copy one or more of your public keys in `~/.ssh/authorized_keys`. Alternatively you can import you public keys from github or gitlab
 
 `ssh-import-id gh:thebeachlab`
 
@@ -61,14 +63,45 @@ And restart sshd `sudo service sshd restart`. You are welcome.
 
 It is important that you understand the difference between a **bare repository** and a **working repository**. If not, read [this](https://www.saintsjd.com/2011/01/what-is-a-bare-git-repository/). **In the ubuntu server all the repositories must be bare**.
 
+### Create bare
+
 To create a bare repository  you have to ssh into git user and:
 
 ```bash
 git@thebeachlab:~$ cd public
-git@thebeachlab:~$ mkdir myrepo.git
-git@thebeachlab:~$ cd myrepo.git
-git@thebeachlab:~$ git init --bare
+git@thebeachlab:~$ git init --bare myrepo.git
+
 ```
+
+This repo is useless it has no commits and more importantly no branches. We cannot tell people to clone it yet. Now clone the empy repository `git clone myrepo.git`.
+
+```bash
+Cloning into 'streamteam'...
+warning: You appear to have cloned an empty repository.
+done.
+```
+
+Do `git status`
+
+```bash
+On branch master
+
+No commits yet
+```
+
+This is misleading because `git branch` returns nothing. There is no master branch. Add some files
+
+```bash
+echo 'test git' > index.html
+git add .
+git config user.name gituser
+git config user.email no.email.yet
+git commit -m 'added file'
+```
+
+Now `git branch` returns `master`. So we can push it to the bare repo `git push origin master`. And master branch will be created in bare repo. Now the bare repo is fully functional.
+
+### Clone bare
 
 To clone a bare repository:
 
