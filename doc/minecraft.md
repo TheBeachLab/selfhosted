@@ -13,7 +13,7 @@ OpenJDK Runtime Environment (build 11.0.9+11-Ubuntu-0ubuntu1.20.04)
 OpenJDK 64-Bit Server VM (build 11.0.9+11-Ubuntu-0ubuntu1.20.04, mixed mode, sharing)
 ```
 
- Otherwise install `sudo apt install openjdk-8-jre-headless`.
+ Otherwise install `sudo apt update; sudo apt install openjdk-16-jdk-headless`.
 
 Download and configure the server
 
