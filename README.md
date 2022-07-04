@@ -1,10 +1,8 @@
 # Selfhosted
 
-> To become independent, you don't have to  ask for independence. To become independent you have *to be* independent.
->
-> Fran Sanchez
+> To become independent, you don't have to  ask for independence. To become independent you have **to be** independent.
 
-This is the story of how I am slowly becoming independent.
+This is the story of how I am slowly becoming independent. Disclaimer: If you don't understand anything, that's fine. I created this documentation for myself.
 
 ![](img/suitcase.jpg)
 
@@ -35,5 +33,6 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Taskserver](doc/taskserver.md)
 - [OBS ninja](doc/obsninja.md)
 - [Minecraft server](doc/minecraft.md)
+- [OpenHab Server](doc/openhab.md)
 - [Troubleshooting](doc/troubleshooting.md)
 
