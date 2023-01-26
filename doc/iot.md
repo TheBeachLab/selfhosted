@@ -254,6 +254,13 @@ keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
 
 Add firewall rules. Adjust NAT or just like me setup a DMZ host for the damn server. I have tested it with the mobile app [owntracks](https://owntracks.org/) and it works like a charm. Coming up in IoT, storing your precious data in a database.
 
+### Troubleshooting MQTT
+
+Mosquitto cannot be started as a service. Service does not start, when started manually `mosquitto -c /etc/mosquitto/mosquitto.conf`complains about cannot open private key
+Solved by installing acl `sudo apt install acl` and `sudo setfacl -R -m u:pink:rX /etc/letsencrypt/{live,archive}`
+
+When pink runs it complains about permissions in /var/lib/mosquitto (belongs to mosquitto:root). No idea how to continue
+
 ## PostgreSQL
 
 ### Install
