@@ -260,6 +260,8 @@ Mosquitto cannot be started as a service. Service does not start, when started m
 Solved by installing acl `sudo apt install acl` and `sudo setfacl -R -m u:pink:rX /etc/letsencrypt/{live,archive}`
 
 When pink runs it complains about permissions in /var/lib/mosquitto (belongs to mosquitto:root). No idea how to continue
+Solved by
+sudo setfacl -R -m u:mosquitto:rX /etc/letsencrypt/{live,archive}`
 
 ## PostgreSQL
 
