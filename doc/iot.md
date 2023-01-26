@@ -160,6 +160,10 @@ Generate a password for a specific user, in this case me, and store it in /etc/m
 
 `sudo mosquitto_passwd -c /etc/mosquitto/passwd fran`
 
+If you need to create an extra use leave the `-c`
+
+`sudo mosquitto_passwd /etc/mosquitto/passwd fmcu`
+
 Create a config file to deny anonymous users
 
 `sudo nano /etc/mosquitto/conf.d/default.conf`
