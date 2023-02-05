@@ -2,37 +2,41 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Node Red](#node-red)
-	* [Prepare](#prepare)
-	* [Install](#install)
-	* [Usage](#usage)
-	* [Secure with https](#secure-with-https)
-	* [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
-* [Mosquitto broker](#mosquitto-broker)
-	* [Install and test](#install-and-test)
-	* [Secure mosquitto](#secure-mosquitto)
-	* [Configure MQTT SSL](#configure-mqtt-ssl)
-	* [Enable MQTT over websockets](#enable-mqtt-over-websockets)
-* [PostgreSQL](#postgresql)
-	* [Install](#install-1)
-	* [Remote connection](#remote-connection)
-	* [Common psql commands](#common-psql-commands)
-	* [Create a new role](#create-a-new-role)
-	* [Create a new database](#create-a-new-database)
-	* [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
-	* [TimescaleDB](#timescaledb)
-	* [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
-* [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
-	* [Install pgadmin4](#install-pgadmin4)
-	* [Apache and nginx together](#apache-and-nginx-together)
-	* [Creating a subdomain (optional)](#creating-a-subdomain-optional)
-	* [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
-	* [Configure pgadmin](#configure-pgadmin)
-	* [Running pgadmin](#running-pgadmin)
-	* [Tips and tricks](#tips-and-tricks)
-		* [For every table](#for-every-table)
-		* [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
-		* [New template from table](#new-template-from-table)
+- [IoT](#iot)
+  - [Node Red](#node-red)
+    - [Prepare](#prepare)
+    - [Install](#install)
+    - [Usage](#usage)
+    - [Secure with https](#secure-with-https)
+    - [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
+  - [Mosquitto broker](#mosquitto-broker)
+    - [Install and test](#install-and-test)
+    - [Secure mosquitto](#secure-mosquitto)
+    - [Configure MQTT SSL](#configure-mqtt-ssl)
+    - [Enable MQTT over websockets](#enable-mqtt-over-websockets)
+  - [PostgreSQL](#postgresql)
+    - [Install](#install-1)
+    - [Upgrade](#upgrade)
+    - [Remote connection](#remote-connection)
+    - [Common psql commands](#common-psql-commands)
+    - [Create a new role](#create-a-new-role)
+    - [Create a new database](#create-a-new-database)
+    - [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
+    - [TimescaleDB](#timescaledb)
+    - [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
+  - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
+    - [Install pgadmin4](#install-pgadmin4)
+    - [Apache and nginx together](#apache-and-nginx-together)
+    - [Creating a subdomain (optional)](#creating-a-subdomain-optional)
+    - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
+    - [Configure pgadmin](#configure-pgadmin)
+    - [Running pgadmin](#running-pgadmin)
+    - [Tips and tricks](#tips-and-tricks)
+      - [For every table](#for-every-table)
+      - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
+      - [New table from existing table](#new-table-from-existing-table)
+      - [Add new column to existing table](#add-new-column-to-existing-table)
+      - [Add one to many](#add-one-to-many)
 
 <!-- vim-markdown-toc -->
 
@@ -283,6 +287,63 @@ postgres=#
 ```
 
 Exit with `\q`
+
+### Upgrade
+
+Check version running `sudo -u postgres psql -c 'SELECT version();'`
+
+Output if you are currently runnin 12:
+
+```
+ PostgreSQL 12.12 (Ubuntu 12.12-0ubuntu0.20.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0, 64-bit
+(1 row)
+````
+
+Check what postgres versions you have installed `pg_lsclusters`  
+
+```
+Ver Cluster       Port Status Owner    Data directory                       Log file
+12  main          5432 online postgres /var/lib/postgresql/12/main          /var/log/postgresql/postgresql-12-main.log
+14  main          5434 online postgres /var/lib/postgresql/14/main          /var/log/postgresql/postgresql-14-main.log
+```
+
+Please be aware that the installation of postgresql-14 will automatically create a default cluster 14/main. If you want to upgrade the 12/main cluster, you need to remove the already existing 14 cluster:
+
+`sudo pg_dropcluster --stop 14 main`
+
+Use `dpkg -l | grep postgresql` to check which postgres packages are installed:
+
+```
+ii  postgresql                            14+238                                  all          object-relational SQL database (supported version)
+ii  postgresql-12                         12.12-0ubuntu0.20.04.1                  amd64        object-relational SQL database, version 12 server
+ii  postgresql-14                         14.6-0ubuntu0.22.04.1                   amd64        The World's Most Advanced Open Source Relational Database
+ii  postgresql-client-12                  12.12-0ubuntu0.20.04.1                  amd64        front-end programs for PostgreSQL 12
+ii  postgresql-client-14                  14.6-0ubuntu0.22.04.1                   amd64        front-end programs for PostgreSQL 14
+ii  postgresql-client-common              238                                     all          manager for multiple PostgreSQL client versions
+ii  postgresql-common                     238                                     all          PostgreSQL database-cluster manager
+ii  postgresql-contrib                    14+238                                  all          additional facilities for PostgreSQL (supported version)
+ii  timescaledb-loader-postgresql-12      1.7.5~ubuntu20.04                       amd64        The loader for TimescaleDB to load individual versions.
+ii  timescaledb-postgresql-12             1.7.5~ubuntu20.04                       amd64        An open-source time-series database based on PostgreSQL, as an extension.
+````
+
+> Somehow my timescaledb was broken after upgrading to Ubuntu 22 so I had to reinstall it. In any case you have to make sure you have already the version according to postgres before migrating the data.  
+`curl -s https://packagecloud.io/install/repositories/timescale/timescaledb/script.deb.sh | sudo bash`  
+`sudo apt install timescaledb-2-postgresql-14`
+
+Now start with the data migration
+
+`sudo pg_upgradecluster 12 main`
+
+After this process 12 is down and 14 is up. Now tune timescale:
+
+```
+sudo apt install timescaledb-tools
+sudo timescaledb-tune
+```
+
+> When I upgraded to Ubuntu 22 I also had to reinstall pgadmin4 and rerun `sudo /usr/pgadmin4/bin/setup-web.sh` but normally that is not required
+
+Now drop the old database `sudo pg_dropcluster 12 main` and purge old packages `sudo apt-get purge postgresql-12 postgresql-client-12`
 
 ### Remote connection
 
