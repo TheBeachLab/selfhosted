@@ -2,6 +2,8 @@
 
 With Nginx and PostgreSQL
 
+> IMPORTANT UPDATE: After upgrading to Ubuntu 22 Nextcloud broke and I could not manage to bring it back up. These mastodontic pieces, like Gitlab, require a lot of understanding, and if it fails, all fails with it, locking your data. I believe for a home server it is much better to split all the services into smaller individual pieces.
+
 ## Domain and SSL certificates
 
 Create a CNAME for `cloud` or similar to `beachlab.org` and get a certificate

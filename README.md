@@ -25,6 +25,7 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Web server](doc/web.md)
 - [Mail server](doc/mail.md)
 - [Git server](doc/git.md)
+- [SFTP server](doc/sftp.md)
 - [Mumble server](doc/mumble.md)
 - [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
@@ -34,5 +35,6 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [OBS ninja](doc/obsninja.md)
 - [Minecraft server](doc/minecraft.md)
 - [OpenHab Server](doc/openhab.md)
+- [STUN/TURN Server (WIP)](doc/turn.md)
 - [Troubleshooting](doc/troubleshooting.md)
 
