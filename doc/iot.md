@@ -2,41 +2,42 @@
 
 <!-- vim-markdown-toc GFM -->
 
-- [IoT](#iot)
-  - [Node Red](#node-red)
-    - [Prepare](#prepare)
-    - [Install](#install)
-    - [Usage](#usage)
-    - [Secure with https](#secure-with-https)
-    - [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
-  - [Mosquitto broker](#mosquitto-broker)
-    - [Install and test](#install-and-test)
-    - [Secure mosquitto](#secure-mosquitto)
-    - [Configure MQTT SSL](#configure-mqtt-ssl)
-    - [Enable MQTT over websockets](#enable-mqtt-over-websockets)
-  - [PostgreSQL](#postgresql)
-    - [Install](#install-1)
-    - [Upgrade](#upgrade)
-    - [Remote connection](#remote-connection)
-    - [Common psql commands](#common-psql-commands)
-    - [Create a new role](#create-a-new-role)
-    - [Create a new database](#create-a-new-database)
-    - [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
-    - [TimescaleDB](#timescaledb)
-    - [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
-  - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
-    - [Install pgadmin4](#install-pgadmin4)
-    - [Apache and nginx together](#apache-and-nginx-together)
-    - [Creating a subdomain (optional)](#creating-a-subdomain-optional)
-    - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
-    - [Configure pgadmin](#configure-pgadmin)
-    - [Running pgadmin](#running-pgadmin)
-    - [Tips and tricks](#tips-and-tricks)
-      - [For every table](#for-every-table)
-      - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
-      - [New table from existing table](#new-table-from-existing-table)
-      - [Add new column to existing table](#add-new-column-to-existing-table)
-      - [Add one to many](#add-one-to-many)
+- [Node Red](#node-red)
+  - [Prepare](#prepare)
+  - [Install](#install)
+  - [Usage](#usage)
+  - [Secure with https](#secure-with-https)
+  - [Secure the editor with username and password](#secure-the-editor-with-username-and-password)
+- [Mosquitto broker](#mosquitto-broker)
+  - [Install and test](#install-and-test)
+  - [Adding users to mosquitto](#adding-users-to-mosquitto)
+  - [Set user permissions](#set-user-permissions)
+  - [Configure MQTT through TLS](#configure-mqtt-through-tls)
+  - [Enable MQTT over websockets TLS](#enable-mqtt-over-websockets-tls)
+  - [Troubleshooting MQTT](#troubleshooting-mqtt)
+- [PostgreSQL](#postgresql)
+  - [Install](#install-1)
+  - [Upgrade](#upgrade)
+  - [Remote connection](#remote-connection)
+  - [Common psql commands](#common-psql-commands)
+  - [Create a new role](#create-a-new-role)
+  - [Create a new database](#create-a-new-database)
+  - [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
+  - [TimescaleDB](#timescaledb)
+  - [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
+- [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
+  - [Install pgadmin4](#install-pgadmin4)
+  - [Apache and nginx together](#apache-and-nginx-together)
+  - [Creating a subdomain (optional)](#creating-a-subdomain-optional)
+  - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
+  - [Configure pgadmin](#configure-pgadmin)
+  - [Running pgadmin](#running-pgadmin)
+  - [Tips and tricks](#tips-and-tricks)
+    - [For every table](#for-every-table)
+    - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
+    - [New table from existing table](#new-table-from-existing-table)
+    - [Add new column to existing table](#add-new-column-to-existing-table)
+    - [Add one to many](#add-one-to-many)
 
 <!-- vim-markdown-toc -->
 
@@ -158,7 +159,7 @@ In the server publish something to the broker
 
 This was my first MQTT message!
 
-### Secure mosquitto
+### Adding users to mosquitto
 
 Generate a password for a specific user, in this case me, and store it in /etc/mosquitto/passwd
 
@@ -202,9 +203,24 @@ Should be good now. And try to publish
 
 `mosquitto_pub -h localhost -t test -u "fran" -P "password" -m "hello world"`
 
-The message should have been received! The only problem remains is that I am sending tthe password unencrypted over the internet. Oh boy....
+The message should have been received! The only problem remains is that I am sending the password unencrypted over the internet. Oh boy.... we need to use mqtt over TLS instead of over TCP
 
-### Configure MQTT SSL
+### Set user permissions
+In the config file `/etc/mosquitto/mosquitto.conf` add the following line just before you read the `conf.d`folder: 
+
+`acl_file /etc/mosquitto/aclfile` 
+
+This will tell mosquitto where to find the access control list file. By default everything is blocked unless you unblock it. You can allow read, write or readwrite. This is a sample:
+
+````
+# This only affects clients with username "fmcu".
+user fmcu
+topic write fmcu/id
+topic read fmcu/sun
+topic read fmcu/online
+````
+
+### Configure MQTT through TLS
 
 Let's generate the certificates
 
@@ -216,8 +232,7 @@ Open the config file and specify the location of the certificates and the port t
 listener 1883 localhost
 
 listener 8883
-certfile /etc/letsencrypt/live/mosquitto.beachlab.org/cert.pem
-cafile /etc/letsencrypt/live/mosquitto.beachlab.org/chain.pem
+certfile /etc/letsencrypt/live/mosquitto.beachlab.org/fullchain.pem
 keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
 ```
 
@@ -232,16 +247,13 @@ Now subscribe from localhost:
 Publish from outside
 
 ```bash
-[unix ~]$ mosquitto_pub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -m "hello ssl" -u "fran" -P "password"
-Error: Connection refused
-[unix ~]$ mosquitto_pub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -m "hello ssl" -u "fran" -P "password"
+[unix ~]$ mosquitto_pub -h mosquitto.beachlab.org -p 8883 -t "my/topic" -m "hello ssl" -u "fran" -P "password"
 ```
-
 The message should have arrived. To subscribe from outside
 
-`mosquitto_sub -h mosquitto.beachlab.org -p 8883 --capath /etc/ssl/certs/ -t test -u "fran" -P "password"`
+`mosquitto_sub -h mosquitto.beachlab.org -p 8883 -t "my/topic" -u "fran" -P "password"`
 
-### Enable MQTT over websockets
+### Enable MQTT over websockets TLS
 
 `sudo nano /etc/mosquitto/conf.d/default.conf`
 
@@ -250,10 +262,8 @@ Add
 ```bash
 listener 8083
 protocol websockets
-certfile /etc/letsencrypt/live/mosquitto.beachlab.org/cert.pem
-cafile /etc/letsencrypt/live/mosquitto.beachlab.org/chain.pem
+certfile /etc/letsencrypt/live/mosquitto.beachlab.org/fullchain.pem
 keyfile /etc/letsencrypt/live/mosquitto.beachlab.org/privkey.pem
-
 ```
 
 Add firewall rules. Adjust NAT or just like me setup a DMZ host for the damn server. I have tested it with the mobile app [owntracks](https://owntracks.org/) and it works like a charm. Coming up in IoT, storing your precious data in a database.
