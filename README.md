@@ -29,6 +29,8 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Mumble server](doc/mumble.md)
 - [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
+- [Postgresql Database Server](doc/postgres.md)
+- [OSM Server](doc/osm.md)
 - [GPU related](doc/gpu.md)
 - [Cloud server](doc/cloud.md)
 - [Taskserver](doc/taskserver.md)

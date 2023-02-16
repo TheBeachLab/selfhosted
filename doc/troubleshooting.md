@@ -72,3 +72,17 @@ And the file `/var/log/unattended-upgrades/unattended-upgrades.log` says
 ```
 
 Try to manually update the packages listed. If it says already the latest version it is safe to just remove the keptback file `sudo rm /var/lib/unattended-upgrades/kept-back`
+
+## Removing wrong PPAs
+
+sudo apt-add-repository --list
+
+Ign:12 https://packagecloud.io/timescale/timescaledb/debian jammy InRelease
+Err:15 https://packagecloud.io/timescale/timescaledb/debian jammy Release
+  404  Not Found [IP: 54.183.47.114 443]
+  E: The repository 'https://packagecloud.io/timescale/timescaledb/debian jammy Release' does not have a Release file.
+N: Updating from such a repository can't be done securely, and is therefore disabled by default.
+
+sudo apt-add-repository --remove ppa:https://packagecloud.io/timescale/timescaledb/debian
+
+sudo apt-get install ppa-purge
