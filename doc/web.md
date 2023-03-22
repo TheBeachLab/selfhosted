@@ -2,17 +2,18 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Install nginx and create firewall rules](#install-nginx-and-create-firewall-rules)
-* [Create and configure your websites](#create-and-configure-your-websites)
-* [Point your domain to your machine](#point-your-domain-to-your-machine)
-* [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
-* [Create your own video streaming server](#create-your-own-video-streaming-server)
-	* [Install nginx RTMP module](#install-nginx-rtmp-module)
-	* [Setup the firewall](#setup-the-firewall)
-	* [Stream with OBS](#stream-with-obs)
-	* [Watch on VLC](#watch-on-vlc)
-	* [TODO](#todo)
-* [The result](#the-result)
+- [Install nginx and create firewall rules](#install-nginx-and-create-firewall-rules)
+- [Create and configure your websites](#create-and-configure-your-websites)
+- [Point your domain to your machine](#point-your-domain-to-your-machine)
+- [Get free trusted SSL certificates for your websites](#get-free-trusted-ssl-certificates-for-your-websites)
+- [Create your own video streaming server](#create-your-own-video-streaming-server)
+  - [Install nginx RTMP module](#install-nginx-rtmp-module)
+  - [Setup the firewall](#setup-the-firewall)
+  - [Stream with OBS](#stream-with-obs)
+  - [Watch on VLC](#watch-on-vlc)
+  - [TODO](#todo)
+- [The result](#the-result)
+- [Not yet: Apache 2](#not-yet-apache-2)
 
 <!-- vim-markdown-toc -->
 
@@ -176,4 +177,8 @@ My proud website hosted in my suitcase:
 
 To deploy your website with git check the [git](git.md) section.
 
+## Not yet: Apache 2
 
+My initial intention was to run all my web services through nginx. But there are still some software that require you to run apache. In fact, the reason my Nextcloud server is broken is probably related to refusing to install Apache 2.
+
+WIP

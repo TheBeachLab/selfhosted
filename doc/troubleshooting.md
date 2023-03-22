@@ -83,6 +83,68 @@ Err:15 https://packagecloud.io/timescale/timescaledb/debian jammy Release
   E: The repository 'https://packagecloud.io/timescale/timescaledb/debian jammy Release' does not have a Release file.
 N: Updating from such a repository can't be done securely, and is therefore disabled by default.
 
-sudo apt-add-repository --remove ppa:https://packagecloud.io/timescale/timescaledb/debian
 
-sudo apt-get install ppa-purge
+sudo apt-add-repository --remove 'deb https://packagecloud.io/timescale/timescaledb/debian/ jammy main'
+
+## Old keyring
+```
+Warning: apt-key is deprecated. Manage keyring files in trusted.gpg.d instead (see apt-key(8)).
+/etc/apt/trusted.gpg
+--------------------
+pub   rsa4096 2020-03-02 [SC] [expired: 2022-03-02]
+      F640 3F65 44A3 8863 DAA0  B6E0 3F01 618A 5131 2F3F
+uid           [ expired] GitLab B.V. (package repository signing key) <packages@gitlab.com>
+
+pub   rsa4096 2013-06-30 [SC]
+      1637 8A33 A6EF 1676 2922  526E 561F 9B9C AC40 B2F7
+uid           [ unknown] Phusion Automated Software Signing (Used by automated tools to sign software packages) <auto-software-signing@phusion.nl>
+sub   rsa4096 2013-06-30 [E]
+
+pub   rsa4096 2014-06-13 [SC]
+      9FD3 B784 BC1C 6FC3 1A8A  0A1C 1655 A0AB 6857 6280
+uid           [ unknown] NodeSource <gpg@nodesource.com>
+sub   rsa4096 2014-06-13 [E]
+
+pub   rsa4096 2018-08-14 [SC]
+      E869 7E2E EF76 C02D 3A63  3277 8881 B2A8 2109 76F2
+uid           [ unknown] Package Manager (Package Signing Key) <packages@pgadmin.org>
+sub   rsa4096 2018-08-14 [E]
+
+pub   rsa4096 2015-07-25 [SC] [expires: 2023-07-24]
+      EDB7 D030 4E2F CAF6 29DF  1163 0757 21F6 A224 060A
+uid           [ unknown] openHAB Bintray Repositories <owner@openhab.org>
+sub   rsa4096 2015-07-25 [E] [expires: 2023-07-25]
+
+pub   rsa4096 2022-04-14 [SC]
+      EB69 3B30 35CD 5710 E231  E123 A4B4 6996 3BF8 63CC
+uid           [ unknown] cudatools <cudatools@nvidia.com>
+
+pub   rsa4096 2016-10-05 [SC]
+      72EC F46A 56B4 AD39 C907  BBB7 1646 B01B 86E5 0310
+uid           [ unknown] Yarn Packaging <yarn@dan.cx>
+sub   rsa4096 2016-10-05 [E]
+
+pub   rsa4096 2017-02-22 [SCEA]
+      9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid           [ unknown] Docker Release (CE deb) <docker@docker.com>
+sub   rsa4096 2017-02-22 [S]
+
+pub   rsa4096 2018-10-19 [SCEA]
+      1005 FB68 604C E9B8 F687  9CF7 59F1 8EDF 47F2 4417
+uid           [ unknown] https://packagecloud.io/timescale/timescaledb (https://packagecloud.io/docs#gpg_signing) <support@packagecloud.io>
+sub   rsa4096 2018-10-19 [SEA]
+```
+
+sudo apt-key del '1637 8A33 A6EF 1676 2922  526E 561F 9B9C AC40 B2F7'
+
+
+W: https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/jammy/dists/pgadmin4/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+
+sudo apt-key list
+
+pub   rsa4096 2018-08-14 [SC]
+      E869 7E2E EF76 C02D 3A63  3277 8881 B2A8 2109 76F2
+uid           [ unknown] Package Manager (Package Signing Key) <packages@pgadmin.org>
+sub   rsa4096 2018-08-14 [E]
+
+sudo apt-key export 210976F2 | sudo gpg --dearmour -o /etc/apt/trusted.gpg.d/pgadmin4.gpg

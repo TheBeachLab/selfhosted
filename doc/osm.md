@@ -115,4 +115,48 @@ exit
 
 ## Install Renderd and mod_tile
 
+sudo apt install software-properties-common
+
+sudo add-apt-repository ppa:osmadmins/ppa
+
+sudo apt install apache2 libapache2-mod-tile renderd
+
+
+Enable tile mode  
+sudo a2enmod tile
+
+Next, create a virtual host for the tile server.  
+`sudo nano /etc/apache2/sites-available/tileserver_site.conf`
+
+Add the following lines in this file. Replace tile.your-domain.com with your real domain name and the post you will use. Don’t forget to DNS A  or CNAME record and add a UFW rule.
+
+<VirtualHost *:80>
+    ServerName tile.your-domain.com
+    LogLevel info
+    Include /etc/apache2/conf-available/renderd.conf
+</VirtualHost>
+
+sudo a2ensite tileserver_site.conf
+
+sudo systemctl reload apache2
+
+systemctl status renderd
+
+## Generate Mapnik Stylesheet
+
+sudo apt install -y curl unzip gdal-bin mapnik-utils libmapnik-dev python3-pip
+
+sudo apt-get install -y nodejs
+
+
+
+
+##
+
+Maputnnik - Editor estilos
+
+Maptiler y Mapbox serve tiles
+
+
+
 https://www.linuxbabe.com/linux-server/osm-openstreetmap-tile-server-ubuntu-22-04

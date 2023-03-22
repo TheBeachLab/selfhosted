@@ -23,6 +23,7 @@ You will be surprised how low-tech this whole thing can go. Of course the better
 - [Understanding DNS](doc/dns.md)
 - [Backups](doc/backups.md)
 - [Web server](doc/web.md)
+- [Node Server](doc/nodejs.md)
 - [Mail server](doc/mail.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
