@@ -12,7 +12,13 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 ## What hardware do you need
 
-You will be surprised how low-tech this whole thing can go. Of course the better hardware you have the longer you will travel. But for most common needs like website, mail and so, any computer from 10 years ago will be fine. You can even use a raspberry pi and carry your server in your pocket!! My server is a 2015 Skylake i3-6100 (2 cores/4 threads) @ 3.700GHz with 8GB RAM and 500GB SSD running Ubuntu Server 20.04 LTS. It has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
+You will be surprised how low-tech this whole thing can go. Of course the better hardware you have the longer you will travel. But for most common needs like website, mail and so, any computer from 10 years ago will be fine. You can even use a raspberry pi and carry your server in your pocket!! 
+
+My first server, called Suitcase is a 2015 Skylake i3-6100 (2 cores/4 threads) @ 3.700GHz with 8GB RAM and 500GB SSD running Ubuntu Server 22.04 LTS. 
+
+My second server, called Sister is a X79 chipset with a liquid cooled Intel Xeon E5-2670 v2 (10 cores/20 threads) @2.500Ghz with 40GB RAM and 1TB NVME SSD running Ubuntu Server 22.04 LTS.
+
+The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH with dynamic IP address.
 
 - TODO: Convert a powerbank to 12V UPS for the router using a [Pololu Adjustable Boost Regulator 4-25V](https://www.pololu.com/product/799/specs)
 
