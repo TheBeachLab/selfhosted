@@ -2,20 +2,20 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Installing Ubuntu Server](#installing-ubuntu-server)
-* [Set the root password](#set-the-root-password)
-* [Upgrade](#upgrade)
-* [Enable beep](#enable-beep)
-* [Configure ethernet](#configure-ethernet)
-* [Get rid of snap](#get-rid-of-snap)
-* [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
-* [Configure Wake on LAN](#configure-wake-on-lan)
+- [Installing Ubuntu Server](#installing-ubuntu-server)
+- [Set the root password](#set-the-root-password)
+- [Upgrade](#upgrade)
+- [Enable beep](#enable-beep)
+- [Configure ethernet](#configure-ethernet)
+- [Get rid of snap](#get-rid-of-snap)
+- [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
+- [Configure Wake on LAN](#configure-wake-on-lan)
 
 <!-- vim-markdown-toc -->
 
 ## Installing Ubuntu Server
 
-First step is installing Ubuntu Server. I installed 20.04 LTS. There are plenty of tutorials on how to do this, so I won't explain it here.
+First step is installing Ubuntu Server. I have currently installed 22.04 LTS. There are plenty of tutorials on how to do this, so I won't explain it here.
 
 ## Set the root password
 
@@ -33,12 +33,21 @@ You might think that's silly, but it helps me a lot when debugging or as notific
 
 ```bash
 sudo apt install beep
+sudo apt install acl
 sudo modprobe pcspkr
 ```
+If you try to beep, non root users see `beep: Error: Could not open any device` and running with sudo outputs `beep: Error: Running under sudo, which is not supported for security reasons. beep: Error: Set up permissions for the pcspkr evdev device file instead.`
 
-Test it with the `beep` command. That will work for the current session. To make the beeping persistent comment the line `blacklist pcspkr` from `/etc/modprobe.d/blacklist.conf`. 
+You need special permissions to beep, so we will add a group `sudo addgroup --system beep` and make some rules to be able to beep. Edit `sudo nano /lib/udev/rules.d/90-pcspkr-beep.rules` and add:
 
-> TODO: Non root users see `beep: Error: Could not open any device` and running with sudo outputs `beep: Error: Running under sudo, which is not supported for security reasons. beep: Error: Set up permissions for the pcspkr evdev device file instead.`
+```bash
+# Add write access to the PC speaker for the "beep" group
+ACTION=="add", SUBSYSTEM=="input", ATTRS{name}=="PC Speaker", ENV{DEVNAME}!="", RUN+="/usr/bin/setfacl -m g:beep:w '$env{DEVNAME}'"
+```
+
+Add the beeping user to the group `sudo usermod sister -a -G beep` and reboot
+
+Test it with the `beep` command. Since we ran `sudo modprobe pcspkr` that will work for the current session. To make the beeping persistent comment the line `blacklist pcspkr` from `/etc/modprobe.d/blacklist.conf`. 
 
 ## Configure ethernet
 
