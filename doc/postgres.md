@@ -103,8 +103,20 @@ Now drop the old database `sudo pg_dropcluster 12 main` and purge old packages `
 ## Remote connection
 
 - Add a firewall rule `sudo ufw allow 5432 comment 'postgres'`and `sudo ufw reload`
-- Listen connections in `/etc/postgresql/12/main/postgresql.conf`
-- Accept connections on `/etc/postgresql/12/main/pg_hba.conf` from local network `192.168.1.0/24`
+- Listen connections in `/etc/postgresql/14/main/postgresql.conf`
+
+```bash
+listen_addresses = '*' 
+```
+
+- Accept connections on `/etc/postgresql/14/main/pg_hba.conf` from local network `192.168.1.0/24`
+
+```
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             192.168.1.0/24          scram-sha-256
+```
+
 - On remote (arch) install `postgresql-libs` package
 - Test `psql -h 192.168.1.50 -U postgres`
 
