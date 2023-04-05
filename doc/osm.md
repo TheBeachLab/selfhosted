@@ -26,7 +26,18 @@ sudo setfacl -R -m u:pink:rwx /home/osm/
 
 git clone https://github.com/gravitystorm/openstreetmap-carto.git
 
+
 wget -c http://download.geofabrik.de/europe/spain-latest.osm.pbf
+
+Using download-osm:
+
+sudo apt install docker.io
+git clone https://github.com/openmaptiles/openmaptiles.git
+sudo docker run --rm -it -v $PWD:/download openmaptiles/openmaptiles-tools \
+  download-osm planet -- -d /download
+
+
+osm2pgsql -c -d gis planet-230313.osm.pbf
 
 ## Optimize PostgreSQL Server Performance
 
@@ -94,7 +105,7 @@ sudo setfacl -R -m u:postgres:rwx /home/osm/
 
 sudo -u postgres -i
 
-osm2pgsql --slim -d gis --hstore --multi-geometry --number-processes 2 --tag-transform-script /home/osm/openstreetmap-carto/openstreetmap-carto.lua --style /home/osm/openstreetmap-carto/openstreetmap-carto.style -C 5600 /home/osm/spain-latest.osm.pbf
+osm2pgsql --slim -d gis --hstore --multi-geometry --number-processes 15 --tag-transform-script /home/osm/openstreetmap-carto/openstreetmap-carto.lua --style /home/osm/openstreetmap-carto/openstreetmap-carto.style -C 25000 /home/osm/europe-latest.osm.pbf
 
 where
 
