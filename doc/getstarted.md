@@ -6,6 +6,7 @@
 - [Set the root password](#set-the-root-password)
 - [Upgrade](#upgrade)
 - [Enable beep](#enable-beep)
+  - [beep on login](#beep-on-login)
 - [Configure ethernet](#configure-ethernet)
 - [Get rid of snap](#get-rid-of-snap)
 - [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
@@ -48,6 +49,18 @@ ACTION=="add", SUBSYSTEM=="input", ATTRS{name}=="PC Speaker", ENV{DEVNAME}!="", 
 Add the beeping user to the group `sudo usermod sister -a -G beep` and reboot
 
 Test it with the `beep` command. Since we ran `sudo modprobe pcspkr` that will work for the current session. To make the beeping persistent comment the line `blacklist pcspkr` from `/etc/modprobe.d/blacklist.conf`. 
+
+### beep on login
+Create the script `/usr/local/bin/beep-on-login.sh`
+
+```bash
+#!/bin/bash
+beep -f 1000 -l 100 -r 2
+```
+
+Make the script executable `sudo chmod +x /usr/local/bin/beep-on-login.sh`
+
+Add the script to `/etc/rc.local` using `/usr/local/bin/beep-on-login.sh &`
 
 ## Configure ethernet
 
