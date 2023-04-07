@@ -11,6 +11,7 @@
 - [Get rid of snap](#get-rid-of-snap)
 - [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
 - [Configure Wake on LAN](#configure-wake-on-lan)
+- [Using screen to run a long (in time) command in a remote terminal](#using-screen-to-run-a-long-in-time-command-in-a-remote-terminal)
 
 <!-- vim-markdown-toc -->
 
@@ -113,3 +114,7 @@ First enable this feature in the BIOS. Check if the adapter supports WOL `sudo e
 `sudo ethtool -s cable wol g`
 
 You need to issue this command at every boot or by adding `wakeonlan: true` in netplan config file (see above). Finally in your computer issue the command `wol 00:ab:cd:ef:12:34` and the server should wake.
+
+## Using screen to run a long (in time) command in a remote terminal
+
+If you open a remote terminal and run a command, it will stop if the connection is closed. To prevent that run screen. A new terminal window will open where you can run your command. Detach the screen with control+A followed by d. To reattach the screen run screen -r. If multiple screen sessions are running, list them with screen -ls and attach the session with screen -r ID.
