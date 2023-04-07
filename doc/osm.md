@@ -105,7 +105,11 @@ sudo setfacl -R -m u:postgres:rwx /home/osm/
 
 sudo -u postgres -i
 
-osm2pgsql --slim -d gis --hstore --multi-geometry --number-processes 15 --tag-transform-script /home/osm/openstreetmap-carto/openstreetmap-carto.lua --style /home/osm/openstreetmap-carto/openstreetmap-carto.style -C 25000 /home/osm/europe-latest.osm.pbf
+osm2pgsql --slim -d gis --hstore --multi-geometry --keep-coastlines --number-processes 15 -O flex --tag-transform-script /home/osm/openstreetmap-carto/openstreetmap-carto.lua --style /home/osm/openstreetmap-carto/openstreetmap-carto.style -C 25000 /home/osm/europe-latest.osm.pbf
+
+
+osm2pgsql --create   --style your_osm2pgsql_style_file your_osm_data_file.pbf
+
 
 where
 
@@ -171,3 +175,41 @@ Maptiler y Mapbox serve tiles
 
 
 https://www.linuxbabe.com/linux-server/osm-openstreetmap-tile-server-ubuntu-22-04
+
+# Maplibre
+
+https://maplibre.org
+
+
+
+Generate and serve mbtiles
+
+https://github.com/onthegomap/planetiler/blob/main/PLANET.md
+
+Generate contours, hillshade, Terrain RGB, and slope angle shading map tiles from Digital Elevation Models (DEMs).
+
+https://github.com/nst-guide/terrain
+
+https://github.com/syncpoint/terrain-rgb
+
+
+
+Seabed data
+
+https://www.gebco.net
+
+
+Terrain data AWS https://registry.opendata.aws/terrain-tiles/
+
+
+Convert to terrain-RGB
+Install docker
+
+
+
+aws s3 cp s3://raster/AW3D30/ --recursive --endpoint-url https://opentopography.s3.sdsc.edu --no-sign-request
+
+
+natural earth data https://www.naturalearthdata.com
+
+aws s3 cp --no-sign-request --recursive s3://elevation-tiles-prod-eu/geotiff geotiff
