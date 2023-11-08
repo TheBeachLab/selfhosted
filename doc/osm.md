@@ -1,8 +1,10 @@
 # Self hosting OpenStreetMaps
 
+## Install Postgis
+```
 sudo apt update; sudo apt upgrade -y
-
-sudo apt install postgis postgresql-15-postgis-3
+sudo apt install postgis postgresql-16-postgis-3
+```
 
 sudo -u postgres -i
 
@@ -41,28 +43,28 @@ osm2pgsql -c -d gis planet-230313.osm.pbf
 
 ## Optimize PostgreSQL Server Performance
 
-sudo nano /etc/postgresql/15/main/postgresql.conf
+`sudo nano /etc/postgresql/15/main/postgresql.conf``
 
 Change 
 
-shared_buffers = 128MB
-
-to 25% of RAM
-
-shared_buffers = 2GB
+`shared_buffers = 128MB` to 25% of RAM `shared_buffers = 2GB`
 
 Also
 
+```
 work_mem = 1GB
 maintenance_work_mem = 8GB (mine set to 2GB, check)
+```
 
-sudo systemctl restart postgresql
+`sudo systemctl restart postgresql`
 
-sudo head -1 /var/lib/postgresql/15/main/postmaster.pid
+`sudo head -1 /var/lib/postgresql/15/main/postmaster.pid`
 
+```
 grep ^VmPeak /proc/7031/status
 VmPeak:	 2173776 kB
-
+```
+```
 cat /proc/meminfo | grep -i huge
 AnonHugePages:         0 kB
 ShmemHugePages:        0 kB
@@ -73,17 +75,18 @@ HugePages_Rsvd:        0
 HugePages_Surp:        0
 Hugepagesize:       2048 kB
 Hugetlb:               0 kB
+```
 
 We can calculate how many huge pages we need. Divide the VmPeak value by the size of huge page: 2173776 kB / 2048 kB = 1062. Then we need to edit the sysctl files to change Linux kernel parameters. Instead of editing the /etc/sysctl.conf file, we create a custom config file, so your custom configurations won’t be overwritten when upgrading software packages.
 
+`sudo touch /etc/sysctl.d/60-custom.conf`
 
-sudo touch /etc/sysctl.d/60-custom.conf
+`echo "vm.nr_hugepages = 1062" | sudo tee -a /etc/sysctl.d/60-custom.conf`
 
-echo "vm.nr_hugepages = 1062" | sudo tee -a /etc/sysctl.d/60-custom.conf
-
-sudo sysctl -p /etc/sysctl.d/60-custom.conf
+`sudo sysctl -p /etc/sysctl.d/60-custom.conf`
 
 Now 
+```
 cat /proc/meminfo | grep -i huge
 AnonHugePages:         0 kB
 ShmemHugePages:        0 kB
@@ -94,8 +97,9 @@ HugePages_Rsvd:        0
 HugePages_Surp:        0
 Hugepagesize:       2048 kB
 Hugetlb:         2174976 kB
+```
 
-sudo systemctl restart postgresql
+`sudo systemctl restart postgresql`
 
 ##  Import the Map Data to PostgreSQL
 

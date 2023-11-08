@@ -22,6 +22,7 @@
   - [New table from existing table](#new-table-from-existing-table)
   - [Add new column to existing table](#add-new-column-to-existing-table)
   - [Add one to many](#add-one-to-many)
+  - [Create a JSON from a table](#create-a-json-from-a-table)
 
 
 ## Install
@@ -474,4 +475,13 @@ ALTER TABLE public.interests
     NOT VALID;
 ```
 
+### Create a JSON from a table
+
+```sql
+SELECT json_agg(row_to_json(t))
+FROM (
+  SELECT *
+  FROM your_table
+) t
+```
 
