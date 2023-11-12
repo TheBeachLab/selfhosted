@@ -152,5 +152,42 @@ http://192.168.1.51:3000/ccaa?select=ccaa_code,ccaa_es&order=ccaa_es.desc
 Limits and offsets  
 http://192.168.1.51:3000/ccaa?select=ccaa_code,ccaa_es&limit=5&offset=2
 
+## Create web proxy
+
+Create CNAME api pointing to beachlab.org, update `/etc/hosts`
+
+Create `/etc/nginx/sites-available` with
+
+```nginx
+server {
+    listen 80;
+    server_name api.beachlab.org;
+    default_type text/plain;  # Set the default content type
+
+    location /location1/ {
+        proxy_pass http://192.168.1.51:3000/;  # Replace with the actual IP or domain
+        proxy_redirect off;
+    }
+
+    location /location2/ {
+        proxy_pass http://192.168.1.51:3001/;  # Replace with the actual IP or domain
+        proxy_redirect off;
+    }
+
+    # Reject all other requests with a 403 Forbidden status
+    location / {
+        return 403;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/api.beachlab.org /etc/nginx/sites-enabled/
+nginx -t
+sudo systemctl restart nginx
+```
+
+
+
 
 
