@@ -26,11 +26,9 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 
 - [Getting started](doc/getstarted.md)
 - [Securing SSH access](doc/security.md)
-- [Understanding DNS](doc/dns.md)
 - [Backups](doc/backups.md)
 - [Web server](doc/web.md)
 - [NodeJS Server](doc/nodejs.md)
-- [Mail server](doc/mail.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
 - [Mumble server](doc/mumble.md)
@@ -41,11 +39,16 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
   - [PostgREST API](doc/postgrest.md)
   - [OSM Server](doc/osm.md)
 - [GPU related](doc/gpu.md)
-- [Cloud server](doc/cloud.md)
+- [OpenHab Server](doc/openhab.md)
+- [Troubleshooting](doc/troubleshooting.md)
+
+
+To improve or fix
+- [Understanding DNS](doc/dns.md)
 - [Taskserver](doc/taskserver.md)
 - [OBS ninja](doc/obsninja.md)
-- [Minecraft server](doc/minecraft.md)
-- [OpenHab Server](doc/openhab.md)
 - [STUN/TURN Server (WIP)](doc/turn.md)
-- [Troubleshooting](doc/troubleshooting.md)
+- [Minecraft server](doc/minecraft.md)
+- [Cloud server](doc/cloud.md)
+- [Mail server](doc/mail.md)
 
