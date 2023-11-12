@@ -54,14 +54,14 @@ Check version running `sudo -u postgres psql -c 'SELECT version();'`
 
 Output if you are currently runnin 12:
 
-```
+```bash
  PostgreSQL 12.12 (Ubuntu 12.12-0ubuntu0.20.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0, 64-bit
 (1 row)
 ```
 
 Check what postgres versions you have installed `pg_lsclusters`  
 
-```
+```bash
 Ver Cluster       Port Status Owner    Data directory                       Log file
 12  main          5432 online postgres /var/lib/postgresql/12/main          /var/log/postgresql/postgresql-12-main.log
 14  main          5434 online postgres /var/lib/postgresql/14/main          /var/log/postgresql/postgresql-14-main.log
@@ -344,7 +344,7 @@ sudo apt install pgadmin4-web
 
 To avoid both web servers listening to the same port change the default listening port from 80 to 5050 and 443 to 8090 in `/etc/apache2/ports.conf`
 
-```bash
+```apache
 Listen 5050
 
 <IfModule ssl_module>
@@ -358,7 +358,7 @@ Listen 5050
 
 and `sudo nano /etc/apache2/sites-available/000-default.conf` and set
 
-```
+```apache
 <VirtualHost *:5050>
 ```
 
@@ -372,7 +372,7 @@ pgadmin will be located at `http://server-address:5050/pgadmin4`
 
 I created and enabled `/etc/nginx/sites-available/postgres.beachlab.org` with this content
 
-```bash
+```nginx
 server {
         listen 80;
         listen [::]:80;
@@ -424,7 +424,7 @@ ERD and other files are stored in `/var/lib/pgadmin/storage/email_account.org/`
 
 ### Create a readonly user
 
-```
+```sql
 CREATE USER readonly WITH PASSWORD 'your_password';
 \c air
 GRANT CONNECT ON DATABASE air TO readonly;
