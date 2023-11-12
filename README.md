@@ -37,6 +37,7 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 - [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
 - [Postgresql Database Server](doc/postgres.md)
+- [Strapi CSM](doc/strapi.md)
 - [OSM Server](doc/osm.md)
 - [GPU related](doc/gpu.md)
 - [Cloud server](doc/cloud.md)

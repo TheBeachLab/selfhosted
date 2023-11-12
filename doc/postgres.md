@@ -16,7 +16,11 @@
   - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
   - [Configure pgadmin](#configure-pgadmin)
   - [Running pgadmin](#running-pgadmin)
-- [Tips and tricks](#tips-and-tricks)
+  - [Reset pgadmin password](#reset-pgadmin-password)
+  - [unlock pgadmin account](#unlock-pgadmin-account)
+  - [pgadmin storage](#pgadmin-storage)
+- [SQL Tips and tricks](#sql-tips-and-tricks)
+  - [Create a readonly user](#create-a-readonly-user)
   - [For every table](#for-every-table)
   - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
   - [New table from existing table](#new-table-from-existing-table)
@@ -405,13 +409,28 @@ Run `/usr/pgadmin4/bin/setup-web.sh`
 
 Go to `http://server-ip:5050/pgadmin4`
 
+### Reset pgadmin password
 if you don't remember the credentials `mv /var/lib/pgadmin/pgadmin4.db /var/lib/pgadmin/pgadmin4.db.backup` and run `/usr/pgadmin4/bin/setup-web.sh` again.
 
 Add a server and enter the connection details. You might have to connect to `sudo -u postgres psql` and `ALTER USER postgres PASSWORD 'mynewpassword';` if you don't remember your credentials.
 
-ERD files are stored in `/var/lib/pgadmin/storage/email_account.org/erdfiles/`
+### unlock pgadmin account
+After 3 unsuccessful login attempts your account will be locked. Install `sudo apt install sqlite3` and run as root `sqlite3 pgadmin4.db "UPDATE USER SET LOCKED = false, LOGIN_ATTEMPTS = 0 WHERE USERNAME = 'user@domain.com';" ".exit"`
 
-## Tips and tricks
+### pgadmin storage
+ERD and other files are stored in `/var/lib/pgadmin/storage/email_account.org/`
+
+## SQL Tips and tricks
+
+### Create a readonly user
+
+```
+CREATE USER readonly WITH PASSWORD 'your_password';
+\c air
+GRANT CONNECT ON DATABASE air TO readonly;
+GRANT USAGE ON SCHEMA public TO readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
+```
 
 ### For every table
 
