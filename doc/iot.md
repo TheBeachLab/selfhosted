@@ -100,18 +100,18 @@ If you use node red without user authentication anyone can take over the whole s
 and uncomment/edit
 
 ```js
-    // Securing Node-RED
-    // -----------------
-    // To password protect the Node-RED editor and admin API, the following
-    // property can be used. See http://nodered.org/docs/security.html for details.
-    adminAuth: {
-        type: "credentials",
-        users: [{
-            username: "admin",
-            password: "$2a$08$zZWtXTja0fB1pzD4sHCMyOCMYz2Z6dNbM6tl8sJogENOMcxWV9DN.",
-            permissions: "*"
-        }]
-    },
+// Securing Node-RED
+// -----------------
+// To password protect the Node-RED editor and admin API, the following
+// property can be used. See http://nodered.org/docs/security.html for details.
+adminAuth: {
+    type: "credentials",
+    users: [{
+        username: "admin",
+        password: "$2a$08$zZWtXTja0fB1pzD4sHCMyOCMYz2Z6dNbM6tl8sJogENOMcxWV9DN.",
+        permissions: "*"
+    }]
+},
 ```
 
 > Note: The above are not my real username/password. Do you think I am idiot?
@@ -156,7 +156,6 @@ And paste
 ```bash
 allow_anonymous false
 password_file /etc/mosquitto/passwd
-
 ```
 
 Make sure there is a new line at the end of the file. Restart mosquitto `sudo systemctl restart mosquitto`. Now try to subscribe again to test
@@ -196,6 +195,7 @@ user fmcu
 topic write fmcu/id
 topic read fmcu/sun
 topic read fmcu/online
+topic whatever rw
 ````
 
 ### Configure MQTT through TLS
@@ -252,6 +252,7 @@ Mosquitto cannot be started as a service. Service does not start, when started m
 Solved by installing acl `sudo apt install acl` and `sudo setfacl -R -m u:pink:rX /etc/letsencrypt/{live,archive}`
 
 When pink runs it complains about permissions in /var/lib/mosquitto (belongs to mosquitto:root). No idea how to continue
-Solved by
-sudo setfacl -R -m u:mosquitto:rX /etc/letsencrypt/{live,archive}`
+Solved by:
+
+`sudo setfacl -R -m u:mosquitto:rX /etc/letsencrypt/{live,archive}`
 
