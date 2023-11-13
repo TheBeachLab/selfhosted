@@ -140,9 +140,10 @@ This was my first MQTT message!
 
 Generate a password for a specific user, in this case me, and store it in /etc/mosquitto/passwd
 
-`sudo mosquitto_passwd -c /etc/mosquitto/passwd fran`
+> WARNING: This will delete existing users and passwords
+> `sudo mosquitto_passwd -c /etc/mosquitto/passwd fran`
 
-If you need to create an extra use leave the `-c`
+If you need to ADD an extra USER without removing the existing ones, use this instead:
 
 `sudo mosquitto_passwd /etc/mosquitto/passwd fmcu`
 
