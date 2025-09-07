@@ -258,18 +258,58 @@ aws s3 cp --no-sign-request --recursive s3://elevation-tiles-prod-eu/geotiff geo
 
 
 ## OSM Planet
-The planet is stored in `/home/osm/planet`
+The planet is stored in `/home/osm/downloads/osm/planet`
+
+I created a scrip to download it `download_osm_planet.sh`
 
 ```bash
-mv /home/osm/planet/planet-latest.osm.pbf planet-latest.osm.pbf.old
-wget https://ftp5.gwdg.de/pub/misc/openstreetmap/planet.openstreetmap.org/pbf/planet-latest.osm.pbf
-rm planet-latest.osm.pbf.old
+#!/usr/bin/env bash
+set -euo pipefail
+
+OUTDIR="/home/osm/downloads/osm_planet"
+LOGFILE="$OUTDIR/osm_planet.log"
+mkdir -p "$OUTDIR"
+cd "$OUTDIR"
+
+# Reset log each run
+: > "$LOGFILE"
+
+# Notify on error
+trap '/usr/local/bin/notify.sh "OSM Planet ❌" "Download failed. Check $LOGFILE."' ERR
+
+BASE="https://planet.openstreetmap.org/pbf"
+PBF="planet-latest.osm.pbf"
+MD5="planet-latest.osm.pbf.md5"
+
+{
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting OSM Planet download (~100 GB)..."
+
+  # Download to temp file first
+  tmppbf="$PBF.part"
+  tmpmd5="$MD5.part"
+
+  curl -fsSL --retry 5 -C - -o "$tmppbf" "$BASE/$PBF"
+  mv "$tmppbf" "$PBF"
+
+  curl -fsSL --retry 5 -o "$tmpmd5" "$BASE/$MD5"
+  mv "$tmpmd5" "$MD5"
+
+  echo "==> Checking checksum..."
+  if md5sum -c "$MD5"; then
+    echo "   ✔ Checksum OK"
+  else
+    echo "   ✘ Checksum mismatch!"
+    exit 1
+  fi
+
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Finished successfully."
+} >> "$LOGFILE" 2>&1
 ```
-Son 75GB approx. Unos 22 minutos, una vez al mes dia 15 a las 5am
+It is 80GB approx. Takes about 22 minutes, I download it monthly at 5am
 
 ### Cron job to download planet once a month 
 ```bash
-0 5 15 * * mv /home/osm/planet/planet-latest.osm.pbf /home/osm/planet/planet-latest.osm.pbf.old && wget -O /home/osm/planet/planet-latest.osm.pbf https://ftp5.gwdg.de/pub/misc/openstreetmap/planet.openstreetmap.org/pbf/planet-latest.osm.pbf && rm /home/osm/planet/planet-latest.osm.pbf.old
+0 5 1 * * /home/osm/downloads/download_osm_planet.sh
 ```
 
 ### Extract data fro OSM Planet to Database

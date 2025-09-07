@@ -1,6 +1,7 @@
 # PostgreSQL
 
 - [Install](#install)
+- [Install pgbouncer](#install-pgbouncer)
 - [Upgrade](#upgrade)
 - [Remote connection](#remote-connection)
 - [Common psql commands](#common-psql-commands)
@@ -53,6 +54,14 @@ postgres=#
 ```
 
 Exit with `\q`
+
+## Install pgbouncer
+
+PgBouncer is a lightweight connection pooler for PostgreSQL whose purpose is to manage and reuse database connections efficiently. Instead of each client (like your APIs or apps) opening and closing expensive PostgreSQL connections, they connect to PgBouncer, which maintains a small pool of persistent connections to the database and hands them out as needed. This reduces overhead, improves scalability, and lets PostgreSQL handle many more clients with fewer resources.
+
+`sudo apt install pgbouncer`
+
+Is it running? `systemctl status pgbouncer`if not start and enable
 
 ## Upgrade
 
@@ -142,7 +151,7 @@ host    all             all             192.168.1.0/24          scram-sha-256
 ## Create a new role
 
 ```bash
-pink@thebeachlab:~$ sudo -u postgres createuser --interactive
+sudo -u postgres createuser --interactive
 Enter name of role to add: iot
 Shall the new role be a superuser? (y/n) y
 ```
