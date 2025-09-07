@@ -12,6 +12,8 @@
 - [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
 - [Configure Wake on LAN](#configure-wake-on-lan)
 - [Using screen to run a long (in time) command in a remote terminal](#using-screen-to-run-a-long-in-time-command-in-a-remote-terminal)
+- [Use mosh to connect from mobile phones and iSH](#use-mosh-to-connect-from-mobile-phones-and-ish)
+- [tmux Terminal Multiplexer](#tmux-terminal-multiplexer)
 - [Unattended upgrades](#unattended-upgrades)
 
 <!-- vim-markdown-toc -->
@@ -119,6 +121,38 @@ You need to issue this command at every boot or by adding `wakeonlan: true` in n
 ## Using screen to run a long (in time) command in a remote terminal
 
 If you open a remote terminal and run a command, it will stop if the connection is closed. To prevent that run screen. A new terminal window will open where you can run your command. Detach the screen with control+A followed by d. To reattach the screen run screen -r. If multiple screen sessions are running, list them with screen -ls and attach the session with screen -r ID.
+
+## Use mosh to connect from mobile phones and iSH
+
+Mosh (mobile shell) is a remote terminal application like SSH but designed to handle roaming, intermittent connectivity, and network changes more gracefully. It uses UDP with built-in prediction and keep-alive, allowing you to stay connected while moving between Wi-Fi and mobile networks or during short outages, without the session freezing or dropping as SSH often does.
+
+You have to install mosh in the Ubuntu server
+
+`sudo apt install mosh`
+
+and in your computer or phone. Then I have an alias to connect quickly. Note if your SSH port is not standard you need to specify.
+
+`pinky='mosh --ssh="ssh -p 2622" pink@beachlab.org'`
+
+To close all ghost sessions:
+
+`pkill -u $USER mosh-server`
+
+## tmux Terminal Multiplexer
+
+tmux is a terminal multiplexer: it lets you open multiple terminal sessions inside a single window, split the screen into panes, detach a session so it keeps running in the background, and later reattach to it from anywhere. This makes it ideal for running long-lived processes, organizing multiple shells, or maintaining work across SSH or mosh connections without losing progress.
+
+You only need to install tmux in your computer (not the server). So in macos
+
+`brew install tmux`
+
+To create a new tmux session
+
+`tmux new -s work`
+
+If connection drops, reattach
+
+`tmux attach -t work`
 
 ## Unattended upgrades
 

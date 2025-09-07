@@ -34,6 +34,9 @@
   - [Delete ROWS](#delete-rows)
   - [Create a VIEW with fallback values](#create-a-view-with-fallback-values)
   - [Get the definition that created a VIEW](#get-the-definition-that-created-a-view)
+- [API and REST](#api-and-rest)
+  - [PostgREST](#postgrest)
+  - [FastAPI](#fastapi)
 
 
 ## Install
@@ -62,6 +65,8 @@ PgBouncer is a lightweight connection pooler for PostgreSQL whose purpose is to 
 `sudo apt install pgbouncer`
 
 Is it running? `systemctl status pgbouncer`if not start and enable
+
+`sudo systemctl enable --now pgbouncer`
 
 ## Upgrade
 
@@ -568,3 +573,101 @@ SELECT view_definition
 FROM information_schema.views
 WHERE table_name = 'view_name';
 ```
+
+## API and REST
+
+### PostgREST
+
+PostgREST is an open-source tool that automatically generates a RESTful API from a PostgreSQL database. Instead of writing backend code, you define your data model and permissions directly in the database, and PostgREST exposes them as secure, standards-compliant endpoints. This makes it easy to build scalable APIs quickly while leveraging PostgreSQL’s features like views, roles, and functions.
+
+A RESTful API is an interface that allows systems to communicate over HTTP using the principles of Representational State Transfer (REST). It organizes resources into endpoints, typically accessed with standard HTTP methods like GET, POST, PUT, and DELETE, making interactions predictable and stateless. This approach simplifies integration, scalability, and flexibility across different platforms and clients.
+
+Visit [PostgREST](postgrest.md) section
+
+### FastAPI
+
+FastAPI is a modern, high-performance web framework for building APIs with Python. It’s designed around Python type hints, which enable automatic validation, serialization, and interactive documentation. Known for its speed and ease of use, FastAPI makes it simple to create secure, production-ready APIs with minimal boilerplate code.
+
+Install
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip
+```
+
+Create the virtual environment (as pink)
+
+```bash
+mkdir -p ~/fastapi-app && cd ~/fastapi-app
+python3 -m venv .venv
+source .venv/bin/activate
+```
+Install dependencies
+
+```bash
+pip install --upgrade pip
+pip install fastapi "uvicorn[standard]" gunicorn psycopg[binary]
+```
+
+Make a hello world app 
+
+`/home/pink/fastapi-app/main.py`
+
+```bash
+from fastapi import FastAPI
+app = FastAPI()
+@app.get("/api/health")
+def health(): return {"ok": True}
+``` 
+
+Create a system service
+
+`sudo nano /etc/systemd/system/fastapi.service`
+
+```bash
+[Unit]
+Description=FastAPI (pink)
+After=network.target
+
+[Service]
+User=pink
+Group=pink
+WorkingDirectory=/home/pink/fastapi-app
+Environment="PATH=/home/pink/fastapi-app/.venv/bin"
+# (opcional) añade tus variables aquí:
+# Environment="DATABASE_URL=postgres://api_ro:***@127.0.0.1:5432/tu_db"
+ExecStart=/home/pink/fastapi-app/.venv/bin/gunicorn \
+          -k uvicorn.workers.UvicornWorker -w 4 \
+          -b 127.0.0.1:8000 main:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+and then
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now fastapi
+```
+
+For nginx reverse proxy, in the domain you desire add the following location
+
+```nginx
+location /api/ {
+  proxy_pass http://127.0.0.1:8000/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $remote_addr;
+}
+```
+
+and then
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+
+
+

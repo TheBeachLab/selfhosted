@@ -43,6 +43,8 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
   - [Airports Database](doc/airports.md)
   - [Baustellen in München](doc/baustellen.md)
 - [GPU related](doc/gpu.md)
+- [iOS Push Notifications iGotify](doc/igotify.md)
+- [n8n Server](doc/n8n.md)
 - [OpenHab Server](doc/openhab.md)
 - [Troubleshooting](doc/troubleshooting.md)
 
