@@ -38,6 +38,7 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
   - [Strapi CSM](doc/strapi.md)
   - [PostgREST API](doc/postgrest.md)
   - [OSM Server](doc/osm.md)
+  - [Working with CSV](doc/csv.md)
 - [GPU related](doc/gpu.md)
 - [OpenHab Server](doc/openhab.md)
 - [Troubleshooting](doc/troubleshooting.md)

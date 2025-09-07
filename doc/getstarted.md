@@ -12,6 +12,7 @@
 - [Install sensor monitoring tools and hwinfo](#install-sensor-monitoring-tools-and-hwinfo)
 - [Configure Wake on LAN](#configure-wake-on-lan)
 - [Using screen to run a long (in time) command in a remote terminal](#using-screen-to-run-a-long-in-time-command-in-a-remote-terminal)
+- [Unattended upgrades](#unattended-upgrades)
 
 <!-- vim-markdown-toc -->
 
@@ -118,3 +119,15 @@ You need to issue this command at every boot or by adding `wakeonlan: true` in n
 ## Using screen to run a long (in time) command in a remote terminal
 
 If you open a remote terminal and run a command, it will stop if the connection is closed. To prevent that run screen. A new terminal window will open where you can run your command. Detach the screen with control+A followed by d. To reattach the screen run screen -r. If multiple screen sessions are running, list them with screen -ls and attach the session with screen -r ID.
+
+## Unattended upgrades
+
+Install `sudo apt-get install unattended-upgrades`
+
+Edit the config file and uncomment/modify the options `sudo nano /etc/apt/apt.conf.d/50unattended-upgrades`
+
+Test `sudo unattended-upgrades --dry-run --debug`
+
+Apply the changes `sudo dpkg-reconfigure --priority=low unattended-upgrades`
+
+![](../img/unattended.png)

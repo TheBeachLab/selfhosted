@@ -26,7 +26,13 @@
   - [New table from existing table](#new-table-from-existing-table)
   - [Add new column to existing table](#add-new-column-to-existing-table)
   - [Add one to many](#add-one-to-many)
-  - [Create a JSON from a table](#create-a-json-from-a-table)
+  - [Create a JSON from a TABLE](#create-a-json-from-a-table)
+  - [Check the size of a TABLE](#check-the-size-of-a-table)
+  - [Create a unique constraint combination of 2 COLUMNS](#create-a-unique-constraint-combination-of-2-columns)
+  - [Copy a TABLE from one DATABASE to another (same pg server)](#copy-a-table-from-one-database-to-another-same-pg-server)
+  - [Delete ROWS](#delete-rows)
+  - [Create a VIEW with fallback values](#create-a-view-with-fallback-values)
+  - [Get the definition that created a VIEW](#get-the-definition-that-created-a-view)
 
 
 ## Install
@@ -494,7 +500,7 @@ ALTER TABLE public.interests
     NOT VALID;
 ```
 
-### Create a JSON from a table
+### Create a JSON from a TABLE
 
 ```sql
 SELECT json_agg(row_to_json(t))
@@ -504,3 +510,52 @@ FROM (
 ) t
 ```
 
+### Check the size of a TABLE
+
+```sql
+SELECT pg_size_pretty(pg_total_relation_size('table_name')) AS table_size;
+```
+
+### Create a unique constraint combination of 2 COLUMNS
+
+```sql
+-- Add a unique constraint on the combination of region_code and country_code
+ALTER TABLE regions
+ADD CONSTRAINT unique_region_country UNIQUE (region_code, country_code);
+```
+
+### Copy a TABLE from one DATABASE to another (same pg server)
+
+```bash
+sudo -u postgres pg_dump -d misc_data -t territories -f /tmp/territories.sql
+sudo -u postgres psql -d air -f /tmp/territories.sql
+```
+
+### Delete ROWS
+```sql
+DELETE FROM countries WHERE alpha_2_code IS NULL;
+```
+
+### Create a VIEW with fallback values
+```sql
+DROP VIEW IF EXISTS countries_view;
+CREATE VIEW countries_view AS
+SELECT
+  alpha_3_code,
+  name_es,
+  COALESCE(name_ca, name_es) AS name_ca,
+  name_en,
+  name_fr,
+  name_it,
+  name_de
+FROM countries;
+```
+
+### Get the definition that created a VIEW
+
+Useful if you need to rename a column/recreate a view, etc.
+```sql
+SELECT view_definition
+FROM information_schema.views
+WHERE table_name = 'view_name';
+```
