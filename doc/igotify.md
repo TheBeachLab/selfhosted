@@ -1,12 +1,14 @@
 # Push Notifications with iGotify
 
-Gosh, this shit took me a while. I started with [ntfy](https://ntfy.sh) at the beginning, but push notifications never went through with a self hosted solution. Apparently for that to work you need to recompile the iOS app with your Apple Developer.
+## Overview
 
-Gotify is a self-hosted server for sending and receiving push notifications, offering a simple web interface and apps for real-time message delivery.
+Gotify is a self-hosted server for sending and receiving push notifications, offering a simple web interface and apps for real-time message delivery. iGotify is a containerized notification bridge that works alongside a Gotify server. Deployed via Docker (commonly with Docker Compose on Ubuntu), iGotify decrypts Gotify messages and forwards them as push notifications through Apple’s APNs to iOS devices—addressing Gotify’s lack of native support for iOS push alerts.
 
-iGotify (Docker on Ubuntu) is a containerized notification bridge that works alongside a Gotify server. Deployed via Docker (often using Docker Compose on Ubuntu), iGotify decrypts Gotify messages and forwards them as push notifications through Apple’s APNs to iOS devices—filling the gap since Gotify lacks native support for iOS push alerts.
+## Deployment Steps
 
-`sudo nano /srv/gotify/docker-compose.yml`
+1. **Prepare Docker Compose file**
+
+Create or edit `/srv/gotify/docker-compose.yml` with the following content:
 
 ```yaml
 version: "3.8"
@@ -18,7 +20,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./gotify-data:/app/data
-    # Lo exponemos SOLO en loopback para usarlo detrás de Nginx:
+    # Expose ONLY on loopback for use behind Nginx:
     ports:
       - "127.0.0.1:8180:80"
 
@@ -38,19 +40,18 @@ services:
       - ./igotify-data:/app/data
 ```
 
+2. **Deploy or update containers**
 
 ```bash
 cd /srv/gotify
-docker compose down --remove-orphans (optional)
+docker compose down --remove-orphans  # optional
 sudo docker compose pull
 sudo docker compose up -d
 ```
 
-Check
+3. **Configure Nginx reverse proxy**
 
-`curl -sS -D- https://ntfy.beachlab.org/igotify/Version`
-
-nginx reverse proxy `sudo nano /etc/nginx/sites-available/ntfy.beachlab.org`
+Create or edit `/etc/nginx/sites-available/ntfy.beachlab.org` with:
 
 ```nginx
 server {
@@ -77,38 +78,37 @@ server {
     proxy_read_timeout 3600s;  # SSE
   }
 
-location /igotify/ {
-  proxy_pass http://127.0.0.1:2080/;
-  proxy_set_header Host $host;
-  proxy_set_header X-Real-IP $remote_addr;
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_set_header X-Forwarded-Proto $scheme;
+  location /igotify/ {
+    proxy_pass http://127.0.0.1:2080/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 
-  proxy_http_version 1.1;
-  proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection "upgrade";
-  proxy_buffering off;
-  proxy_read_timeout 3600s;
-}
-
-
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+  }
 }
 ```
 
-and test/reload
+4. **Reload and test Nginx**
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-iOS App
+5. **iOS app setup**
 
-Gotify Server URL: https://ntfy.beachlab.org 
+- Gotify Server URL: `https://ntfy.beachlab.org`
+- Notification Assist URL: `https://ntfy.beachlab.org/igotify/`
 
-Notification Assist URL: https://ntfy.beachlab.org/igotify/
+6. **Get token in iOS app and test**
 
-Get a token in the iOS app. And test with the token:
+Obtain a token in the iOS app, then test sending a notification:
 
 ```bash
 curl -s -X POST "https://ntfy.beachlab.org/message" \
@@ -117,17 +117,23 @@ curl -s -X POST "https://ntfy.beachlab.org/message" \
   -F "message=Hola desde APNs"
 ```
 
-Create a notifier
+7. **Setup notifier script and environment variables**
+
+Create environment variables file `/etc/notify.env` (replace tokens accordingly):
 
 ```bash
-# 1) Variables globales (edita TU token)
 sudo tee /etc/notify.env >/dev/null <<'EOF'
 GOTIFY_URL="https://ntfy.beachlab.org/message"
 GOTIFY_APP_TOKEN="Ar_xxxxxx"
 DEFAULT_PRIORITY="5"
 EOF
+```
 
-# 2) Script notificador
+## Notifier Script
+
+Create the notifier script `/usr/local/bin/notify.sh`:
+
+```bash
 sudo tee /usr/local/bin/notify.sh >/dev/null <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -146,18 +152,27 @@ EOF
 sudo chmod +x /usr/local/bin/notify.sh
 ```
 
-Then you can just `/usr/local/bin/notify.sh "Test ✅" "This is a test notification from the server"`
+You can now send a notification with:
 
-You might create an alias
+```bash
+/usr/local/bin/notify.sh "Test ✅" "This is a test notification from the server"
+```
 
-`alias notify='/usr/local/bin/notify.sh'`
+Optionally, create an alias for convenience:
 
-and `source ~/.bashrc`
+```bash
+alias notify='/usr/local/bin/notify.sh'
+source ~/.bashrc
+```
 
-then would be as easy as `notify "Test 🚀" "Alias works fine"`
+Then use:
 
-If you want the notification to go through even with no disturb mode use:
+```bash
+notify "Test 🚀" "Alias works fine"
+```
 
-`notify "Backup failed ❌" "Disk full" 10`
+To send notifications that bypass Do Not Disturb mode, use a higher priority (e.g., 10):
 
-
+```bash
+notify "Backup failed ❌" "Disk full" 10
+```

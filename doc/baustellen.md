@@ -7,7 +7,7 @@ curl -L -o baustellen_4w.json \
 "https://geoportal.muenchen.de/geoserver/mor_wfs/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=mor_wfs:baustellen_4_weeks_opendata&outputFormat=application/json"
 ```
 
-I have a executable script `download_muc_baustellen.sh` 
+I have a executable script `download_muc_baustellen.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -42,7 +42,12 @@ URL="https://geoportal.muenchen.de/geoserver/mor_wfs/ows?service=WFS&version=1.1
 } >> "$LOGFILE" 2>&1
 ```
 
-Then I have a crontab to download the Baustellen everyday at 3:30 AM because they update around 3:00 AM 
+Then I have a crontab to download the Baustellen everyday at 3:30 AM because they update around 3:00 AM
 ```
 30 3 * * * /home/osm/downloads/download_muc_baustellen.sh
 ```
+
+### Notes
+- Test manually with: `bash download_muc_baustellen.sh && cat /home/osm/downloads/muc_baustellen/muc_baustellen.log`
+- Final JSON is stored at: `/home/osm/downloads/muc_baustellen/baustellen_4w.json`
+
