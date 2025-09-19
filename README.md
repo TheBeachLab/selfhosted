@@ -31,6 +31,7 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 - [NodeJS Server](doc/nodejs.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
+- [Transmission Daemon](doc/transmission.md)
 - [Mumble server](doc/mumble.md)
 - [VPN Server](doc/vpn.md)
 - [IoT related](doc/iot.md)
