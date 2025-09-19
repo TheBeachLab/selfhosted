@@ -156,7 +156,7 @@ http://192.168.1.51:3000/ccaa?select=ccaa_code,ccaa_es&limit=5&offset=2
 
 Create CNAME api pointing to beachlab.org, update `/etc/hosts`
 
-Create `/etc/nginx/sites-available` with
+Create `/etc/nginx/sites-available/api.beachlab.org` with
 
 ```nginx
 server {
