@@ -171,7 +171,7 @@ Apply the changes `sudo dpkg-reconfigure --priority=low unattended-upgrades`
 
 Note: ddclient will NOT work with NordVPN. Still not sure how to go around this limitation.
 
-The world is full of bastard law firms monitoring the Internet to sue you. My 2 cents: Become invisible
+The world is full of bastard law firms monitoring the Internet. My 2 cents: Become invisible
 
 `sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)` 
 
