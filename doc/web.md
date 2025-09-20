@@ -49,6 +49,8 @@ Finally reload nginx `sudo systemctl reload nginx`
 
 ## Point your domain to your machine
 
+Note: This will not work if you connect to NordVPN
+
 For that you will need to create an A record for `@` (the domain) which points to your public IP and CNAMES for `www` and other hosts pointing to your your domain. If your ISP provides you with a fixed public IP that's all you need to do.
 
 I **don't** have a fixed public IP address though. So instead of an A record  I have [a dynamic A record in namecheap](https://www.namecheap.com/support/knowledgebase/article.aspx/36/11/how-do-i-start-using-dynamic-dns) (where my domains are registered).
