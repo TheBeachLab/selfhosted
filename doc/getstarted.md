@@ -15,7 +15,6 @@
 - [Use mosh to connect from mobile phones and iSH](#use-mosh-to-connect-from-mobile-phones-and-ish)
 - [tmux Terminal Multiplexer](#tmux-terminal-multiplexer)
 - [Unattended upgrades](#unattended-upgrades)
-- [Setup NordVPN](#setup-nordvpn)
 
 <!-- vim-markdown-toc -->
 
@@ -167,16 +166,3 @@ Apply the changes `sudo dpkg-reconfigure --priority=low unattended-upgrades`
 
 ![](../img/unattended.png)
 
-## Setup NordVPN
-
-Note: ddclient will NOT work with NordVPN. Still not sure how to go around this limitation.
-
-The world is full of bastard law firms monitoring the Internet. My 2 cents: Become invisible
-
-`sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)` 
-
-Then get a token in you account and log-in `nordvpn login --token YOUR_TOKEN_HERE`
-
-and connect `nordvpn connect es` (to Spain in this case)
-
-and set autoconnect on login: `nordvpn set autoconnect on es`
