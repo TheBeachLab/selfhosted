@@ -256,3 +256,18 @@ Solved by:
 
 `sudo setfacl -R -m u:mosquitto:rX /etc/letsencrypt/{live,archive}`
 
+But also
+
+`sudo setfacl -R -m d:u:mosquitto:rx /etc/letsencrypt/{live,archive}`
+
+That command sets default ACLs (Access Control Lists) for the Mosquitto user on the specified directories.
+
+Breakdown:
+- sudo → run as root
+- setfacl → command to set file access control lists
+- -R → apply recursively to all files and subdirectories
+- -m → modify (add/change) ACL entries
+- d: → set a default ACL, meaning new files or dirs created under these paths will inherit this ACL
+- u:mosquitto:rx → give user mosquitto read (r) and execute (x) permissions
+- /etc/letsencrypt/{live,archive} → target directories
+
