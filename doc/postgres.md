@@ -336,7 +336,68 @@ postgres-# \q
 pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 ```
 
-> To be continued...
+```sql
+sudo -u postgres psql <<'SQL'
+CREATE DATABASE sensors;
+\c sensors
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+CREATE TABLE env_readings (
+  time           timestamptz NOT NULL,
+  device_id      text        NOT NULL,
+  temperature_c  double precision,
+  humidity_pct   double precision,
+  pressure_hpa   double precision
+);
+
+SELECT create_hypertable('env_readings','time',
+                         chunk_time_interval => interval '1 day',
+                         if_not_exists => TRUE);
+SQL
+```
+
+The response will be:
+
+```sql 
+CREATE DATABASE
+You are now connected to database "sensors" as user "postgres".
+CREATE EXTENSION
+CREATE TABLE
+     create_hypertable     
+---------------------------
+ (1,public,env_readings,t)
+(1 row)
+```
+
+TODO
+If (time, device_id) should be unique (e.g., one reading per device per timestamp), add a primary key:
+
+```sql
+ALTER TABLE env_readings
+  ADD CONSTRAINT env_readings_pk PRIMARY KEY (time, device_id);
+```
+
+and add helpful indexes for common queries:
+
+```sql
+-- Filter by device over time
+CREATE INDEX ON env_readings (device_id, time DESC);
+-- Pure time-window scans
+CREATE INDEX ON env_readings (time DESC);
+```
+If you’ll compress older data later:
+
+```sql
+ALTER TABLE env_readings SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'device_id',
+  timescaledb.compress_orderby   = 'time DESC'
+);
+
+SELECT add_compression_policy('env_readings', INTERVAL '7 days'); -- compress data older than 7d
+```
+
+
 
 ## Managing PostgreSQL with pgAdmin
 
