@@ -63,7 +63,7 @@ If you want to disable 2FA for this user, edit `sudo nano /etc/pam.d/sshd` and a
 
 before `auth required pam_google_authenticator.so`. Make sure you reload the ssh daemon `sudo service sshd restart`
 
-Check the connection `ssh -p 22 mlgpu@beachlab.org`
+Check the connection `ssh -p 22 ml@beachlab.org`
 
 ## Install JupyterLab and PyTorch
 
@@ -121,7 +121,7 @@ Logout and login for the changes to apply. Now you can create the mount point an
 
 ```bash
 sudo mkdir /mnt/ml
-sudo sshfs -p 22 -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),default_permissions,IdentityFile=/home/unix/.ssh/id_rsa ml@beachlab.org:/home/mlgpu /mnt/mlgpu
+sudo sshfs -p 622 -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),default_permissions,IdentityFile=/home/unix/.ssh/id_rsa ml@beachlab.org:/home/ml /mnt/ml
 ```
 
 And you will see that the files are mounted as if you were the owner
@@ -155,33 +155,19 @@ brew install gromgit/fuse/sshfs-mac
 Now create the mount point and mount the remote ml home folder:
 
 ```bash
-mkdir -p ~/mnt/mlgpu
-sshfs -p 22 \
+mkdir -p ~/mnt/ml
+sshfs -p 622 \
   -o allow_other,workaround=rename,noexec,idmap=user,uid=$(id -u),gid=$(id -g),reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,IdentityFile=~/.ssh/id_rsa \
-  ml@beachlab.org:/home/mlgpu ~/mnt/mlgpu
+  ml@beachlab.org:/home/ml ~/mnt/ml
 ```
 
-You’ll now see the files as if you were the owner:
-
-```bash
-[mac ~/mnt/mlgpu]$ ls -l
-total 4.0K
-drwxrwxr-x 1 mac staff 4.0K Nov  6 10:54 data
-```
-
-And on the remote server:
-
-```bash
-ml@thebeachlab:~$ ls -l
-total 4
-drwxrwxr-x 3 ml ml 4096 Nov  6 09:54 data
-```
+You’ll now see the files as if you were the owner.
 
 Unmount when not needed:
 
 ```bash
-umount ~/mnt/mlgpu
+umount ~/mnt/ml
 # or:
-diskutil unmount force ~/mnt/mlgpu
+diskutil unmount force ~/mnt/ml
 ```
 
