@@ -1,42 +1,45 @@
 # PostgreSQL
 
-- [Install](#install)
-- [Install pgbouncer](#install-pgbouncer)
-- [Upgrade](#upgrade)
-- [Remote connection](#remote-connection)
-- [Common psql commands](#common-psql-commands)
-- [Create a new role](#create-a-new-role)
-- [Create a new database](#create-a-new-database)
-- [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
-- [TimescaleDB](#timescaledb)
-- [Create a hypertable in `iot` database](#create-a-hypertable-in-iot-database)
-- [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
-  - [Install pgadmin4](#install-pgadmin4)
-  - [Apache and nginx together](#apache-and-nginx-together)
-  - [Creating a subdomain (optional)](#creating-a-subdomain-optional)
-  - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
-  - [Configure pgadmin](#configure-pgadmin)
-  - [Running pgadmin](#running-pgadmin)
-  - [Reset pgadmin password](#reset-pgadmin-password)
-  - [unlock pgadmin account](#unlock-pgadmin-account)
-  - [pgadmin storage](#pgadmin-storage)
-- [SQL Tips and tricks](#sql-tips-and-tricks)
-  - [Create a readonly user](#create-a-readonly-user)
-  - [For every table](#for-every-table)
-  - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
-  - [New table from existing table](#new-table-from-existing-table)
-  - [Add new column to existing table](#add-new-column-to-existing-table)
-  - [Add one to many](#add-one-to-many)
-  - [Create a JSON from a TABLE](#create-a-json-from-a-table)
-  - [Check the size of a TABLE](#check-the-size-of-a-table)
-  - [Create a unique constraint combination of 2 COLUMNS](#create-a-unique-constraint-combination-of-2-columns)
-  - [Copy a TABLE from one DATABASE to another (same pg server)](#copy-a-table-from-one-database-to-another-same-pg-server)
-  - [Delete ROWS](#delete-rows)
-  - [Create a VIEW with fallback values](#create-a-view-with-fallback-values)
-  - [Get the definition that created a VIEW](#get-the-definition-that-created-a-view)
-- [API and REST](#api-and-rest)
-  - [PostgREST](#postgrest)
-  - [FastAPI](#fastapi)
+- [PostgreSQL](#postgresql)
+  - [Install](#install)
+  - [Install pgbouncer](#install-pgbouncer)
+  - [Upgrade](#upgrade)
+  - [Remote connection](#remote-connection)
+  - [Common psql commands](#common-psql-commands)
+  - [Create a new role](#create-a-new-role)
+  - [Create a new database](#create-a-new-database)
+  - [Open a postgres prompt with `iot` role](#open-a-postgres-prompt-with-iot-role)
+  - [TimescaleDB](#timescaledb)
+    - [Create a hypertable in `sensors` database](#create-a-hypertable-in-sensors-database)
+    - [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
+    - [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
+  - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
+    - [Install pgadmin4](#install-pgadmin4)
+    - [Apache and nginx together](#apache-and-nginx-together)
+    - [Creating a subdomain (optional)](#creating-a-subdomain-optional)
+    - [Securing pgadmin with https (optional)](#securing-pgadmin-with-https-optional)
+    - [Configure pgadmin](#configure-pgadmin)
+    - [Running pgadmin](#running-pgadmin)
+    - [Reset pgadmin password](#reset-pgadmin-password)
+    - [unlock pgadmin account](#unlock-pgadmin-account)
+    - [pgadmin storage](#pgadmin-storage)
+  - [SQL Tips and tricks](#sql-tips-and-tricks)
+    - [Create a readonly user](#create-a-readonly-user)
+    - [For every table](#for-every-table)
+    - [Autoupdate the modified timestamp when a record is updated](#autoupdate-the-modified-timestamp-when-a-record-is-updated)
+    - [New table from existing table](#new-table-from-existing-table)
+    - [Add new column to existing table](#add-new-column-to-existing-table)
+    - [Add one to many](#add-one-to-many)
+    - [Create a JSON from a TABLE](#create-a-json-from-a-table)
+    - [Check the size of a TABLE](#check-the-size-of-a-table)
+    - [Create a unique constraint combination of 2 COLUMNS](#create-a-unique-constraint-combination-of-2-columns)
+    - [Copy a TABLE from one DATABASE to another (same pg server)](#copy-a-table-from-one-database-to-another-same-pg-server)
+    - [Delete ROWS](#delete-rows)
+    - [Create a VIEW with fallback values](#create-a-view-with-fallback-values)
+    - [Get the definition that created a VIEW](#get-the-definition-that-created-a-view)
+  - [API and REST](#api-and-rest)
+    - [PostgREST](#postgrest)
+    - [FastAPI](#fastapi)
 
 
 ## Install
@@ -293,16 +296,16 @@ If you are going to say yes to all you could also do `sudo timescaledb-tune --qu
 
 `sudo systemctl restart postgresql.service`
 
-## Create a hypertable in `iot` database
+### Create a hypertable in `sensors` database
 
-First connect to `iot`
+First connect to `sensors`
 
-`sudo -u iot psql`
+`sudo -u sensors psql`
 
 Enable the TimescaleDB extension
 
 ```bash
-iot=# CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+sensors=# CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 WARNING:
 WELCOME TO
  _____ _                               _     ____________
@@ -336,65 +339,74 @@ postgres-# \q
 pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 ```
 
-```sql
-sudo -u postgres psql <<'SQL'
-CREATE DATABASE sensors;
-\c sensors
-CREATE EXTENSION IF NOT EXISTS timescaledb;
 
-CREATE TABLE env_readings (
-  time           timestamptz NOT NULL,
-  device_id      text        NOT NULL,
-  temperature_c  double precision,
-  humidity_pct   double precision,
-  pressure_hpa   double precision
+
+```sql
+-- 1) Remove the old wide table
+DROP TABLE IF EXISTS sensors;
+
+-- 2) Create the narrow table
+CREATE TABLE sensors (
+  time        TIMESTAMPTZ NOT NULL,
+  device_id   TEXT        NOT NULL,
+  sensor_name TEXT        NOT NULL,
+  value       DOUBLE PRECISION NOT NULL
 );
 
-SELECT create_hypertable('env_readings','time',
-                         chunk_time_interval => interval '1 day',
-                         if_not_exists => TRUE);
-SQL
+-- 3) Make it a hypertable (pick chunk interval you like)
+SELECT create_hypertable('sensors', 'time', chunk_time_interval => INTERVAL '1 day');
+
+-- 4) Helpful indexes
+CREATE INDEX ON sensors (device_id, sensor_name, time DESC);
+
+-- (Optional) prevent exact duplicate points:
+ALTER TABLE sensors ADD CONSTRAINT sensors_unique UNIQUE (time, device_id, sensor_name);
+
+-- (Optional) compression/retention examples:
+ALTER TABLE sensors SET (timescaledb.compress, timescaledb.compress_segmentby = 'device_id,sensor_name');
+SELECT add_compression_policy('sensors', INTERVAL '7 days');
+SELECT add_retention_policy('sensors', INTERVAL '365 days');
 ```
 
-The response will be:
+### Manually insert sensor data in the hypertable
+
+You can enter data like this:
 
 ```sql 
-CREATE DATABASE
-You are now connected to database "sensors" as user "postgres".
-CREATE EXTENSION
-CREATE TABLE
-     create_hypertable     
----------------------------
- (1,public,env_readings,t)
-(1 row)
+INSERT INTO sensors (time, device_id, sensor_name, value)
+VALUES (now(), 'pink', 'disk_usage_pct', 42.3);
 ```
 
-TODO
-If (time, device_id) should be unique (e.g., one reading per device per timestamp), add a primary key:
+### Automatic insert sensor data in the hypertable
 
-```sql
-ALTER TABLE env_readings
-  ADD CONSTRAINT env_readings_pk PRIMARY KEY (time, device_id);
+`sudo nano /usr/local/bin/diskwatch_to_timescale.sh`
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEVICE_ID="pink"   
+
+PCT=$(df --output=pcent / | tail -n1 | tr -d ' %')
+STATE=/var/tmp/root_pct.prev
+PREV=$(cat "$STATE" 2>/dev/null || echo -1)
+
+if [ "$PCT" != "$PREV" ]; then
+  echo "$PCT" > "$STATE"
+  psql -XtAc \
+    "INSERT INTO sensors (time, device_id, sensor_name, value)
+     VALUES (NOW(), '$DEVICE_ID', 'disk_usage_pct', $PCT);" >/dev/null
+fi
 ```
 
-and add helpful indexes for common queries:
+Make it executable `sudo chmod +x /usr/local/bin/diskwatch_to_timescale.sh`
 
-```sql
--- Filter by device over time
-CREATE INDEX ON env_readings (device_id, time DESC);
--- Pure time-window scans
-CREATE INDEX ON env_readings (time DESC);
-```
-If you’ll compress older data later:
-
-```sql
-ALTER TABLE env_readings SET (
-  timescaledb.compress,
-  timescaledb.compress_segmentby = 'device_id',
-  timescaledb.compress_orderby   = 'time DESC'
-);
-
-SELECT add_compression_policy('env_readings', INTERVAL '7 days'); -- compress data older than 7d
+```bash
+# Create /.pgpass with correct perms
+sudo -u root sh -c 'umask 177 && cat > /root/.pgpass <<EOF
+localhost:5432:sensors:sensors:password
+EOF'
+sudo chown root:root /root/.pgpass
 ```
 
 
