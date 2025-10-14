@@ -382,20 +382,23 @@ VALUES (now(), 'pink', 'disk_usage_pct', 42.3);
 `sudo nano /usr/local/bin/diskwatch_to_timescale.sh`
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-DEVICE_ID="pink"   
+DEVICE_ID="pink"
+SENSOR="disk_usage_pct"
 
 PCT=$(df --output=pcent / | tail -n1 | tr -d ' %')
-STATE=/var/tmp/root_pct.prev
-PREV=$(cat "$STATE" 2>/dev/null || echo -1)
 
-if [ "$PCT" != "$PREV" ]; then
-  echo "$PCT" > "$STATE"
-  psql -XtAc \
-    "INSERT INTO sensors (time, device_id, sensor_name, value)
-     VALUES (NOW(), '$DEVICE_ID', 'disk_usage_pct', $PCT);" >/dev/null
+LAST=$(
+  psql -Atc "SELECT value
+             FROM sensors
+             WHERE device_id='${DEVICE_ID}'
+               AND sensor_name='${SENSOR}'
+             ORDER BY time DESC
+             LIMIT 1;"
+)
+
+if [ -z "$LAST" ] || [ "$PCT" != "$LAST" ]; then
+  psql -XtAc "INSERT INTO sensors (time, device_id, sensor_name, value)
+              VALUES (NOW(), '${DEVICE_ID}', '${SENSOR}', ${PCT});" >/dev/null
 fi
 ```
 
@@ -408,7 +411,26 @@ localhost:5432:sensors:sensors:password
 EOF'
 sudo chown root:root /root/.pgpass
 ```
+and make sure the permissions are 600
 
+`sudo chmod 600 /root/.pgpass`
+
+check the write of data:
+
+```bash
+pink@thebeachlab$ sudo -u sensors psql
+psql (18.0 (Ubuntu 18.0-1.pgdg22.04+3), server 17.6 (Ubuntu 17.6-2.pgdg22.04+1))
+Type "help" for help.
+
+sensors=# SELECT * 
+FROM sensors
+ORDER BY time DESC
+LIMIT 20;
+             time              | device_id |  sensor_name   | value 
+-------------------------------+-----------+----------------+-------
+ 2025-10-14 09:55:01.294568+00 | pink      | disk_usage_pct |    61
+(1 row)
+```
 
 
 ## Managing PostgreSQL with pgAdmin
