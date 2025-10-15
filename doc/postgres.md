@@ -13,6 +13,7 @@
     - [Create a hypertable in `sensors` database](#create-a-hypertable-in-sensors-database)
     - [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
     - [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
+    - [Push hypertable data to web server](#push-hypertable-data-to-web-server)
   - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
     - [Install pgadmin4](#install-pgadmin4)
     - [Apache and nginx together](#apache-and-nginx-together)
@@ -431,6 +432,185 @@ LIMIT 20;
  2025-10-14 09:55:01.294568+00 | pink      | disk_usage_pct |    61
 (1 row)
 ```
+
+### Push hypertable data to web server
+
+Add a NOTIFY trigger in PostgreSQL
+
+`sudo -u sensors psql`
+
+```sql
+-- 1) Create a function that NOTIFY’s a channel with a JSON payload
+CREATE OR REPLACE FUNCTION public.sensors_notify()
+RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE payload text;
+BEGIN
+  payload := json_build_object(
+    'table','sensors',
+    'op', TG_OP,
+    'time', NEW.time,
+    'device_id', NEW.device_id,
+    'sensor_name', NEW.sensor_name,
+    'value', NEW.value
+  )::text;
+  PERFORM pg_notify('sensors_changes', payload);
+  RETURN NEW;
+END; $$;
+```
+
+create a web_read role
+
+```sql
+CREATE ROLE web_read LOGIN PASSWORD 'webread_password';
+
+-- read permissions
+GRANT CONNECT ON DATABASE sensors TO web_read;
+GRANT USAGE ON SCHEMA public TO web_read;
+GRANT SELECT ON TABLE public.sensors TO web_read;
+```
+
+Install dependencies. Use a non-root service user and a virtualenv:
+
+```bash
+sudo adduser --system --group --home /opt/sse-bridge sse
+sudo -u sse python3 -m venv /opt/sse-bridge/venv
+sudo -u sse /opt/sse-bridge/venv/bin/pip install flask psycopg2-binary gunicorn
+```
+
+Create `sudo -u sse -H nano /opt/sse-bridge/sse.py`
+
+```python
+from flask import Flask, Response
+import psycopg2, os, select, json, time
+
+app = Flask(__name__)
+
+def stream():
+    conn = psycopg2.connect(
+        host=os.getenv("PGHOST","localhost"),
+        dbname=os.getenv("PGDATABASE","sensors"),
+        user=os.getenv("PGUSER","web_read"),
+        password=os.getenv("PGPASSWORD")
+    )
+    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = conn.cursor()
+    cur.execute("LISTEN sensors_changes;")
+    # keep-alive 25s for proxies
+    last_ping = time.time()
+    try:
+        while True:
+            if select.select([conn], [], [], 5)[0]:
+                conn.poll()
+                while conn.notifies:
+                    n = conn.notifies.pop(0)
+                    yield f"data: {n.payload}\n\n"
+            if time.time() - last_ping > 25:
+                yield ": keep-alive\n\n"
+                last_ping = time.time()
+    finally:
+        cur.close(); conn.close()
+
+@app.after_request
+def sse_headers(resp):
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.get("/events")
+def events():
+    return Response(stream(), mimetype="text/event-stream")
+```
+
+Point nginx to it (reverse proxy)
+
+```nginx
+location /events {
+    proxy_pass         http://127.0.0.1:5051/events;
+    proxy_http_version 1.1;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_buffering    off;
+    proxy_cache        off;
+    gzip               off;
+    proxy_read_timeout 1h;
+    add_header Cache-Control no-store;
+}
+```
+
+`sudo nginx -t && sudo systemctl reload nginx`
+
+Create a service
+
+`sudo nano /etc/systemd/system/sse-bridge.service`
+
+```bash
+[Unit]
+Description=SSE bridge for sensors
+After=network.target
+
+[Service]
+User=sse
+WorkingDirectory=/opt/sse-bridge
+EnvironmentFile=/opt/sse-bridge/env.sh
+ExecStart=/opt/sse-bridge/venv/bin/gunicorn -w 1 --threads 4 -b 127.0.0.1:5051 sse:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create the environment file:
+
+```bash
+# create env file
+sudo -u sse -H nano /opt/sse-bridge/env.sh 
+
+PGHOST=localhost
+PGDATABASE=sensors
+PGUSER=web_read
+PGPASSWORD=password_for_webread
+
+sudo -u sse -H chmod 600 /opt/sse-bridge/env.sh'
+```
+
+then
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now sse-bridge
+sudo systemctl status sse-bridge
+```
+
+Check that data is pushed to the web server
+
+```sql
+sensors=# INSERT INTO public.sensors (time, device_id, sensor_name, value)
+VALUES (now(), 'pink', 'disk_usage_pct', 60);
+INSERT 0 1
+sensors=# 
+```
+
+In the web server
+
+```bash
+pink@thebeachlab:~$ curl -i http://127.0.0.1:5051/events
+HTTP/1.1 200 OK
+Server: gunicorn
+Date: Tue, 14 Oct 2025 14:07:49 GMT
+Connection: keep-alive
+Transfer-Encoding: chunked
+Content-Type: text/event-stream; charset=utf-8
+Cache-Control: no-store
+
+
+data: {"table" : "sensors", "op" : "INSERT", "time" : "2025-10-14T14:09:10.324284+00:00", "device_id" : "pink", "sensor_name" : "disk_usage_pct", "value" : 60}
+```
+
+Catch the event with websocket
+
+
+
+
 
 
 ## Managing PostgreSQL with pgAdmin
