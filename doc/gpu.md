@@ -34,7 +34,7 @@ Replace with your actual SSH port `sudo ufw allow 22/udp comment "ML"` and `sudo
 This is just in case you need gpu accelerated encoders or decoders for video server. [Remove the nouveau kernel](https://tutorials.technology/tutorials/85-How-to-remove-Nouveau-kernel-driver-Nvidia-install-error.html) then download and install cuda and the driver. Check version `nvcc --version`.
 
 ```bash
-sudo apt install nvidia-driver-550
+sudo apt install ubuntu-drivers autoinstall
 ```
 
 ## Python
