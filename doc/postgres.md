@@ -13,13 +13,14 @@
     - [Create a hypertable in `sensors` database](#create-a-hypertable-in-sensors-database)
     - [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
     - [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
+    - [Push hypertable data to web server](#push-hypertable-data-to-web-server)
+    - [Catch the event with SSE](#catch-the-event-with-sse)
     - [Add a Time series for the server internal sensors](#add-a-time-series-for-the-server-internal-sensors)
       - [1. Create the role and database](#1-create-the-role-and-database)
       - [2. Install collectors](#2-install-collectors)
       - [3. Configure Telegraf](#3-configure-telegraf)
       - [4. Test and enable](#4-test-and-enable)
       - [5. Verify in Timescale](#5-verify-in-timescale)
-    - [Push hypertable data to web server](#push-hypertable-data-to-web-server)
   - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
     - [Install pgadmin4](#install-pgadmin4)
     - [Apache and nginx together](#apache-and-nginx-together)
@@ -305,7 +306,7 @@ If you are going to say yes to all you could also do `sudo timescaledb-tune --qu
 
 ### Create a hypertable in `sensors` database
 
-First connect to `sensors`
+First execute psql as `sensors` user
 
 `sudo -u sensors psql`
 
@@ -438,97 +439,6 @@ LIMIT 20;
  2025-10-14 09:55:01.294568+00 | pink      | disk_usage_pct |    61
 (1 row)
 ```
-### Add a Time series for the server internal sensors
-
-This section sets up automatic collection of internal hardware metrics (CPU, GPU, disks, sensors) and stores them in TimescaleDB using Telegraf.
-
-#### 1. Create the role and database
-```bash
-sudo -u postgres psql <<'SQL'
-CREATE ROLE sensors LOGIN PASSWORD 'YOUR_PASSWORD';
-CREATE DATABASE sensors OWNER sensors TEMPLATE template0 ENCODING 'UTF8';
-\c sensors
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-SQL
-```
-
-Ensure that `/etc/postgresql/*/main/pg_hba.conf` allows local password auth:
-```
-host    all    sensors    127.0.0.1/32    scram-sha-256
-```
-Then restart PostgreSQL.
-
-#### 2. Install collectors
-```bash
-sudo apt update
-sudo apt install -y telegraf lm-sensors smartmontools nvme-cli intel-gpu-tools
-sudo sensors-detect --auto
-```
-Give Telegraf permission for SMART:
-```bash
-echo 'telegraf ALL=(root) NOPASSWD:/usr/sbin/smartctl' | sudo tee /etc/sudoers.d/telegraf-smart
-```
-
-#### 3. Configure Telegraf
-Create `/etc/telegraf/telegraf.d/nuc-timescale.conf`:
-```toml
-[agent]
-  interval = "30s"
-  round_interval = true
-  omit_hostname = false
-
-[[inputs.cpu]] percpu=true totalcpu=true
-[[inputs.mem]]
-[[inputs.system]]
-
-[[inputs.disk]]
-  ignore_fs = ["tmpfs","devtmpfs","overlay","squashfs","aufs","nsfs","ramfs","bpf","cgroup2","tracefs","proc","sysfs"]
-[[inputs.diskio]]
-
-[[inputs.sensors]]
-[[inputs.nvidia_smi]]
-  bin_path = "/usr/bin/nvidia-smi"
-  timeout = "5s"
-
-[[inputs.smart]]
-  use_sudo = true
-  attributes = true
-  nocheck = "standby"
-  devices = ["/dev/nvme0","/dev/sda","/dev/sdb"]
-
-[[outputs.sql]]
-  driver = "pgx"
-  data_source_name = "postgres://sensors:YOUR_PASSWORD@127.0.0.1:5432/sensors?sslmode=disable"
-```
-
-#### 4. Test and enable
-```bash
-sudo telegraf --config /etc/telegraf/telegraf.d/nuc-timescale.conf --test | head
-sudo systemctl restart telegraf
-sudo journalctl -u telegraf -n 50 --no-pager
-```
-
-#### 5. Verify in Timescale
-```bash
-sudo -u postgres psql sensors
-\dt
-SELECT time, host, util AS gpu_util, temperature_gpu AS gpu_temp FROM telegraf_nvidia_smi ORDER BY time DESC LIMIT 5;
-SELECT time, host, feature, temp_input FROM telegraf_sensors ORDER BY time DESC LIMIT 5;
-```
-
-Convert tables to hypertables:
-```sql
-DO $$
-DECLARE r record;
-BEGIN
-  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'telegraf_%'
-  LOOP
-    EXECUTE format($f$SELECT create_hypertable('%I','time', if_not_exists => TRUE)$f$, r.tablename);
-  END LOOP;
-END$$;
-```
-
-Telegraf now continuously inserts CPU, GPU, temperature, and disk metrics into TimescaleDB.
 
 ### Push hypertable data to web server
 
@@ -703,12 +613,162 @@ Cache-Control: no-store
 data: {"table" : "sensors", "op" : "INSERT", "time" : "2025-10-14T14:09:10.324284+00:00", "device_id" : "pink", "sensor_name" : "disk_usage_pct", "value" : 60}
 ```
 
-Catch the event with websocket
+### Catch the event with SSE
+
+And update your website
+
+```html
+<table id="readings">
+  <thead>
+    <tr><th>Device</th><th>Sensor</th><th>Value</th><th>Time</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  // Open the SSE stream
+  const es = new EventSource('/events');
+  es.onmessage = (ev) => updateDashboard(JSON.parse(ev.data));
+
+  // Paint/update the UI with the newest reading
+  function updateDashboard(msg) {
+    // Try to be flexible with field names coming from your backend
+    const device = msg.device_id || msg.device || 'unknown';
+    const sensor = msg.sensor_name || msg.sensor || msg.table || 'reading';
+    const value  = msg.value ?? msg.val ?? msg.reading ?? '—';
+    const ts     = msg.ts || msg.time || msg.timestamp || new Date().toISOString();
+
+    // Use (device,sensor) as a stable row key
+    const key = `${device}:${sensor}`;
+    const tbody = document.querySelector('#readings tbody');
+    let row = tbody.querySelector(`tr[data-key="${key}"]`);
+
+    if (!row) {
+      // Create row if first time we see this (device,sensor)
+      row = document.createElement('tr');
+      row.setAttribute('data-key', key);
+      row.innerHTML = `
+        <td class="c-device"></td>
+        <td class="c-sensor"></td>
+        <td class="c-value"></td>
+        <td class="c-time"></td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    // Update the cells
+    row.querySelector('.c-device').textContent = device;
+    row.querySelector('.c-sensor').textContent = sensor;
+    row.querySelector('.c-value').textContent  = String(value);
+    row.querySelector('.c-time').textContent   = new Date(ts).toLocaleString();
+
+    // Optional: quick highlight effect when a value changes
+    row.classList.add('updated');
+    setTimeout(() => row.classList.remove('updated'), 400);
+  }
+</script>
+
+<style>
+  /* Optional: tiny highlight so you "see" live updates */
+  tr.updated { transition: background 0.4s; background: rgba(255, 230, 150, 0.6); }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+</style>
+```
 
 
 
+### Add a Time series for the server internal sensors
 
+This section sets up automatic collection of internal hardware metrics (CPU, GPU, disks, sensors) and stores them in TimescaleDB using Telegraf.
 
+#### 1. Create the role and database
+```bash
+sudo -u postgres psql <<'SQL'
+CREATE ROLE sensors LOGIN PASSWORD 'YOUR_PASSWORD';
+CREATE DATABASE sensors OWNER sensors TEMPLATE template0 ENCODING 'UTF8';
+\c sensors
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+SQL
+```
+
+Ensure that `/etc/postgresql/*/main/pg_hba.conf` allows local password auth:
+```
+host    all    sensors    127.0.0.1/32    scram-sha-256
+```
+Then restart PostgreSQL.
+
+#### 2. Install collectors
+```bash
+sudo apt update
+sudo apt install -y telegraf lm-sensors smartmontools nvme-cli intel-gpu-tools
+sudo sensors-detect --auto
+```
+Give Telegraf permission for SMART:
+```bash
+echo 'telegraf ALL=(root) NOPASSWD:/usr/sbin/smartctl' | sudo tee /etc/sudoers.d/telegraf-smart
+```
+
+#### 3. Configure Telegraf
+Create `/etc/telegraf/telegraf.d/nuc-timescale.conf`:
+```toml
+[agent]
+  interval = "30s"
+  round_interval = true
+  omit_hostname = false
+
+[[inputs.cpu]] percpu=true totalcpu=true
+[[inputs.mem]]
+[[inputs.system]]
+
+[[inputs.disk]]
+  ignore_fs = ["tmpfs","devtmpfs","overlay","squashfs","aufs","nsfs","ramfs","bpf","cgroup2","tracefs","proc","sysfs"]
+[[inputs.diskio]]
+
+[[inputs.sensors]]
+[[inputs.nvidia_smi]]
+  bin_path = "/usr/bin/nvidia-smi"
+  timeout = "5s"
+
+[[inputs.smart]]
+  use_sudo = true
+  attributes = true
+  nocheck = "standby"
+  devices = ["/dev/nvme0","/dev/sda","/dev/sdb"]
+
+[[outputs.sql]]
+  driver = "pgx"
+  data_source_name = "postgres://sensors:YOUR_PASSWORD@127.0.0.1:5432/sensors?sslmode=disable"
+```
+
+#### 4. Test and enable
+```bash
+sudo telegraf --config /etc/telegraf/telegraf.d/nuc-timescale.conf --test | head
+sudo systemctl restart telegraf
+sudo journalctl -u telegraf -n 50 --no-pager
+```
+
+#### 5. Verify in Timescale
+```bash
+sudo -u postgres psql sensors
+\dt
+SELECT time, host, util AS gpu_util, temperature_gpu AS gpu_temp FROM telegraf_nvidia_smi ORDER BY time DESC LIMIT 5;
+SELECT time, host, feature, temp_input FROM telegraf_sensors ORDER BY time DESC LIMIT 5;
+```
+
+Convert tables to hypertables:
+```sql
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'telegraf_%'
+  LOOP
+    EXECUTE format($f$SELECT create_hypertable('%I','time', if_not_exists => TRUE)$f$, r.tablename);
+  END LOOP;
+END$$;
+```
+
+Telegraf now continuously inserts CPU, GPU, temperature, and disk metrics into TimescaleDB.
 
 ## Managing PostgreSQL with pgAdmin
 
