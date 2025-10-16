@@ -34,8 +34,16 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 - [Transmission Daemon](doc/transmission.md)
 - [Mumble server](doc/mumble.md)
 - [VPN Server](doc/vpn.md)
+- [iOS Push Notifications iGotify](doc/igotify.md)
+- [n8n Server](doc/n8n.md)
+- [OpenHab Server](doc/openhab.md)
+- [Auto USB copy](doc/transfer2usb.md)
+- [Troubleshooting](doc/troubleshooting.md)
+
+IoT and Databases
 - [IoT related](doc/iot.md)
 - [Postgresql Database Server](doc/postgres.md)
+  - [TimescaleDB](doc/timescaledb.md)
   - [Strapi CSM](doc/strapi.md)
   - [PostgREST API](doc/postgrest.md)
   - [OSM Server](doc/osm.md)
@@ -43,11 +51,10 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 - [Open Geo Data](doc/geodata.md)
   - [Airports Database](doc/airports.md)
   - [Baustellen in München](doc/baustellen.md)
-- [GPU related](doc/gpu.md)
-- [iOS Push Notifications iGotify](doc/igotify.md)
-- [n8n Server](doc/n8n.md)
-- [OpenHab Server](doc/openhab.md)
-- [Troubleshooting](doc/troubleshooting.md)
+
+AI Related
+- [GPU](doc/gpu.md)
+- [Hailo Dataflow Compiler](doc/ai.md)
 
 
 To improve or fix
