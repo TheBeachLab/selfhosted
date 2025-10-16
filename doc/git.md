@@ -2,15 +2,15 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Gitlab? No, thanks](#gitlab-no-thanks)
-* [Setup a plain git server](#setup-a-plain-git-server)
-* [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
-* [Create or clone a bare repository](#create-or-clone-a-bare-repository)
-	* [Create bare](#create-bare)
-	* [Clone bare](#clone-bare)
-* [Working repositories](#working-repositories)
-* [Web Interface](#web-interface)
-* [Deploy your website with git](#deploy-your-website-with-git)
+- [Gitlab? No, thanks](#gitlab-no-thanks)
+- [Setup a plain git server](#setup-a-plain-git-server)
+- [Optional. Disable 2FA for some users](#optional-disable-2fa-for-some-users)
+- [Create or clone a bare repository](#create-or-clone-a-bare-repository)
+  - [Create bare](#create-bare)
+  - [Clone bare](#clone-bare)
+- [Working repositories](#working-repositories)
+- [Web Interface](#web-interface)
+- [Deploy your website with git](#deploy-your-website-with-git)
 
 <!-- vim-markdown-toc -->
 

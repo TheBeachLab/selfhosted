@@ -2,11 +2,12 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Prerrequisites](#prerrequisites)
-* [Install](#install)
-* [Configure](#configure)
-* [Copy the certificates in the machine/device where client taskwarrior is](#copy-the-certificates-in-the-machinedevice-where-client-taskwarrior-is)
-* [Sync](#sync)
+- [Prerrequisites](#prerrequisites)
+- [Install the server](#install-the-server)
+- [Configure the server](#configure-the-server)
+- [Generate certificate files for each client](#generate-certificate-files-for-each-client)
+- [Copy the certificates to the client machine/device (taskwarrior)](#copy-the-certificates-to-the-client-machinedevice-taskwarrior)
+- [Sync](#sync)
 
 <!-- vim-markdown-toc -->
 

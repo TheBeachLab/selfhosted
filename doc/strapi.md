@@ -1,4 +1,9 @@
-# Install
+# Strapi CMS
+
+- [Install](#install)
+
+
+## Install
 Create database sisterapi in postgres
 ```sql
 CREATE USER strapi_user WITH PASSWORD 'whatever';

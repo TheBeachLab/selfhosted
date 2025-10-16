@@ -6,6 +6,5 @@ From <https://ourcodeworld.com/articles/read/1175/how-to-create-and-configure-yo
 
 `nano /etc/default/coturn` make sure `TURNSERVER_ENABLED=1`
 
-`
 Missing correct link of certificates
 

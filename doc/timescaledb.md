@@ -1,8 +1,23 @@
-## TimescaleDB
+# TimescaleDB
 
 IoT stores huge time series data. Relational databases can be used to store the data but processing can be slow. TimescaleDB is an NoSQL database optimized to store time-series data. It is implemented as an extension of PostgreSQL combining the ease of use of relational databases and the speed of NoSQL databases.
 
-Install
+- [Install](#install)
+- [Configure and optimize](#configure-and-optimize)
+- [Convert existing `sensors` database into hypertable](#convert-existing-sensors-database-into-hypertable)
+- [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
+- [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
+- [Push hypertable data to web server](#push-hypertable-data-to-web-server)
+- [Catch the event with SSE](#catch-the-event-with-sse)
+- [Add a Time series for the server internal sensors](#add-a-time-series-for-the-server-internal-sensors)
+  - [1. Create the role and database](#1-create-the-role-and-database)
+  - [2. Install collectors](#2-install-collectors)
+  - [3. Configure Telegraf](#3-configure-telegraf)
+  - [4. Test and enable](#4-test-and-enable)
+  - [5. Verify in Timescale](#5-verify-in-timescale)
+
+
+## Install
 
 ```bash
 sudo add-apt-repository ppa:timescale/timescaledb-ppa
@@ -10,7 +25,7 @@ sudo apt update
 sudo apt install timescaledb-postgresql-12
 ```
 
-Configure and optimize
+## Configure and optimize
 
 ```bash
 pink@thebeachlab:~$ sudo timescaledb-tune
@@ -96,7 +111,7 @@ If you are going to say yes to all you could also do `sudo timescaledb-tune --qu
 
 `sudo systemctl restart postgresql.service`
 
-### Create a hypertable in `sensors` database
+## Convert existing `sensors` database into hypertable
 
 First execute psql as `sensors` user
 
@@ -168,7 +183,7 @@ SELECT add_compression_policy('sensors', INTERVAL '7 days');
 SELECT add_retention_policy('sensors', INTERVAL '365 days');
 ```
 
-### Manually insert sensor data in the hypertable
+## Manually insert sensor data in the hypertable
 
 You can enter data like this:
 
@@ -177,7 +192,7 @@ INSERT INTO sensors (time, device_id, sensor_name, value)
 VALUES (now(), 'pink', 'disk_usage_pct', 42.3);
 ```
 
-### Automatic insert sensor data in the hypertable
+## Automatic insert sensor data in the hypertable
 
 `sudo nano /usr/local/bin/diskwatch_to_timescale.sh`
 
@@ -232,7 +247,7 @@ LIMIT 20;
 (1 row)
 ```
 
-### Push hypertable data to web server
+## Push hypertable data to web server
 
 Add a NOTIFY trigger in PostgreSQL
 
@@ -405,7 +420,7 @@ Cache-Control: no-store
 data: {"table" : "sensors", "op" : "INSERT", "time" : "2025-10-14T14:09:10.324284+00:00", "device_id" : "pink", "sensor_name" : "disk_usage_pct", "value" : 60}
 ```
 
-### Catch the event with SSE
+## Catch the event with SSE
 
 And update your website
 
@@ -470,11 +485,11 @@ And update your website
 
 
 
-### Add a Time series for the server internal sensors
+## Add a Time series for the server internal sensors
 
 This section sets up automatic collection of internal hardware metrics (CPU, GPU, disks, sensors) and stores them in TimescaleDB using Telegraf.
 
-#### 1. Create the role and database
+### 1. Create the role and database
 ```bash
 sudo -u postgres psql <<'SQL'
 CREATE ROLE sensors LOGIN PASSWORD 'YOUR_PASSWORD';
@@ -490,7 +505,7 @@ host    all    sensors    127.0.0.1/32    scram-sha-256
 ```
 Then restart PostgreSQL.
 
-#### 2. Install collectors
+### 2. Install collectors
 ```bash
 sudo apt update
 sudo apt install -y telegraf lm-sensors smartmontools nvme-cli intel-gpu-tools
@@ -501,7 +516,7 @@ Give Telegraf permission for SMART:
 echo 'telegraf ALL=(root) NOPASSWD:/usr/sbin/smartctl' | sudo tee /etc/sudoers.d/telegraf-smart
 ```
 
-#### 3. Configure Telegraf
+### 3. Configure Telegraf
 Create `/etc/telegraf/telegraf.d/nuc-timescale.conf`:
 ```toml
 [agent]
@@ -533,14 +548,14 @@ Create `/etc/telegraf/telegraf.d/nuc-timescale.conf`:
   data_source_name = "postgres://sensors:YOUR_PASSWORD@127.0.0.1:5432/sensors?sslmode=disable"
 ```
 
-#### 4. Test and enable
+### 4. Test and enable
 ```bash
 sudo telegraf --config /etc/telegraf/telegraf.d/nuc-timescale.conf --test | head
 sudo systemctl restart telegraf
 sudo journalctl -u telegraf -n 50 --no-pager
 ```
 
-#### 5. Verify in Timescale
+### 5. Verify in Timescale
 ```bash
 sudo -u postgres psql sensors
 \dt

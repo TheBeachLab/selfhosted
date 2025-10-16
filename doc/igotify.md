@@ -1,5 +1,10 @@
 # Push Notifications with iGotify
 
+- [Overview](#overview)
+- [Deployment Steps](#deployment-steps)
+- [Notifier Script](#notifier-script)
+
+
 ## Overview
 
 Gotify is a self-hosted server for sending and receiving push notifications, offering a simple web interface and apps for real-time message delivery. iGotify is a containerized notification bridge that works alongside a Gotify server. Deployed via Docker (commonly with Docker Compose on Ubuntu), iGotify decrypts Gotify messages and forwards them as push notifications through Apple’s APNs to iOS devices—addressing Gotify’s lack of native support for iOS push alerts.

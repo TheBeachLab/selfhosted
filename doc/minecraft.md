@@ -2,6 +2,10 @@
 
 I'm not too much in Minecraft. but both my sons are... so by popular demand...
 
+- [Java (Computer)](#java-computer)
+- [Bedrock (iPad)](#bedrock-ipad)
+  - [Automate the server as a service](#automate-the-server-as-a-service)
+
 ## Java (Computer)
 
 Check thah java is installed `java --version`.

@@ -1,6 +1,9 @@
 # OpenHab Server
 [OpenHab](https://www.openhab.org) is an agnostic open source automation software to control your smart devices at home.
 
+- [Install](#install)
+
+
 ## Install
 ```bash
 wget -qO - 'https://openhab.jfrog.io/artifactory/api/gpg/key/public' | sudo apt-key add -

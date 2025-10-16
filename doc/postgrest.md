@@ -1,4 +1,16 @@
-# Install or update
+# PostgREST
+
+- [Install or update](#install-or-update)
+- [Prepare firewall](#prepare-firewall)
+- [Download, decompress](#download-decompress)
+- [Create roles](#create-roles)
+- [Configure](#configure)
+- [Create service](#create-service)
+- [Make calls](#make-calls)
+- [Create web proxy](#create-web-proxy)
+
+
+## Install or update
 
 For user sister.
 
@@ -186,8 +198,3 @@ sudo ln -s /etc/nginx/sites-available/api.beachlab.org /etc/nginx/sites-enabled/
 nginx -t
 sudo systemctl restart nginx
 ```
-
-
-
-
-

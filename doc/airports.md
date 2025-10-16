@@ -1,5 +1,10 @@
 # Airports
 
+- [download\_airports.sh.](#download_airportssh)
+- [Crontab](#crontab)
+- [Insert the data in Postgres Database](#insert-the-data-in-postgres-database)
+
+
 There is a planet database of airports in Github: https://github.com/davidmegginson/ourairports-data
 
 Direct DL links

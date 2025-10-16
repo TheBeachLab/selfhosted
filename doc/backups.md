@@ -6,8 +6,8 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
-* [Install and setup rsnapshot](#install-and-setup-rsnapshot)
+- [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
+- [Install and setup rsnapshot](#install-and-setup-rsnapshot)
 
 <!-- vim-markdown-toc -->
 

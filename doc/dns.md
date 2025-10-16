@@ -4,10 +4,10 @@ This was one of the most difficult parts to undertand for me. Actually one of th
 
 <!-- vim-markdown-toc GFM -->
 
-* [A little bit of history](#a-little-bit-of-history)
-* [Queries](#queries)
-* [Split Horizon name server](#split-horizon-name-server)
-* [Installing your own recursive  DNS server. Unbound](#installing-your-own-recursive--dns-server-unbound)
+- [A little bit of history](#a-little-bit-of-history)
+- [Queries](#queries)
+- [Split Horizon name server](#split-horizon-name-server)
+- [Installing your own recursive  DNS server. Unbound](#installing-your-own-recursive--dns-server-unbound)
 
 <!-- vim-markdown-toc -->
 

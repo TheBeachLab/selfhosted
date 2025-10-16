@@ -2,7 +2,7 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [Postfix](#postfix)
+- [Postfix](#postfix)
 
 <!-- vim-markdown-toc -->
 
