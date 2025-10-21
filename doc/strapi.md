@@ -1,6 +1,7 @@
 # Strapi CMS
 
-- [Install](#install)
+- [Strapi CMS](#strapi-cms)
+  - [Install](#install)
 
 
 ## Install

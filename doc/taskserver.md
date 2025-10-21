@@ -2,12 +2,13 @@
 
 <!-- vim-markdown-toc GFM -->
 
-- [Prerrequisites](#prerrequisites)
-- [Install the server](#install-the-server)
-- [Configure the server](#configure-the-server)
-- [Generate certificate files for each client](#generate-certificate-files-for-each-client)
-- [Copy the certificates to the client machine/device (taskwarrior)](#copy-the-certificates-to-the-client-machinedevice-taskwarrior)
-- [Sync](#sync)
+- [Task server (taskwarrior)](#task-server-taskwarrior)
+  - [Prerrequisites](#prerrequisites)
+  - [Install the server](#install-the-server)
+  - [Configure the server](#configure-the-server)
+  - [Generate certificate files for each client](#generate-certificate-files-for-each-client)
+  - [Copy the certificates to the client machine/device (taskwarrior)](#copy-the-certificates-to-the-client-machinedevice-taskwarrior)
+  - [Sync](#sync)
 
 <!-- vim-markdown-toc -->
 

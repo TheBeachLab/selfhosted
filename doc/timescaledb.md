@@ -2,19 +2,20 @@
 
 IoT stores huge time series data. Relational databases can be used to store the data but processing can be slow. TimescaleDB is an NoSQL database optimized to store time-series data. It is implemented as an extension of PostgreSQL combining the ease of use of relational databases and the speed of NoSQL databases.
 
-- [Install](#install)
-- [Configure and optimize](#configure-and-optimize)
-- [Convert existing `sensors` database into hypertable](#convert-existing-sensors-database-into-hypertable)
-- [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
-- [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
-- [Push hypertable data to web server](#push-hypertable-data-to-web-server)
-- [Catch the event with SSE](#catch-the-event-with-sse)
-- [Add a Time series for the server internal sensors](#add-a-time-series-for-the-server-internal-sensors)
-  - [1. Create the role and database](#1-create-the-role-and-database)
-  - [2. Install collectors](#2-install-collectors)
-  - [3. Configure Telegraf](#3-configure-telegraf)
-  - [4. Test and enable](#4-test-and-enable)
-  - [5. Verify in Timescale](#5-verify-in-timescale)
+- [TimescaleDB](#timescaledb)
+  - [Install](#install)
+  - [Configure and optimize](#configure-and-optimize)
+  - [Convert existing `sensors` database into hypertable](#convert-existing-sensors-database-into-hypertable)
+  - [Manually insert sensor data in the hypertable](#manually-insert-sensor-data-in-the-hypertable)
+  - [Automatic insert sensor data in the hypertable](#automatic-insert-sensor-data-in-the-hypertable)
+  - [Push hypertable data to web server](#push-hypertable-data-to-web-server)
+  - [Catch the event with SSE](#catch-the-event-with-sse)
+  - [Add a Time series for the server internal sensors](#add-a-time-series-for-the-server-internal-sensors)
+    - [1. Create the role and database](#1-create-the-role-and-database)
+    - [2. Install collectors](#2-install-collectors)
+    - [3. Configure Telegraf](#3-configure-telegraf)
+    - [4. Test and enable](#4-test-and-enable)
+    - [5. Verify in Timescale](#5-verify-in-timescale)
 
 
 ## Install

@@ -1,18 +1,16 @@
 # PostgREST
 
-- [Install or update](#install-or-update)
-- [Prepare firewall](#prepare-firewall)
-- [Download, decompress](#download-decompress)
-- [Create roles](#create-roles)
-- [Configure](#configure)
-- [Create service](#create-service)
-- [Make calls](#make-calls)
-- [Create web proxy](#create-web-proxy)
+- [PostgREST](#postgrest)
+  - [Prepare firewall](#prepare-firewall)
+  - [Install](#install)
+  - [Create roles](#create-roles)
+  - [Check permissions of readonly](#check-permissions-of-readonly)
+  - [JWT (TODO)](#jwt-todo)
+  - [Configure](#configure)
+  - [Create service](#create-service)
+  - [Make calls](#make-calls)
+  - [Create web proxy](#create-web-proxy)
 
-
-## Install or update
-
-For user sister.
 
 ## Prepare firewall
 ```bash
@@ -22,32 +20,96 @@ sudo ufw status
 ```
 Do the same for other ports.
 
-## Download, decompress
+## Install
 
 ```bash
-wget https://github.com/PostgREST/postgrest/releases/download/v11.2.2/postgrest-v11.2.2-linux-static-x64.tar.xz -O - | tar -xJf -
+sudo apt update && sudo apt upgrade -y
+curl -L -o postgrest.tar.xz https://github.com/PostgREST/postgrest/releases/download/v13.0.7/postgrest-v13.0.7-linux-static-x86-64.tar.xz
+ tar -xf postgrest.tar.xz
+sudo mv postgrest /usr/local/bin/
+sudo chmod +x /usr/local/bin/postgrest
+postgrest --version
 ```
 
 ## Create roles
+
+You’ll run these as a superuser (e.g. postgres)
+
 Create a group role `web_anon` for the server
 ```sql
-create role web_anon nologin;
-grant usage on schema public to web_anon;
-grant select on public.my_table1 to web_anon;
-grant select on public.my_table2 to web_anon;
-```
-In your readonly user:
-```sql
-grant web_anon to readonly;
-```
-TODO: Check permissions of readonly
+-- Create the anonymous group role (no login)
+CREATE ROLE web_anon NOLOGIN;
 
+-- Create a login role for PostgREST to connect with
+-- (choose your own password)
+CREATE ROLE readonly LOGIN PASSWORD 'change_me' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+
+-- Make readonly a member of web_anon (so PostgREST can SET ROLE web_anon)
+GRANT web_anon TO readonly;
+```
+Grant permissions
+
+```sql
+GRANT USAGE ON SCHEMA public TO web_anon;
+
+-- Existing tables (read-only)
+GRANT SELECT ON TABLE public.my_table1, public.my_table2 TO web_anon;
+
+-- Or if you want read on ALL existing tables in public:
+-- GRANT SELECT ON ALL TABLES IN SCHEMA public TO web_anon;
+
+-- Grant for specific sequences if those tables use them:
+-- GRANT USAGE, SELECT ON SEQUENCE public.my_table1_id_seq, public.my_table2_id_seq TO web_anon;
+
+-- Or blanket for all existing sequences in public:
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO web_anon;
+
+-- For future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT ON TABLES TO web_anon;
+
+-- For future sequences
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT ON SEQUENCES TO web_anon;
+
+-- (Optional but smart) Tighten public schema permissions
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- (Keep USAGE granted to web_anon as above)
+
+```
+
+## Check permissions of readonly
+
+```sql
+-- Who can do what (roles + membership)
+\du+ readonly
+\du+ web_anon
+
+-- Table privileges (look for SELECT for web_anon; readonly inherits membership)
+\dp public.my_table1
+\dp public.my_table2
+
+-- Schema permissions
+\dn+ public
+```
+
+Try to SELECT (should work) and INSERT (should fail) as readonly.
+
+```sql
+# change connection details as needed
+psql "postgres://readonly:change_me@localhost:5432/postgres" -c "SELECT * FROM public.my_table1 LIMIT 1;"
+
+# This should fail with permission denied
+psql "postgres://readonly:change_me@localhost:5432/postgres" -c "INSERT INTO public.my_table1 DEFAULT VALUES;"
+```
+
+## JWT (TODO)
 
 ## Configure
 Create a conf file for each database `nano postgrest_db1.conf`
 
 ```bash
-db-uri = "postgres://readonly:uri_encoded_password@localhost:6432/my_database"
+db-uri = "postgres://readonly:uri_encoded_password@localhost:5432/your_database_db1"
 db-schemas = "public"
 db-anon-role = "web_anon"
 server-port = 3000

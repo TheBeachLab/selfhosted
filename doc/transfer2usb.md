@@ -1,9 +1,11 @@
 # Auto Transfer contents to USB
 
-- [Install](#install)
-- [Prepare](#prepare)
-- [systemd Service](#systemd-service)
-- [udev Rule](#udev-rule)
+- [Auto Transfer contents to USB](#auto-transfer-contents-to-usb)
+  - [Install](#install)
+  - [Prepare](#prepare)
+- [Script](#script)
+  - [systemd Service](#systemd-service)
+  - [udev Rule](#udev-rule)
 
 
 ## Install

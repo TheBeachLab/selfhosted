@@ -2,11 +2,12 @@
 
 <!-- vim-markdown-toc GFM -->
 
-- [Don't use the default port 22](#dont-use-the-default-port-22)
-- [Ban brute force attackers](#ban-brute-force-attackers)
-- [Use 2FA verification codes](#use-2fa-verification-codes)
-- [Use ssh keys instead of password to log in via ssh](#use-ssh-keys-instead-of-password-to-log-in-via-ssh)
-- [Set basic firewall rules](#set-basic-firewall-rules)
+- [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
+  - [Don't use the default port 22](#dont-use-the-default-port-22)
+  - [Ban brute force attackers](#ban-brute-force-attackers)
+  - [Use 2FA verification codes](#use-2fa-verification-codes)
+  - [Use ssh keys instead of password to log in via ssh](#use-ssh-keys-instead-of-password-to-log-in-via-ssh)
+  - [Set basic firewall rules](#set-basic-firewall-rules)
 
 <!-- vim-markdown-toc -->
 

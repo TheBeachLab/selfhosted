@@ -1,8 +1,9 @@
 # SFTP Server
 
-- [Why](#why)
-- [Install](#install)
-- [Configuration](#configuration)
+- [SFTP Server](#sftp-server)
+	- [Why](#why)
+	- [Install](#install)
+	- [Configuration](#configuration)
 
 
 ## Why 

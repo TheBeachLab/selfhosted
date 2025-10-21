@@ -1,5 +1,12 @@
 # Ongoing and past troubleshooting
 
+- [Ongoing and past troubleshooting](#ongoing-and-past-troubleshooting)
+  - [Computer shutdowns after exactly 20 minutes](#computer-shutdowns-after-exactly-20-minutes)
+  - [Updates cannot be automatically installed](#updates-cannot-be-automatically-installed)
+  - [Removing wrong PPAs](#removing-wrong-ppas)
+  - [Old keyring](#old-keyring)
+
+
 ## Computer shutdowns after exactly 20 minutes
 
 This started happenning when I replaced the Nvidia drivers from nvidia page with the ones in the ubuntu repository. I issue the command `watch uptime` and everytime after 20 minutes, the computer shut downs.
