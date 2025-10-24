@@ -43,3 +43,52 @@ which hailo
 hailo --version
 ```
 
+## Reverse tunnel
+
+sudo apt install autossh
+sudo nano /etc/systemd/system/reverse-ssh.service
+
+
+[Unit]
+Description=Reverse SSH tunnel to server
+After=network-online.target
+
+[Service]
+User=admin
+ExecStart=/usr/bin/autossh -M 0 -N -R 2222:localhost:22 user@yourserver.com
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now reverse-ssh.service
+
+
+create key
+
+ssh-keygen
+ssh-copy-id user@yourserver.com
+
+
+sudo adduser tunnelpi ---> G M
+
+sudo mkdir /home/tunnelpi/.ssh
+sudo chown tunnelpi:tunnelpi /home/tunnelpi/.ssh
+sudo chmod 700 /home/tunnelpi/.ssh
+
+sudo nano /home/tunnelpi/.ssh/authorized_keys
+
+sudo chmod 600 /home/tunnelpi/.ssh/authorized_keys
+
+/etc/ssh/sshd_config
+
+sudo systemctl restart ssh
+
+
+sudo nano /etc/pam.d/sshd
+
+auth [success=done default=ignore] pam_succeed_if.so user ingroup tunnelpi
+
