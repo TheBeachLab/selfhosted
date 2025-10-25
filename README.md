@@ -34,6 +34,7 @@ The server has a UPS power supply. The Internet line is a 600Mbps symmetric FTTH
 - [Transmission Daemon](doc/transmission.md)
 - [Mumble server](doc/mumble.md)
 - [VPN Server](doc/vpn.md)
+- [Wireguard VPN](doc/wireguard.md)
 - [iOS Push Notifications iGotify](doc/igotify.md)
 - [n8n Server](doc/n8n.md)
 - [OpenHab Server](doc/openhab.md)
