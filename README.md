@@ -43,6 +43,7 @@ The Internet line is a 1000Mbps symmetric FTTH with dynamic IP address.
 - [Auto USB copy](doc/transfer2usb.md)
 - [Troubleshooting](doc/troubleshooting.md)
 - [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
+- [Whisper Web (protected upload + diarization)](doc/whisper.md)
 
 IoT and Databases
 - [IoT related](doc/iot.md)

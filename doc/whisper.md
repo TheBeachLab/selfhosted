@@ -1,0 +1,139 @@
+# Whisper Web (Protected Upload + GPU Transcription + Diarization)
+
+This page documents the `/whisper` web endpoint for uploading audio/video and getting transcript files (`txt`, `srt`, `pdf`) with speaker diarization.
+
+**Author:** Mr. Watson 🦄
+**Date:** 2026-02-07
+
+## What was implemented
+
+- Protected nginx endpoint: `/whisper`
+- Basic auth in nginx for this route
+- Local web service on `127.0.0.1:8060`
+- Upload + async job queue (SQLite)
+- Faster-Whisper transcription (GPU)
+- Pyannote diarization (GPU-first, fallback possible)
+- Outputs: `.txt`, `.srt`, `.pdf`
+- Source file deletion after successful processing
+
+## Nginx config
+
+Added to `beachlab.org` server block:
+
+```nginx
+location = /whisper {
+    return 301 /whisper/;
+}
+
+location /whisper/ {
+    auth_basic "Restricted";
+    auth_basic_user_file /etc/nginx/.htpasswd-whisper;
+    proxy_pass http://127.0.0.1:8060/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    client_max_body_size 700M;
+}
+```
+
+## Basic auth file
+
+```bash
+sudo htpasswd -bc /etc/nginx/.htpasswd-whisper <USER> '<PASSWORD>'
+sudo chown root:www-data /etc/nginx/.htpasswd-whisper
+sudo chmod 640 /etc/nginx/.htpasswd-whisper
+```
+
+> Keep credentials out of git/docs in real deployments.
+
+## Service app
+
+Path:
+
+- `/opt/whisper-service/app.py`
+
+Main endpoints (served behind `/whisper` via nginx):
+
+- `GET /` → web UI
+- `POST /jobs` → upload + create job
+- `GET /jobs` → list jobs
+- `GET /jobs/{id}` → job details
+- `GET /jobs/{id}/download/{txt|srt|pdf}` → artifacts
+
+## Environment
+
+`/etc/whisper-service.env`
+
+```bash
+# Required for speaker diarization model access
+HF_TOKEN=
+```
+
+### Important diarization note
+
+Pyannote diarization requires:
+
+1. HuggingFace account + token
+2. Acceptance of model terms for `pyannote/speaker-diarization-3.1`
+3. `HF_TOKEN` set in `/etc/whisper-service.env`
+
+Without token/terms acceptance, transcription may work but diarization jobs fail.
+
+## systemd unit
+
+`/etc/systemd/system/whisper-web.service`
+
+```ini
+[Unit]
+Description=Whisper web (transcription + diarization)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pink
+Group=pink
+WorkingDirectory=/opt/whisper-service
+EnvironmentFile=/etc/whisper-service.env
+ExecStart=/opt/whisper-service/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8060
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Setup commands (sanitized)
+
+```bash
+sudo mkdir -p /opt/whisper-service/{uploads,outputs,temp}
+sudo chown -R pink:pink /opt/whisper-service
+python3 -m venv /opt/whisper-service/.venv
+/opt/whisper-service/.venv/bin/pip install --upgrade pip
+/opt/whisper-service/.venv/bin/pip install fastapi uvicorn[standard] python-multipart jinja2 reportlab faster-whisper
+# diarization deps
+/opt/whisper-service/.venv/bin/pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+/opt/whisper-service/.venv/bin/pip install pyannote.audio
+```
+
+## Operations
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now whisper-web
+sudo systemctl status whisper-web
+
+sudo nginx -t
+sudo systemctl reload nginx
+
+# logs
+sudo journalctl -u whisper-web -n 200 --no-pager
+```
+
+## Data lifecycle
+
+- Uploaded source is stored under `/opt/whisper-service/uploads`
+- Successful job deletes source file
+- Artifacts are kept in `/opt/whisper-service/outputs`
+
+Recommended next step:
+- add retention cleanup timer (e.g., delete artifacts older than 30 days)
