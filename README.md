@@ -47,6 +47,7 @@ The Internet line is a 1000Mbps symmetric FTTH with dynamic IP address.
 IoT and Databases
 - [IoT related](doc/iot.md)
 - [MQTT Telemetry (alpha/stats)](doc/mqtt-telemetry.md)
+- [MQTT → TimescaleDB + PostgREST (1-Month History)](doc/mqtt-timescale-postgrest.md)
 - [PostgreSQL Database Server](doc/postgres.md)
   - [TimescaleDB](doc/timescaledb.md)
   - [Strapi CSM](doc/strapi.md)
