@@ -42,6 +42,7 @@ The Internet line is a 1000Mbps symmetric FTTH with dynamic IP address.
 - [OpenHab Server](doc/openhab.md)
 - [Auto USB copy](doc/transfer2usb.md)
 - [Troubleshooting](doc/troubleshooting.md)
+- [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
 
 IoT and Databases
 - [IoT related](doc/iot.md)
