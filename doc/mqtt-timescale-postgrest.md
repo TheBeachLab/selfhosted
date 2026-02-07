@@ -312,11 +312,32 @@ RestartSec=2
 WantedBy=multi-user.target
 ```
 
+## Nginx website route (history API)
+
+Added to `beachlab.org` vhost so website code can query history under the same domain:
+
+```nginx
+# Telemetry history API (PostgREST -> TimescaleDB)
+location /api/telemetry/ {
+    proxy_pass http://127.0.0.1:3010/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+}
+```
+
+This maps:
+
+- `https://beachlab.org/api/telemetry/telemetry_latest` → `http://127.0.0.1:3010/telemetry_latest`
+- `https://beachlab.org/api/telemetry/telemetry_stats` → `http://127.0.0.1:3010/telemetry_stats`
+
 ## Useful API calls
 
 ```bash
 # Latest row per host
 curl 'http://127.0.0.1:3010/telemetry_latest?select=time,host,cpu_usage_percent,disk_used_percent,speedtest_down_mbps,speedtest_error'
+
+# Same via website route
+curl 'https://beachlab.org/api/telemetry/telemetry_latest?select=time,host,cpu_usage_percent,disk_used_percent,speedtest_down_mbps,speedtest_error'
 
 # Recent history
 curl 'http://127.0.0.1:3010/telemetry_stats?select=time,host,cpu_usage_percent,memory_used_percent,disk_used_percent&order=time.desc&limit=200'
