@@ -81,6 +81,12 @@ Subscribe to:
 
 Expect a retained JSON payload, so clients receive last known value immediately upon connect.
 
+## Code snippets
+
+Sanitized implementation snippets are here:
+
+- [MQTT Telemetry — Code Snippets (Sanitized)](mqtt-telemetry-code-snippets.md)
+
 ## Security reminder
 
 Do **not** publish credentials in repo/docs. Keep credentials in local runtime config only.
