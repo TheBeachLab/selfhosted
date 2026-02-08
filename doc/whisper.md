@@ -11,10 +11,12 @@ This page documents the `/whisper` web endpoint for uploading audio/video and ge
 - Basic auth in nginx for this route
 - Local web service on `127.0.0.1:8060`
 - Upload + async job queue (SQLite)
-- Faster-Whisper transcription (GPU)
-- Pyannote diarization (GPU-first, fallback possible)
+- Faster-Whisper transcription (GPU; `cuda/int8` on GTX 1060)
+- Pyannote speaker identification (GPU-first, fallback possible)
 - Outputs: `.txt`, `.srt`, `.pdf`
 - Source file deletion after successful processing
+- Job delete action removes source/audio, transcript artifacts, and DB row
+- Speaker identification is OFF by default in the UI
 
 ## Nginx config
 
@@ -57,6 +59,7 @@ Main endpoints (served behind `/whisper` via nginx):
 - `POST /jobs` → upload + create job
 - `GET /jobs` → list jobs
 - `GET /jobs/{id}` → job details
+- `DELETE /jobs/{id}` → delete job + remove source/artifacts
 - `GET /jobs/{id}/download/{txt|srt|pdf}` → artifacts
 
 ## Environment
