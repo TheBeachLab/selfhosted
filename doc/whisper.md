@@ -68,7 +68,7 @@ Main endpoints (served behind `/whisper` via nginx):
 
 ```bash
 # Required for speaker diarization model access
-HF_TOKEN=
+HF_TOKEN=<redacted>
 ```
 
 ### Important diarization note
@@ -80,6 +80,8 @@ Pyannote diarization requires:
 3. `HF_TOKEN` set in `/etc/whisper-service.env`
 
 Without token/terms acceptance, transcription may work but diarization jobs fail.
+
+Current status (2026-02-08): `HF_TOKEN` configured on host (redacted in docs).
 
 ## systemd unit
 
