@@ -156,6 +156,14 @@ sudo certbot certonly --nginx \
   -d pgadmin.beachlab.org
 ```
 
+API endpoint was also moved to TLS with its own certificate:
+
+```bash
+sudo certbot certonly --nginx -d api.beachlab.org
+```
+
+`api.beachlab.org` now redirects HTTP->HTTPS and serves only over 443.
+
 ### Firewall hardening applied (UFW)
 
 After reverse-proxy cutover, direct public access rules were removed for admin/data ports:
