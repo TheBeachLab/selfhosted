@@ -156,6 +156,18 @@ sudo certbot certonly --nginx \
   -d pgadmin.beachlab.org
 ```
 
+### Firewall hardening applied (UFW)
+
+After reverse-proxy cutover, direct public access rules were removed for admin ports:
+
+```bash
+sudo ufw delete allow 1880/tcp   # Node-RED direct
+sudo ufw delete allow 8080/tcp   # openHAB direct
+sudo ufw delete allow 5050       # pgAdmin direct
+```
+
+Result: admin UIs are reachable through Nginx/TLS hostnames only.
+
 ## Verification commands
 
 ```bash
@@ -174,6 +186,9 @@ sudo /usr/local/bin/egpu-watchdog.sh --verbose
 
 # check certs
 sudo certbot certificates
+
+# verify UFW rules (1880/8080/5050 should be absent)
+sudo ufw status numbered
 
 # validate and reload nginx
 sudo nginx -t && sudo systemctl reload nginx
