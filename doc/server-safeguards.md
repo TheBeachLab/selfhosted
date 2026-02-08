@@ -91,18 +91,50 @@ sudo systemctl reload postfix
 
 This removed `virtual.db` lookup noise from logs.
 
+## 5) eGPU watchdog (Thunderbolt)
+
+Added automated eGPU monitoring + auto-recovery attempts + iGotify alerts.
+
+Files:
+
+- `/usr/local/bin/egpu-watchdog.sh`
+- `/etc/systemd/system/egpu-watchdog.service`
+- `/etc/systemd/system/egpu-watchdog.timer`
+- `/etc/egpu-watchdog.env`
+
+Behavior:
+
+- checks if expected Thunderbolt enclosure is connected (`boltctl`)
+- checks if NVIDIA device exists in PCI (`lspci`)
+- if missing, attempts auto-recovery:
+  - restart `bolt`
+  - `echo 1 > /sys/bus/pci/rescan`
+  - try `modprobe nvidia*`
+- if still missing, sends iGotify alert (with cooldown)
+- sends recovery notification when NVIDIA reappears
+
+Current env:
+
+```bash
+EGPU_NAME=Razer Core X
+COOLDOWN_S=1800
+```
+
 ## Verification commands
 
 ```bash
 # services
-systemctl is-active rag-library-ingest whisper-web postfix system-load-guard.timer
+systemctl is-active rag-library-ingest whisper-web postfix system-load-guard.timer egpu-watchdog.timer
 
 # effective limits
 systemctl show rag-library-ingest --property=MemoryMax,MemoryHigh,CPUQuotaPerSecUSec,OnFailure
 systemctl show whisper-web --property=MemoryMax,MemoryHigh,CPUQuotaPerSecUSec,OnFailure
 
 # timers
-systemctl list-timers --all | grep system-load-guard
+systemctl list-timers --all | grep -E 'system-load-guard|egpu-watchdog'
+
+# run one eGPU check manually
+sudo /usr/local/bin/egpu-watchdog.sh --verbose
 
 # recent postfix map errors (should be empty)
 journalctl --since '5 minutes ago' -u postfix | grep -Ei 'virtual.db|lookup error|map lookup problem'
