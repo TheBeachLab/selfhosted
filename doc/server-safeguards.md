@@ -120,6 +120,42 @@ EGPU_NAME=Razer Core X
 COOLDOWN_S=1800
 ```
 
+## 6) Reverse-proxy consolidation for admin services
+
+To reduce direct internet exposure, these admin UIs were moved behind Nginx + TLS:
+
+- `nodered.beachlab.org` -> `https://127.0.0.1:1880`
+- `openhab.beachlab.org` -> `http://127.0.0.1:8080`
+- `pgadmin.beachlab.org` -> `http://127.0.0.1:5050`
+
+Nginx files:
+
+- `/etc/nginx/sites-available/nodered.beachlab.org`
+- `/etc/nginx/sites-available/openhab.beachlab.org`
+- `/etc/nginx/sites-available/pgadmin.beachlab.org`
+
+Legacy host redirects kept for compatibility:
+
+- `node.beachlab.org` -> `https://nodered.beachlab.org`
+- `postgres.beachlab.org` -> `https://pgadmin.beachlab.org`
+
+### Certificates
+
+Before creating/reloading vhosts, verify cert existence:
+
+```bash
+sudo certbot certificates
+```
+
+Missing certs were requested with:
+
+```bash
+sudo certbot certonly --nginx \
+  -d nodered.beachlab.org \
+  -d openhab.beachlab.org \
+  -d pgadmin.beachlab.org
+```
+
 ## Verification commands
 
 ```bash
@@ -135,6 +171,17 @@ systemctl list-timers --all | grep -E 'system-load-guard|egpu-watchdog'
 
 # run one eGPU check manually
 sudo /usr/local/bin/egpu-watchdog.sh --verbose
+
+# check certs
+sudo certbot certificates
+
+# validate and reload nginx
+sudo nginx -t && sudo systemctl reload nginx
+
+# smoke tests
+curl -I https://nodered.beachlab.org/
+curl -I https://openhab.beachlab.org/
+curl -I https://pgadmin.beachlab.org/
 
 # recent postfix map errors (should be empty)
 journalctl --since '5 minutes ago' -u postfix | grep -Ei 'virtual.db|lookup error|map lookup problem'
