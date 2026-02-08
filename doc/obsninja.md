@@ -2,18 +2,18 @@
 
 Only God knows how much I hate Zoom and it's lack of support for Linux. This is day and night for streaming.
 
-Create a CNAME in your DNS server. I have created `call.beachlab.org`
+Create a CNAME in your DNS server, e.g. `webrtc.example.org`.
 
 Clone [obsninja](https://github.com/steveseguin/obsninja) in `/var/www`
 
-Create a file in `/etc/nginx/sites-available/call.beachlab.org` with this content
+Create a file in `/etc/nginx/sites-available/webrtc.example.org` with this content
 
 ```
 server {
   listen 80;
   listen [::]:80;
 
-  server_name call.beachlab.org;
+  server_name webrtc.example.org;
   root /var/www/obsninja;
   index index.html;
 
@@ -35,11 +35,11 @@ server {
 
 Check the syntax `sudo nginx -t`. Enable the site: 
 
-`sudo ln -s /etc/nginx/sites-available/call.beachlab.org /etc/nginx/sites-enabled/call.beachlab.org`
+`sudo ln -s /etc/nginx/sites-available/webrtc.example.org /etc/nginx/sites-enabled/webrtc.example.org`
 
 Reload nginx `sudo service nginx reload`
 
-Add SSL certificates `sudo certbot --nginx -d call.beachlab.org`
+Add SSL certificates `sudo certbot --nginx -d webrtc.example.org`
 
 Install a turn server
 

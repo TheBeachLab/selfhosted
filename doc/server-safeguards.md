@@ -212,13 +212,41 @@ Service/vhost removals:
 
 ```bash
 sudo systemctl disable --now coturn
-sudo rm -f /etc/nginx/sites-enabled/call.beachlab.org
+sudo rm -f /etc/nginx/sites-enabled/<retired-webrtc-vhost>
 sudo rm -f /etc/nginx/sites-enabled/n8n
 sudo systemctl disable --now n8n
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 This retires public obsninja/coturn exposure and n8n public entrypoint for now.
+
+## 8) Apache exposure reduced (pgAdmin backend only)
+
+Apache is kept only as a local backend for pgAdmin web mode (`*:5050`), behind Nginx.
+
+Public exposure removals:
+
+```bash
+sudo ufw delete allow 'Apache Full'
+sudo ufw delete allow 8090
+sudo ufw delete allow 10000
+```
+
+Apache vhost cleanup:
+
+```bash
+sudo a2dissite 000-default-le-ssl
+sudo a2dissite tileserver_site.conf
+sudo sed -i 's/^\s*Listen\s\+8090/# Listen 8090/' /etc/apache2/ports.conf
+sudo rm -f /etc/apache2/sites-available/tileserver_site.conf
+sudo systemctl reload apache2
+```
+
+Result:
+
+- Apache listens on `5050` only (internal backend use)
+- no public Apache SSL (`8090`) exposure
+- no public tileserver Apache exposure (`10000`)
 
 ## Verification commands
 
