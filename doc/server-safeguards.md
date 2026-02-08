@@ -164,6 +164,12 @@ sudo certbot certonly --nginx -d api.beachlab.org
 
 `api.beachlab.org` now redirects HTTP->HTTPS and serves only over 443.
 
+Current API exposure state:
+
+- `/air/` disabled (pending DB/API setup)
+- `/data/` disabled (legacy target unknown)
+- default response is `403` until explicit upstreams are defined
+
 ### Firewall hardening applied (UFW)
 
 After reverse-proxy cutover, direct public access rules were removed for admin/data ports:
