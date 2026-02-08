@@ -158,15 +158,21 @@ sudo certbot certonly --nginx \
 
 ### Firewall hardening applied (UFW)
 
-After reverse-proxy cutover, direct public access rules were removed for admin ports:
+After reverse-proxy cutover, direct public access rules were removed for admin/data ports:
 
 ```bash
 sudo ufw delete allow 1880/tcp   # Node-RED direct
 sudo ufw delete allow 8080/tcp   # openHAB direct
 sudo ufw delete allow 5050       # pgAdmin direct
+sudo ufw delete allow 5432       # PostgreSQL direct
+sudo ufw delete allow 3000       # legacy direct API port
 ```
 
-Result: admin UIs are reachable through Nginx/TLS hostnames only.
+Result:
+
+- admin UIs are reachable through Nginx/TLS hostnames only
+- direct PostgreSQL internet exposure removed
+- external consumers should use `api.beachlab.org` endpoints, not raw DB ports
 
 ## Verification commands
 
