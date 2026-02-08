@@ -188,6 +188,35 @@ Result:
 - direct PostgreSQL internet exposure removed
 - external consumers should use `api.beachlab.org` endpoints, not raw DB ports
 
+## 7) Legacy exposure cleanup (2026-02-08)
+
+Per current usage, additional legacy/public rules were removed:
+
+```bash
+sudo ufw delete allow OpenSSH      # removes 22/tcp profile rule
+sudo ufw delete allow 1935
+sudo ufw delete allow 443/udp
+sudo ufw delete allow 622/udp
+sudo ufw delete allow 1800
+sudo ufw delete allow 1803
+sudo ufw delete allow 5678/tcp
+sudo ufw delete allow 3478
+sudo ufw delete allow 49152:65535/tcp
+sudo ufw delete allow 49152:65535/udp
+```
+
+Service/vhost removals:
+
+```bash
+sudo systemctl disable --now coturn
+sudo rm -f /etc/nginx/sites-enabled/call.beachlab.org
+sudo rm -f /etc/nginx/sites-enabled/n8n
+sudo systemctl disable --now n8n
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+This retires public obsninja/coturn exposure and n8n public entrypoint for now.
+
 ## Verification commands
 
 ```bash
