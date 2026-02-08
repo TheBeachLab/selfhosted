@@ -58,6 +58,7 @@ IoT and Databases
   - [OSM Server](doc/osm.md)
   - [Working with CSV](doc/csv.md)
 - [Open Geo Data](doc/geodata.md)
+  - [Hybrid Tiles Pipeline (Vector + Raster)](doc/tiles-hybrid.md)
   - [Airports Database](doc/airports.md)
   - [Baustellen in München](doc/baustellen.md)
 

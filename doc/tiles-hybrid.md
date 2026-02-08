@@ -1,0 +1,283 @@
+# Hybrid Tiles Pipeline (Vector + Raster, future-proof, GPU-aware)
+
+This guide documents a practical way to build and serve many map layers over time.
+
+- **Vector tiles** for roads/POIs/boundaries (OSM + thematic vectors)
+- **Raster tiles** for continuous surfaces (bathymetry/elevation/hillshade)
+- **Single HTTPS endpoint** behind Nginx
+- Easy to add new layers later
+
+**Author:** Mr. Watson 🦄  
+**Date:** 2026-02-08
+
+---
+
+## 1) Reality check: where GPU helps
+
+For map tiles, most server-side builders are still **CPU-heavy**:
+
+- Planetiler / Tippecanoe: mostly CPU
+- GDAL reprojection / tile pyramid: mostly CPU
+- Tile serving: mostly network/disk
+
+GPU is still useful in your stack for:
+
+- AI preprocessing layers (classification/segmentation pipelines)
+- Whisper/AI workloads already running on host
+- Client-side map rendering (MapLibre/WebGL in browser)
+
+So the best design is:
+
+- Build tiles in robust CPU pipeline
+- Keep GPU for AI and future derived layers
+
+---
+
+## 2) Target architecture
+
+```text
+Data sources
+  ├─ OSM PBF (planet/regional)                -> vector base
+  ├─ GEBCO/DEM/GeoTIFF/NetCDF                 -> raster overlays
+  └─ Future custom layers (CSV/GeoJSON/PostGIS)
+
+Build
+  ├─ Planetiler/Tippecanoe                    -> .pmtiles / .mbtiles (vector)
+  └─ GDAL                                     -> .mbtiles (raster)
+
+Serve
+  ├─ Martin (localhost:3000)                  -> tile endpoints
+  └─ Nginx (443)                              -> public HTTPS
+```
+
+---
+
+## 3) Folder layout (recommended)
+
+```bash
+sudo mkdir -p /opt/tiles/{sources,build,styles,tmp,scripts}
+sudo chown -R pink:pink /opt/tiles
+```
+
+Suggested conventions:
+
+- `/opt/tiles/sources` → raw inputs (`.pbf`, `.nc`, `.tif`, `.geojson`)
+- `/opt/tiles/build` → final artifacts (`.pmtiles`, `.mbtiles`)
+- `/opt/tiles/styles` → `style.json`, sprites, glyph config
+- `/opt/tiles/tmp` → temporary build files
+
+---
+
+## 4) Build vector base layer (OSM)
+
+### Option A: Planetiler (recommended for base maps)
+
+> Flags vary slightly by Planetiler version. Check first:
+
+```bash
+java -jar /home/osm/planetiler.jar --help
+```
+
+Example template:
+
+```bash
+java -Xmx24g -jar /home/osm/planetiler.jar \
+  --osm-path=/home/osm/downloads/osm_planet/planet-latest.osm.pbf \
+  --output=/opt/tiles/build/base.pmtiles \
+  --tmpdir=/opt/tiles/tmp \
+  --force
+```
+
+### Option B: Tippecanoe (for custom vector datasets)
+
+```bash
+tippecanoe -o /opt/tiles/build/my-layer.mbtiles -zg --drop-densest-as-needed /opt/tiles/sources/my-layer.geojson
+```
+
+---
+
+## 5) Build raster bathymetry/elevation layer (GEBCO)
+
+Input example:
+
+- `/home/osm/downloads/gebco_2025/GEBCO_2025.nc`
+
+### 5.1 Reproject to Web Mercator
+
+```bash
+gdalwarp \
+  -t_srs EPSG:3857 \
+  -r bilinear \
+  -multi -wo NUM_THREADS=ALL_CPUS \
+  /home/osm/downloads/gebco_2025/GEBCO_2025.nc \
+  /opt/tiles/tmp/gebco_3857.tif
+```
+
+### 5.2 Color relief (bathymetry palette)
+
+Create palette file:
+
+```bash
+cat >/opt/tiles/sources/bathy-color.txt <<'EOF'
+-11000  0   10  40
+-8000   0   35  90
+-6000   0   60 130
+-4000   0   90 170
+-2000   0  130 210
+-500   50  170 230
+0      220 220 200
+500    180 210 140
+2000   120 170 100
+4000    90 130  80
+EOF
+```
+
+Apply:
+
+```bash
+gdaldem color-relief \
+  /opt/tiles/tmp/gebco_3857.tif \
+  /opt/tiles/sources/bathy-color.txt \
+  /opt/tiles/tmp/gebco_color.tif \
+  -alpha
+```
+
+### 5.3 Convert to MBTiles
+
+```bash
+gdal_translate \
+  -of MBTILES \
+  /opt/tiles/tmp/gebco_color.tif \
+  /opt/tiles/build/gebco_bathy.mbtiles \
+  -co TILE_FORMAT=PNG \
+  -co ZOOM_LEVEL_STRATEGY=AUTO
+```
+
+---
+
+## 6) Serve tiles with Martin (localhost only)
+
+Install Martin binary and run it bound to loopback.
+
+Systemd unit example:
+
+`/etc/systemd/system/martin.service`
+
+```ini
+[Unit]
+Description=Martin tile server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pink
+Group=pink
+ExecStart=/usr/local/bin/martin --listen-address 127.0.0.1:3000 /opt/tiles/build
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now martin
+sudo systemctl status martin
+```
+
+Discover available sources:
+
+```bash
+curl -s http://127.0.0.1:3000/catalog
+```
+
+---
+
+## 7) Nginx reverse proxy (HTTPS only)
+
+Example location in your HTTPS vhost:
+
+```nginx
+location /tiles/ {
+    proxy_pass http://127.0.0.1:3000/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+}
+```
+
+Then test:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+curl -I https://beachlab.org/tiles/catalog
+```
+
+---
+
+## 8) Style file (MapLibre) with vector + raster
+
+`/opt/tiles/styles/style.json` (starter skeleton):
+
+```json
+{
+  "version": 8,
+  "name": "BeachLab Hybrid",
+  "sources": {
+    "base": {
+      "type": "vector",
+      "tiles": ["https://beachlab.org/tiles/base/{z}/{x}/{y}.pbf"],
+      "minzoom": 0,
+      "maxzoom": 14
+    },
+    "bathy": {
+      "type": "raster",
+      "tiles": ["https://beachlab.org/tiles/gebco_bathy/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "minzoom": 0,
+      "maxzoom": 12
+    }
+  },
+  "layers": [
+    { "id": "bathy", "type": "raster", "source": "bathy" }
+  ]
+}
+```
+
+> Use `/tiles/catalog` output to confirm exact source names/paths and adjust URLs.
+
+---
+
+## 9) Add future layers quickly
+
+For every new layer:
+
+1. Drop raw source into `/opt/tiles/sources`
+2. Build to `/opt/tiles/build/<layer>.mbtiles` (or `.pmtiles`)
+3. Confirm in `catalog`
+4. Add source + layer entry in `style.json`
+5. No firewall changes needed if Martin stays `127.0.0.1`
+
+---
+
+## 10) Ops and performance tips
+
+- Use SSD/NVMe for `/opt/tiles/build`
+- Keep big raw inputs under `/home/osm/downloads`
+- Use `NUM_THREADS=ALL_CPUS` in GDAL for faster CPU builds
+- Build regional extracts first, then planet-scale
+- For cache/CDN later, front `/tiles/` with Cloudflare cache rules
+
+---
+
+## 11) Security posture for tiles
+
+- Keep tile server bound to localhost only (`127.0.0.1`)
+- Expose externally only through Nginx `443`
+- Avoid opening direct tile ports in UFW
+- Keep old retired domains/vhosts removed
+
+This aligns with your current hardened setup.
