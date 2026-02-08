@@ -78,18 +78,21 @@ Alert conditions (with cooldown):
 
 Cooldown default: 30 minutes to avoid notification spam.
 
-## 4) Postfix lookup error flood fix
+## 4) Postfix decommissioned
 
-Observed repeated errors from missing/invalid virtual map DB lookups.
+Postfix was previously adjusted to reduce lookup noise, but was later removed from exposure and disabled due to spam-risk concerns.
 
 Applied:
 
 ```bash
-sudo postmap /etc/postfix/virtual
-sudo systemctl reload postfix
+sudo ufw delete allow Postfix
+sudo systemctl disable --now postfix
 ```
 
-This removed `virtual.db` lookup noise from logs.
+Current state:
+
+- SMTP port 25 no longer allowed in UFW
+- `postfix` service disabled/inactive
 
 ## 5) eGPU watchdog (Thunderbolt)
 
@@ -221,7 +224,8 @@ This retires public obsninja/coturn exposure and n8n public entrypoint for now.
 
 ```bash
 # services
-systemctl is-active rag-library-ingest whisper-web postfix system-load-guard.timer egpu-watchdog.timer
+systemctl is-active rag-library-ingest whisper-web system-load-guard.timer egpu-watchdog.timer
+systemctl is-enabled postfix && systemctl is-active postfix  # expected: disabled/inactive
 
 # effective limits
 systemctl show rag-library-ingest --property=MemoryMax,MemoryHigh,CPUQuotaPerSecUSec,OnFailure
@@ -247,8 +251,8 @@ curl -I https://nodered.beachlab.org/
 curl -I https://openhab.beachlab.org/
 curl -I https://pgadmin.beachlab.org/
 
-# recent postfix map errors (should be empty)
-journalctl --since '5 minutes ago' -u postfix | grep -Ei 'virtual.db|lookup error|map lookup problem'
+# confirm SMTP no longer listening
+ss -ltnp | grep ':25 ' || echo 'OK: no smtp listener'
 ```
 
 ## Notes
