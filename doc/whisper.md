@@ -83,6 +83,8 @@ Without token/terms acceptance, transcription may work but diarization jobs fail
 
 Current status (2026-02-08): `HF_TOKEN` configured on host (redacted in docs).
 
+Compatibility fix applied on host app: pyannote now uses `token=` (with fallback to `use_auth_token`) to match current `pyannote.audio` API.
+
 ## systemd unit
 
 `/etc/systemd/system/whisper-web.service`
