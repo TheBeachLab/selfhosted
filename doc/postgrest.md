@@ -243,10 +243,7 @@ server {
         proxy_redirect off;
     }
 
-    location /location2/ {
-        proxy_pass http://192.168.1.51:3001/;  # Replace with the actual IP or domain
-        proxy_redirect off;
-    }
+    # Add more locations only when upstream services actually exist.
 
     # Reject all other requests with a 403 Forbidden status
     location / {
