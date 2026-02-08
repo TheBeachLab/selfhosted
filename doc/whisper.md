@@ -69,6 +69,9 @@ Main endpoints (served behind `/whisper` via nginx):
 ```bash
 # Required for speaker diarization model access
 HF_TOKEN=<redacted>
+
+# Force diarization on CPU (recommended on GTX 1060 / sm_61 hosts)
+WHISPER_DIAR_DEVICE=cpu
 ```
 
 ### Important diarization note
@@ -84,6 +87,8 @@ Without token/terms acceptance, transcription may work but diarization jobs fail
 Current status (2026-02-08): `HF_TOKEN` configured on host (redacted in docs).
 
 Compatibility fix applied on host app: pyannote now uses `token=` (with fallback to `use_auth_token`) to match current `pyannote.audio` API.
+
+CUDA compatibility note: on GTX 1060 3GB (`sm_61`), current Torch wheels for pyannote can raise `no kernel image is available`. Diarization is therefore forced to CPU via `WHISPER_DIAR_DEVICE=cpu` while Whisper transcription remains GPU-enabled.
 
 ## systemd unit
 
