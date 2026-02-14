@@ -43,8 +43,6 @@ The Internet line is a 1000Mbps symmetric FTTH with dynamic IP address.
 - [Auto USB copy](doc/transfer2usb.md)
 - [Troubleshooting](doc/troubleshooting.md)
 - [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
-- [Whisper Web (protected upload + diarization)](doc/whisper.md)
-- [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
 - [Server Safeguards (resource limits + alerts)](doc/server-safeguards.md)
 
 IoT and Databases
@@ -65,6 +63,8 @@ IoT and Databases
 AI Related
 - [GPU](doc/gpu.md)
 - [Hailo Dataflow Compiler](doc/ai.md)
+- [Whisper Web (protected upload + diarization)](doc/whisper.md)
+- [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
 
 
 To improve or fix
