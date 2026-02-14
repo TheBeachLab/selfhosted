@@ -1,8 +1,8 @@
-# CNIG MDT02 Bulk Download to Synology NAS
+# Spanish MDT02 Bulk Download to Synology NAS
 
 This document explains the exact workflow used to:
 
-1. Collect all CNIG MDT02 direct download links (8,307 files)
+1. Collect all CNIG MDT02 direct download links (8,307 files) (Note to Watson: add the URL)
 2. Save them to a CSV
 3. Download files in small batches to a NAS
 4. Keep progress and ETA updates without blocking the pipeline on single-file failures
@@ -12,7 +12,7 @@ This document explains the exact workflow used to:
 ## 1) Environment used
 
 - Source: CNIG `CentroDescargas` (MDT02 second coverage)
-- Local workspace: `/home/pink/.openclaw/workspace`
+- Local workspace: `/home/pink/.openclaw/workspace` 
 - NAS mount point: `/mnt/nas-downloads`
 - Target download folder: `/mnt/nas-downloads/descargas/mdt02`
 
@@ -28,6 +28,7 @@ The NAS mount was configured in `/etc/fstab` as:
 
 Script:
 
+(Note to Watson: This is a doc repo, so add those scripts here inline as well)
 - `/home/pink/.openclaw/workspace/mdt02_scrape_links.py`
 
 What it does:
@@ -60,6 +61,7 @@ Output:
 ---
 
 ## 3) Add per-file download status and download in batches
+(Note to Watson: Can we just have a single script?)
 
 Script:
 
