@@ -69,7 +69,13 @@ Auth health:
 Current runtime secrets are stored in:
 
 - `/etc/auth-jwt-service.env` (`JWT_SECRET`, TTL, host/port)
-- `/etc/auth-jwt-keys.csv` (api_key, role, plan, enabled)
+- `/etc/auth-jwt-keys.csv` (`api_key,role,plan,enabled,expires_at_utc`)
+
+Generate a strong JWT secret (example):
+
+```bash
+openssl rand -hex 32
+```
 
 Permissions:
 
@@ -108,32 +114,46 @@ Expected:
 
 ## Add/rotate API keys
 
-Append new keys:
+Current plan mapping in this setup:
+
+- `free` -> `web_anon`
+- `free_trial` (30 days) -> `web_trial`
+- `pro` -> `web_paid`
+
+Append keys:
 
 ```bash
-NEW_KEY=$(openssl rand -hex 24)
-echo "$NEW_KEY,web_anon,free,1" | sudo tee -a /etc/auth-jwt-keys.csv
+# free
+FREE_KEY=$(openssl rand -hex 24)
+echo "$FREE_KEY,web_anon,free,1," | sudo tee -a /etc/auth-jwt-keys.csv
+
+# trial (30 days)
+TRIAL_KEY=$(openssl rand -hex 24)
+TRIAL_EXP=$(date -u -d '+30 days' '+%Y-%m-%dT%H:%M:%SZ')
+echo "$TRIAL_KEY,web_trial,free_trial,1,$TRIAL_EXP" | sudo tee -a /etc/auth-jwt-keys.csv
+
+# paid
+PAID_KEY=$(openssl rand -hex 24)
+echo "$PAID_KEY,web_paid,pro,1," | sudo tee -a /etc/auth-jwt-keys.csv
+
 sudo systemctl restart auth-jwt
 ```
 
-Disable a key by setting enabled column to `0`.
+Disable a key by setting `enabled` to `0`.
 
 ## Promote from free to paid roles
 
-Current example key uses role `web_anon`.
+This host already has role skeletons:
 
-For paid datasets:
+- `web_anon`
+- `web_trial`
+- `web_paid`
 
-1. Create a dedicated DB role (example: `web_paid`)
-2. Grant only paid objects to that role
-3. Apply RLS where needed
-4. Map paid keys to `web_paid` in `/etc/auth-jwt-keys.csv`
+Next hardening step (when monetization starts):
 
-Example key row:
-
-```text
-<api_key>,web_paid,pro,1
-```
+1. Restrict paid objects to `web_paid`
+2. Keep free objects on `web_anon`/`web_trial`
+3. Add RLS if tenant/data partitioning is needed
 
 ## Rollback
 
