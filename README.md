@@ -53,6 +53,7 @@ IoT and Databases
   - [TimescaleDB](doc/timescaledb.md)
   - [Strapi CSM](doc/strapi.md)
   - [PostgREST API](doc/postgrest.md)
+  - [PostgREST JWT Gateway](doc/postgrest-jwt.md)
   - [OSM Server](doc/osm.md)
   - [Working with CSV](doc/csv.md)
 - [Open Geo Data](doc/geodata.md)

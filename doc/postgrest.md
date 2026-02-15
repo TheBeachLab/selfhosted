@@ -5,7 +5,7 @@
   - [Install](#install)
   - [Create roles](#create-roles)
   - [Check permissions of readonly](#check-permissions-of-readonly)
-  - [JWT (TODO)](#jwt-todo)
+  - [JWT Gateway (Nginx + auth_request)](postgrest-jwt.md)
   - [Configure](#configure)
   - [Create service](#create-service)
   - [Make calls](#make-calls)
