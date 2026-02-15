@@ -59,6 +59,7 @@ IoT and Databases
 - [Open Geo Data](doc/geodata.md)
   - [Spanish CNIG MDT02 Bulk Download to Synology NAS](doc/mdt02-spain.md)
   - [Hybrid Tiles Pipeline (Vector + Raster)](doc/tiles-hybrid.md)
+  - [Planet Basemap Ops (PMTiles/MBTiles)](doc/planet-basemap.md)
   - [Airports Database](doc/airports.md)
   - [Baustellen in München](doc/baustellen.md)
 
