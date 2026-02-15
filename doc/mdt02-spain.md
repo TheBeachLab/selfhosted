@@ -1,20 +1,42 @@
 # Spanish MDT02 Bulk Download to Synology NAS
 
-> Author: Mr. Watson (OpenClaw)
+**Author:** Mr. Watson 🦄
+**Date:** 2026-02-15
 
-This page documents the MDT02 workflow used on this server and provides a **single-script** version you can run end-to-end.
+<!-- vim-markdown-toc GFM -->
 
-Source series page (CNIG):
+- [Goal](#goal)
+- [Source](#source)
+- [Paths](#paths)
+- [NAS mount](#nas-mount)
+- [Install dependencies](#install-dependencies)
+- [Script (single file)](#script-single-file)
+- [Usage](#usage)
+  - [Build full links CSV](#build-full-links-csv)
+  - [Run continuous download batches](#run-continuous-download-batches)
+- [Quick checks](#quick-checks)
+- [Notes](#notes)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Download the full Spanish CNIG MDT02 dataset to a Synology NAS in small batches, with resumable progress tracking.
+
+## Source
+
+CNIG MDT02 series page:
+
 - https://centrodedescargas.cnig.es/CentroDescargas/modelo-digital-terreno-mdt02-segunda-cobertura
 
----
-
-## 1) Environment
+## Paths
 
 - Workspace: `/home/pink/.openclaw/workspace`
 - CSV: `/home/pink/.openclaw/workspace/mdt02_links.csv`
-- NAS mount: `/mnt/nas-downloads`
-- Download target: `/mnt/nas-downloads/descargas/mdt02`
+- NAS mountpoint: `/mnt/nas-downloads`
+- Target folder: `/mnt/nas-downloads/descargas/mdt02`
+
+## NAS mount
 
 `/etc/fstab` entry used:
 
@@ -22,13 +44,20 @@ Source series page (CNIG):
 192.168.1.100:/volume1/synology /mnt/nas-downloads nfs defaults,nofail,_netdev 0 0
 ```
 
----
+## Install dependencies
 
-## 2) Single script (inline)
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip
+python3 -m pip install --user requests beautifulsoup4
+```
 
-Save this as `mdt02.py` in your workspace.
+## Script (single file)
 
-```python
+Create `/home/pink/.openclaw/workspace/mdt02.py`:
+
+```bash
+cat >/home/pink/.openclaw/workspace/mdt02.py <<'PY'
 #!/usr/bin/env python3
 import argparse
 import csv
@@ -273,31 +302,30 @@ def main():
 
 if __name__ == "__main__":
     main()
+PY
+
+chmod +x /home/pink/.openclaw/workspace/mdt02.py
 ```
 
----
+## Usage
 
-## 3) Usage
-
-Generate the full links CSV (filename + url):
+### Build full links CSV
 
 ```bash
 cd /home/pink/.openclaw/workspace
 python3 -u mdt02.py --prepare-links
 ```
 
-Run continuous batch download to NAS (keeps going, does not block on single-file failures):
+### Run continuous download batches
 
 ```bash
 cd /home/pink/.openclaw/workspace
 python3 -u mdt02.py --run --batch-size 20 --sleep 1 --between-batches 5
 ```
 
----
+## Quick checks
 
-## 4) Quick checks
-
-Progress (OK/ERROR/pending):
+Progress (`OK`/`ERROR`/pending):
 
 ```bash
 python3 - <<'PY'
@@ -315,7 +343,7 @@ print({'total':tot,'ok':ok,'error':err,'pending':pend})
 PY
 ```
 
-Downloaded size:
+Downloaded size on NAS:
 
 ```bash
 du -sh /mnt/nas-downloads/descargas/mdt02
@@ -327,10 +355,8 @@ Available NAS space:
 df -h /mnt/nas-downloads
 ```
 
----
+## Notes
 
-## 5) Notes
-
-- `ERROR` rows are kept intentionally so failed files can be retried later.
-- The CSV is the source of truth for pipeline status.
-- For user updates, send milestone notifications at 20%, 30%, 40%, etc., with refreshed ETA.
+- `ERROR` rows are not fatal: pipeline should continue and retry later.
+- CSV is the source of truth for progress.
+- Milestone updates (20%, 30%, 40%, ...) should include updated ETA.
