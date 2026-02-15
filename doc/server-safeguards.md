@@ -1,16 +1,36 @@
 # Server Safeguards (Resource Limits + Alerts)
 
-This page documents safeguards added after an instability incident during RAG deployment.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-08
 
-## Goals
+<!-- vim-markdown-toc GFM -->
 
-- Prevent heavy services from starving the host
-- Alert on service failures
-- Alert on sustained high load / low memory
-- Reduce noisy postfix error flood
+- [Goal](#goal)
+- [Quick checks](#quick-checks)
+- [1) Resource limits for AI services](#1-resource-limits-for-ai-services)
+- [2) Service failure notifications (iGotify)](#2-service-failure-notifications-igotify)
+- [3) High-load watchdog notification](#3-high-load-watchdog-notification)
+- [4) Postfix decommissioned](#4-postfix-decommissioned)
+- [5) eGPU watchdog (Thunderbolt)](#5-egpu-watchdog-thunderbolt)
+- [6) Reverse-proxy consolidation for admin services](#6-reverse-proxy-consolidation-for-admin-services)
+- [7) Legacy exposure cleanup (2026-02-08)](#7-legacy-exposure-cleanup-2026-02-08)
+- [8) Apache exposure reduced (pgAdmin backend only)](#8-apache-exposure-reduced-pgadmin-backend-only)
+- [Verification commands](#verification-commands)
+- [Notes](#notes)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Keep the server stable under heavy workloads and alert on failures before they become incidents.
+
+## Quick checks
+
+```bash
+systemctl status rag-library-ingest whisper-web system-load-guard.timer
+systemctl list-timers --all | grep system-load-guard
+journalctl -u system-load-guard.service -n 50 --no-pager
+```
 
 ## 1) Resource limits for AI services
 

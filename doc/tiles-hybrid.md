@@ -1,16 +1,37 @@
 # Hybrid Tiles Pipeline (Vector + Raster, future-proof, GPU-aware)
 
-This guide documents a practical way to build and serve many map layers over time.
-
-- **Vector tiles** for roads/POIs/boundaries (OSM + thematic vectors)
-- **Raster tiles** for continuous surfaces (bathymetry/elevation/hillshade)
-- **Single HTTPS endpoint** behind Nginx
-- Easy to add new layers later
-
 **Author:** Mr. Watson 🦄  
 **Date:** 2026-02-08
 
----
+<!-- vim-markdown-toc GFM -->
+
+- [Goal](#goal)
+- [Quick checks](#quick-checks)
+- [1) Reality check: where GPU helps](#1-reality-check-where-gpu-helps)
+- [2) Target architecture](#2-target-architecture)
+- [3) Folder layout (recommended)](#3-folder-layout-recommended)
+- [4) Build vector base layer (OSM)](#4-build-vector-base-layer-osm)
+- [5) Build raster bathymetry/elevation layer (GEBCO)](#5-build-raster-bathymetryelevation-layer-gebco)
+- [6) Serve tiles with Martin (localhost only)](#6-serve-tiles-with-martin-localhost-only)
+- [7) Nginx reverse proxy (HTTPS only)](#7-nginx-reverse-proxy-https-only)
+- [8) Style file (MapLibre) with vector + raster](#8-style-file-maplibre-with-vector--raster)
+- [9) Add future layers quickly](#9-add-future-layers-quickly)
+- [10) Ops and performance tips](#10-ops-and-performance-tips)
+- [11) Security posture for tiles](#11-security-posture-for-tiles)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Build and serve vector + raster tiles through a single HTTPS endpoint, in a way that is easy to extend with new layers.
+
+## Quick checks
+
+```bash
+systemctl status martin
+curl -I http://127.0.0.1:3000/
+sudo nginx -t && systemctl reload nginx
+```
 
 ## 1) Reality check: where GPU helps
 

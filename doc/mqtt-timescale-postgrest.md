@@ -1,21 +1,46 @@
 # MQTT → TimescaleDB + PostgREST (Telemetry History, 1-Month Retention)
 
-This page documents the historical telemetry pipeline added on top of live MQTT.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-07
 
+<!-- vim-markdown-toc GFM -->
+
+- [Goal](#goal)
+- [Architecture](#architecture)
+- [Quick checks](#quick-checks)
+- [SQL setup (Timescale + table + retention + API roles)](#sql-setup-timescale--table--retention--api-roles)
+- [Ingestor script (`mqtt_to_timescale.py`)](#ingestor-script-mqtt_to_timescalepy)
+- [Ingestor env + systemd](#ingestor-env--systemd)
+- [PostgREST config + systemd](#postgrest-config--systemd)
+- [Nginx website route (history API)](#nginx-website-route-history-api)
+- [Useful API calls](#useful-api-calls)
+- [Ops checks](#ops-checks)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Store historical telemetry from MQTT in TimescaleDB and expose it safely via PostgREST for dashboard charts.
+
 ## Architecture
 
-- Live source: MQTT topic `alpha/stats` (retained JSON)
-- Ingestor: Python subscriber service (`telemetry-ingest.service`)
-- Storage: TimescaleDB hypertable in `sensors` database
+- Source: MQTT topic `alpha/stats` (retained JSON)
+- Ingestor: `telemetry-ingest.service`
+- Storage: TimescaleDB hypertable in DB `sensors`
 - API: PostgREST on `127.0.0.1:3010`
 
-So dashboard flow is:
+Flow:
 
-- **live card** from MQTT (`alpha/stats`)
-- **history charts** from PostgREST (`telemetry_stats` / `telemetry_latest`)
+- live card from MQTT (`alpha/stats`)
+- history from PostgREST (`telemetry_stats` / `telemetry_latest`)
+
+## Quick checks
+
+```bash
+systemctl status telemetry-ingest postgrest
+curl -s http://127.0.0.1:3010/telemetry_latest?limit=1
+journalctl -u telemetry-ingest -n 80 --no-pager
+```
 
 ## SQL setup (Timescale + table + retention + API roles)
 

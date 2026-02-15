@@ -1,18 +1,35 @@
 # MQTT Telemetry (alpha/stats)
 
-This document describes how telemetry was configured on `thebeachlab` to publish server health data to MQTT for website consumption.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-07
 
+<!-- vim-markdown-toc GFM -->
+
+- [Goal](#goal)
+- [Quick checks](#quick-checks)
+- [Final Topic Design](#final-topic-design)
+- [What is included in `alpha/stats`](#what-is-included-in-alphastats)
+- [Scripts created](#scripts-created)
+- [Scheduler (cron)](#scheduler-cron)
+- [Broker access model](#broker-access-model)
+- [Notes on speedtest reliability](#notes-on-speedtest-reliability)
+- [Minimal frontend subscription](#minimal-frontend-subscription)
+- [Code snippets (sanitized, self-contained)](#code-snippets-sanitized-self-contained)
+- [Security reminder](#security-reminder)
+
+<!-- vim-markdown-toc -->
+
 ## Goal
 
-Publish system telemetry to a simple MQTT topic for dashboards/websites, with:
+Publish server telemetry for dashboards using MQTT, with public read-only consumption and authenticated publishing.
 
-- frequent live metrics
-- periodic speed tests
-- anonymous public read for `alpha/stats` only
-- authenticated publish
+## Quick checks
+
+```bash
+mosquitto_sub -h 127.0.0.1 -t alpha/stats -C 1 -v
+crontab -l | grep -E 'publish_telemetry|publish_speedtest'
+tail -n 50 /tmp/telemetry.log
+```
 
 ## Final Topic Design
 

@@ -1,9 +1,21 @@
 # OpenClaw TUI Quick Access (tmux)
 
-Run OpenClaw TUI in a persistent tmux session so you can disconnect/reconnect anytime.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-07
+
+<!-- vim-markdown-toc GFM -->
+
+- [Goal](#goal)
+- [Quick usage](#quick-usage)
+- [What was configured](#what-was-configured)
+- [Manual fallback (no helper functions)](#manual-fallback-no-helper-functions)
+- [Notes](#notes)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Keep OpenClaw TUI running in a persistent tmux session, so reconnection is instant and safe.
 
 ## Quick usage
 

@@ -1,13 +1,34 @@
 # High-Precision eBook RAG (SFTP Inbox)
 
-This page documents the RAG pipeline for eBooks/documents with automated ingest from SFTP folders.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-08
 
-## Purpose
+<!-- vim-markdown-toc GFM -->
 
-Build a high-precision local RAG pipeline where new books are dropped by SFTP and indexed automatically.
+- [Goal](#goal)
+- [Quick operations](#quick-operations)
+- [Ingest folders (SFTP)](#ingest-folders-sftp)
+- [Supported formats](#supported-formats)
+- [Pipeline service](#pipeline-service)
+- [Precision setup (high)](#precision-setup-high)
+- [Important GPU note for this host (GTX 1060 3GB)](#important-gpu-note-for-this-host-gtx-1060-3gb)
+- [Environment config](#environment-config)
+- [Operations](#operations)
+- [Current status snapshot (2026-02-08)](#current-status-snapshot-2026-02-08)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Run a local high-precision RAG pipeline where documents are dropped via SFTP and indexed automatically.
+
+## Quick operations
+
+```bash
+systemctl status rag-library-ingest
+journalctl -u rag-library-ingest -n 120 --no-pager
+ls -lah /home/sftpuser/library_inbox /home/sftpuser/library_done /home/sftpuser/library_failed
+```
 
 ## Ingest folders (SFTP)
 

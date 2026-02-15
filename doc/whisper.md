@@ -1,22 +1,43 @@
 # Whisper Web (Protected Upload + GPU Transcription + Diarization)
 
-This page documents the `/whisper` web endpoint for uploading audio/video and getting transcript files (`txt`, `srt`, `pdf`) with speaker diarization.
-
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-07
 
-## What was implemented
+<!-- vim-markdown-toc GFM -->
 
-- Protected nginx endpoint: `/whisper`
-- Basic auth in nginx for this route
-- Local web service on `127.0.0.1:8060`
-- Upload + async job queue (SQLite)
-- Faster-Whisper transcription (GPU; `cuda/int8` on GTX 1060)
-- Pyannote speaker identification (GPU-first, fallback possible)
-- Outputs: `.txt`, `.srt`, `.pdf`
-- Source file deletion after successful processing
-- Job delete action removes source/audio, transcript artifacts, and DB row
-- Speaker identification is OFF by default in the UI
+- [Goal](#goal)
+- [Quick operations](#quick-operations)
+- [Nginx config](#nginx-config)
+- [Basic auth file](#basic-auth-file)
+- [Service app](#service-app)
+- [Environment](#environment)
+- [systemd unit](#systemd-unit)
+- [Setup commands (sanitized)](#setup-commands-sanitized)
+- [Operations](#operations)
+- [Data lifecycle](#data-lifecycle)
+
+<!-- vim-markdown-toc -->
+
+## Goal
+
+Expose a protected `/whisper` endpoint to upload media and generate transcript artifacts (`txt`, `srt`, `pdf`) with optional diarization.
+
+## Quick operations
+
+```bash
+systemctl status whisper-web
+curl -I https://beachlab.org/whisper/
+journalctl -u whisper-web -n 80 --no-pager
+```
+
+Implemented:
+
+- Nginx route protection (`/whisper` + basic auth)
+- Local service on `127.0.0.1:8060`
+- Upload queue (SQLite)
+- Faster-Whisper transcription (`cuda/int8` on GTX 1060)
+- Pyannote diarization support
+- Cleanup on job deletion and post-processing
 
 ## Nginx config
 
