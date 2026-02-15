@@ -13,6 +13,8 @@ Servir un planet basemap en `tiles.beachlab.org` con nombre estable en Martin y 
   - `planet_pmtiles -> https://build.protomaps.com/20260215.pmtiles`
 - Endpoint OK:
   - `https://tiles.beachlab.org/planet_pmtiles/0/0/0`
+- Mapa demo (MapLibre + estilo Protomaps apuntando a Martin):
+  - `https://tiles.beachlab.org/map/`
 - Script de actualización ya creado:
   - `/home/osm/downloads/update_planet_pmtiles.sh`
 - Estado operativo (pedido por Fran):
