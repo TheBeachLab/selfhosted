@@ -17,6 +17,8 @@ Servir un planet basemap en `tiles.beachlab.org` con nombre estable en Martin y 
   - `https://tiles.beachlab.org/map/`
   - themes: `light`, `dark`, `grayscale`, `white`, `black`
     - ejemplo: `https://tiles.beachlab.org/map/?theme=dark`
+  - extra (hack): `bright` (inspirado por OpenFreeMap Bright, pero compatible con Protomaps)
+    - `https://tiles.beachlab.org/map/?theme=bright`
 - Script de actualización ya creado:
   - `/home/osm/downloads/update_planet_pmtiles.sh`
 - Estado operativo (pedido por Fran):
