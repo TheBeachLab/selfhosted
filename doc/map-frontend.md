@@ -20,8 +20,10 @@
 
 ## Overview
 
-Single-page MapLibre 5.9.0 map served at `https://maps.beachlab.org/map/` (also `tiles.beachlab.org/map/`).  
+Single-page MapLibre 5.9.0 map served at `https://maps.beachlab.org/map/`.  
 Globe projection always on. Six built-in style themes. MDT02 hillshade + 3D terrain for HU31 (on-the-fly via TiTiler).
+
+UI: no persistent overlay. Controls live in native MapLibre `IControl` widgets (top-left: layers panel, top-right: zoom/compass).
 
 ## File locations
 
@@ -54,9 +56,23 @@ const map = new maplibregl.Map({
 - Change **minimum zoom**: edit `minZoom` (2 = can see full globe).
 - Disable **globe**: change `projection` to `{ type: 'mercator' }` and remove the `setProjection` call in `style.load`.
 
+## Layers control (IControl)
+
+A `LayersControl` class implements the MapLibre `IControl` interface and is added to `top-left`:
+
+```js
+map.addControl(new LayersControl(), 'top-left');
+```
+
+It renders as a small **layers icon button** (same style as native zoom control). Click to open the panel; click outside to close.
+
+Panel contains:
+- **Style** — vertical list of theme buttons (one per row)
+- **Terrain** — 3D terrain checkbox, hillshade checkbox, exaggeration slider
+
 ## Style themes
 
-Six Protomaps-derived styles. Buttons in the UI panel switch between them.
+Six Protomaps-derived styles, selectable from the layers panel.
 
 | Button | Style file |
 |---|---|
@@ -67,10 +83,11 @@ Six Protomaps-derived styles. Buttons in the UI panel switch between them.
 | Black | `style-black.json` |
 | Bright | `style-bright.json` |
 
-**To add/remove a theme button:**
-1. Add/remove entry in the `styles` object in JS.
-2. Add/remove the `<button>` in the UI panel HTML.
-3. Add/remove the `.onclick` handler at the bottom of the script.
+**To add a theme:**
+1. Add entry to the `styles` object in JS.
+2. Add a `<button data-theme="name">` inside `.themes` div in `LayersControl.onAdd()`.
+
+**To remove a theme:** reverse the above.
 
 **To edit visual style** (colors, fonts, layer order): edit the corresponding `style-*.json`. Use [MapLibre style spec](https://maplibre.org/maplibre-style-spec/) as reference.
 
@@ -185,9 +202,10 @@ map.setPaintProperty('mdt02-layer-hu31', 'raster-opacity', 0.65);
 
 | What | How |
 |---|---|
-| Remove a style theme | Delete button, `styles` entry, and `.onclick` |
-| Remove hillshade | Remove `mdt02-hillshade` addLayer block and UI checkbox |
-| Remove 3D terrain | Remove `setTerrain` call and UI checkbox + slider |
+| Remove a style theme | Delete `data-theme` button in `LayersControl` + `styles` entry |
+| Remove layers control entirely | Remove `map.addControl(new LayersControl(), …)` and the class |
+| Remove hillshade | Remove `mdt02-hillshade` addLayer block and UI checkbox in `LayersControl` |
+| Remove 3D terrain | Remove `setTerrain` call and UI checkbox + slider in `LayersControl` |
 | Remove MDT02 rasters | Remove `applyMdt02State()` and related sources |
 | Remove navigation control | Remove `map.addControl(new maplibregl.NavigationControl(), …)` |
 
