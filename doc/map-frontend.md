@@ -83,22 +83,59 @@ Notable layers present in all styles:
 
 ## Sky (globe background)
 
-Set in `applySkyState()` and called on every `style.load`:
+Two-layer approach required — the `sky` style property controls atmosphere/horizon; CSS controls the actual WebGL canvas "space" around the globe.
 
-```js
-map.setSky({
-  'sky-color':       '#000000',
-  'horizon-color':   '#000000',
-  'fog-color':       '#000000',
-  'fog-ground-blend':   0.15,
-  'horizon-fog-blend':  1,
-  'sky-horizon-blend':  1,
-  'atmosphere-blend':   1
-});
+### 1. Style-level sky (atmosphere, all 6 JSON files)
+
+Each `style-*.json` has a root `sky` key:
+
+```json
+"sky": {
+  "sky-color": "#000000",
+  "horizon-color": "#000000",
+  "fog-color": "#000000",
+  "fog-ground-blend": 0.15,
+  "horizon-fog-blend": 1.0,
+  "sky-horizon-blend": 1.0,
+  "atmosphere-blend": 1.0
+}
 ```
 
-**To change sky color**: edit the hex values above.  
-**To add a day/night toggle**: add a `skyMode` state variable, branch in `applySkyState()`, call it on toggle.
+Edit all 6 files at once:
+
+```bash
+python3 - <<'EOF'
+import json, glob
+sky = {
+    "sky-color": "#000000", "horizon-color": "#000000", "fog-color": "#000000",
+    "fog-ground-blend": 0.15, "horizon-fog-blend": 1.0,
+    "sky-horizon-blend": 1.0, "atmosphere-blend": 1.0
+}
+for path in glob.glob('/var/www/tiles.beachlab.org/map/style-*.json'):
+    s = json.load(open(path)); s['sky'] = sky
+    json.dump(s, open(path,'w'), separators=(',',':'))
+    print('OK:', path)
+EOF
+```
+
+### 2. CSS canvas background (space outside the globe)
+
+In `index.html` `<style>` block:
+
+```css
+html, body { height: 100%; margin: 0; background: #000; }
+#map { position: absolute; inset: 0; background: #000; }
+.maplibregl-canvas-container,
+.maplibregl-canvas { background: #000; }
+```
+
+> Both layers are needed. The style `sky` key alone leaves white "space" visible at full zoom-out.
+
+### JS setSky (redundant safety)
+
+`applySkyState()` also calls `map.setSky(…)` with the same black values on every `style.load`, as a belt-and-suspenders fallback.
+
+**To change sky/space color**: update the hex in all three places (style JSONs, CSS, `applySkyState()`).
 
 ## DEM / terrain / hillshade
 
