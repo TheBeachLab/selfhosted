@@ -18,6 +18,8 @@
 - [9) Add future layers quickly](#9-add-future-layers-quickly)
 - [10) Ops and performance tips](#10-ops-and-performance-tips)
 - [11) Security posture for tiles](#11-security-posture-for-tiles)
+- [12) Production update (TiTiler + MDT02 + 3D/hillshade)](#12-production-update-titiler--mdt02--3dhillshade)
+- [13) Quick rollback knobs](#13-quick-rollback-knobs)
 
 <!-- vim-markdown-toc -->
 
@@ -302,3 +304,87 @@ For every new layer:
 - Keep old retired domains/vhosts removed
 
 This aligns with your current hardened setup.
+
+---
+
+## 12) Production update (TiTiler + MDT02 + 3D/hillshade)
+
+Estado aplicado en `tiles.beachlab.org` (2026-02-16/17):
+
+- Martin sigue para vector/PMTiles.
+- TiTiler quedó desplegado para raster DEM MDT02.
+- Nginx publica TiTiler bajo `/titiler/`.
+- Frontend MapLibre (`/map/`) incluye controles:
+  - toggle MDT02 raster
+  - opacidad
+  - fit-to-Spain
+  - 3D terrain toggle
+  - hillshade toggle
+  - exaggeration slider
+
+### 12.1 TiTiler container
+
+```bash
+docker ps --filter name=titiler
+curl -fsS http://127.0.0.1:8081/healthz
+```
+
+Esperado: container `titiler` activo y `{"status":"ok"}`.
+
+### 12.2 Nginx proxy
+
+En el vhost de `tiles.beachlab.org`:
+
+```nginx
+location /titiler/ {
+    proxy_pass http://127.0.0.1:8081/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Validación:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+curl -I https://tiles.beachlab.org/titiler/healthz
+```
+
+### 12.3 MDT02 VRT grouping (mixed CRS-safe)
+
+VRTs activos:
+
+- `/opt/tiles/build/mdt02_hu29.vrt`
+- `/opt/tiles/build/mdt02_hu30.vrt`
+- `/opt/tiles/build/mdt02_hu31.vrt`
+- `/opt/tiles/build/mdt02_wgs84.vrt`
+- `/opt/tiles/build/mdt02_regcan95.vrt`
+
+Nota: evitar pipeline “all-in-one” cuando el input mezcla CRS.
+
+### 12.4 Current caveat
+
+El render 3D/hillshade full-country on-the-fly desde VRT gigante puede provocar:
+
+- worker timeout
+- OOM/SIGKILL
+- latencia alta en zooms altos
+
+Estrategia recomendada actual: empezar por `hu31` on-the-fly y ampliar por zonas.
+
+## 13) Quick rollback knobs
+
+Si 3D/hillshade degrada UX o carga servidor:
+
+1. Desactivar terrain/hillshade en frontend (`/map/index.html`).
+2. Mantener solo raster MDT02 2D + opacidad.
+3. Si hace falta, subir timeout/workers de TiTiler o volver temporalmente a vector-only.
+
+Smoke check rápido:
+
+```bash
+curl -fsS https://tiles.beachlab.org/catalog >/dev/null
+curl -fsS https://tiles.beachlab.org/titiler/healthz >/dev/null
+```
