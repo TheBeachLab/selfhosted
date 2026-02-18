@@ -76,13 +76,14 @@ Data:
 - Dedup by SHA-256
 - Incremental ingest (new/changed files only)
 
-## Important GPU note for this host (GTX 1060 3GB)
+## GPU (2026-02-18)
 
-Current PyTorch build used by sentence-transformers does not support this GPU architecture (`sm_61`) for CUDA kernels.
+Upgraded eGPU to **RTX 2070 Super 8GB** (`sm_75`). All inference now runs on CUDA:
 
-So embeddings/reranking are forced to CPU for stability.
+- Embedding model (`multilingual-e5-base`): `device='cuda'` — ingest and query
+- Cross-encoder reranker (`ms-marco-MiniLM-L-6-v2`): `device='cuda'`
 
-This keeps quality high (same models), only indexing/query speed is lower than modern GPUs.
+No CPU inference paths remain in `rag_pipeline.py`.
 
 ## Environment config
 

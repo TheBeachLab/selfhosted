@@ -35,7 +35,7 @@ Implemented:
 - Nginx route protection (`/whisper` + basic auth)
 - Local service on `127.0.0.1:8060`
 - Upload queue (SQLite)
-- Faster-Whisper transcription (`cuda/int8` on GTX 1060)
+- Faster-Whisper transcription (`cuda/float16` on RTX 2070 Super)
 - Pyannote diarization support
 - Cleanup on job deletion and post-processing
 
@@ -91,8 +91,8 @@ Main endpoints (served behind `/whisper` via nginx):
 # Required for speaker diarization model access
 HF_TOKEN=<redacted>
 
-# Force diarization on CPU (recommended on GTX 1060 / sm_61 hosts)
-WHISPER_DIAR_DEVICE=cpu
+# Run diarization on GPU (RTX 2070 Super, sm_75+)
+WHISPER_DIAR_DEVICE=cuda
 ```
 
 ### Important diarization note
@@ -105,14 +105,20 @@ Pyannote diarization requires:
 
 Without token/terms acceptance, transcription may work but diarization jobs fail.
 
-Current status (2026-02-08): `HF_TOKEN` configured on host (redacted in docs).
-
 Compatibility fixes applied on host app:
 
 - pyannote now uses `token=` (with fallback to `use_auth_token`) to match current `pyannote.audio` API.
 - pyannote 4 returns `DiarizeOutput`; app now reads `output.speaker_diarization` before iterating tracks.
 
-CUDA compatibility note: on GTX 1060 3GB (`sm_61`), current Torch wheels for pyannote can raise `no kernel image is available`. Diarization is therefore forced to CPU via `WHISPER_DIAR_DEVICE=cpu` while Whisper transcription remains GPU-enabled.
+### GPU enforcement (2026-02-18)
+
+Upgraded eGPU from GTX 1060 3GB (`sm_61`) to **RTX 2070 Super 8GB** (`sm_75`).
+
+Changes applied:
+
+- CPU fallback removed from `Engine.__init__` — if CUDA fails, service errors explicitly rather than silently falling back
+- `WHISPER_DIAR_DEVICE=cuda` — diarization now runs on GPU
+- Both Whisper transcription (`float16`) and pyannote diarization run fully on GPU end-to-end
 
 ## systemd unit
 
