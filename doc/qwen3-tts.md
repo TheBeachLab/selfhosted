@@ -174,14 +174,38 @@ sudo journalctl -u qwen3-tts -n 200 --no-pager
 
 ## Usage
 
-1. Navigate to `https://beachlab.org/tts/` (requires basic auth)
-2. Upload reference audio (3-60s, clear speech, wav/mp3/ogg/etc.)
+Navigate to `https://beachlab.org/tts/` (requires basic auth)
+
+### Two modes:
+
+**1. Use saved voice (recommended for reuse):**
+
+1. Select "Use saved voice" radio button
+2. Choose voice from dropdown
+3. Enter text to generate
+4. Optional: select language and voice instructions
+5. Click "Generate Speech"
+6. Download wav when done
+
+**2. Clone new voice:**
+
+1. Select "Clone new voice" radio button
+2. Upload reference audio (3-60s, clear speech)
 3. Provide exact transcription of reference audio
-4. Write text to generate
-5. Select language (or leave Auto)
-6. Optional: add voice instructions ("excited", "whisper", "slow and dramatic", etc.)
+4. ✅ **Check "Save this voice for reuse"** if you want to keep it
+   - Enter voice name (e.g., "John", "Maria", "Narrator")
+   - Optional: add description (e.g., "Male, deep voice, British accent")
+5. Enter text to generate
+6. Optional: select language and voice instructions
 7. Click "Generate Speech"
-8. Download generated wav when status = done
+8. Download wav when done
+9. Voice will appear in saved voices list (if you checked "save")
+
+### Managing saved voices:
+
+- **View all voices:** "Saved Voices" section shows all your cloned voices
+- **Delete voice:** Click "Delete" button (removes voice but keeps old generated audio)
+- **Reuse voice:** Select from dropdown in "Use saved voice" mode
 
 ### Language support
 
@@ -195,6 +219,22 @@ sudo journalctl -u qwen3-tts -n 200 --no-pager
 - Portuguese
 - Spanish
 - Italian
+
+### Cross-lingual voice cloning
+
+**Important:** The model clones the **voice characteristics** including the speaker's **native accent**.
+
+**Example scenarios:**
+
+- ✅ **Same language:** Reference audio in English → Generate English text → Natural English voice
+- ⚠️ **Cross-lingual with accent:** Reference audio in English → Generate Spanish text → Spanish with English accent
+- ✅ **Best quality:** Use reference audio in the **same language** as your target text
+
+**Tips for multilingual voices:**
+
+1. **Record separate samples:** If you need the same voice in multiple languages, record reference audio in each target language
+2. **Save multiple voice profiles:** Save "John-English", "John-Spanish", etc. as separate voices
+3. **Language selector:** The "Language" dropdown helps the model understand the **text** you're generating, not the accent
 
 ### Voice instructions examples
 
@@ -214,8 +254,17 @@ sudo journalctl -u qwen3-tts -n 200 --no-pager
 
 ### Data lifecycle
 
-- Reference audio stored in `/opt/qwen3-tts/uploads`
-- Successful job deletes reference audio
-- Generated wav kept in `/opt/qwen3-tts/outputs`
+**Temporary uploads (when NOT saving voice):**
+- Reference audio uploaded to `/opt/qwen3-tts/uploads`
+- Deleted automatically after job completes
+
+**Saved voices:**
+- Reference audio stored permanently in `/opt/qwen3-tts/voices`
+- Metadata (name, transcription, description) in SQLite database
+- Reusable across unlimited jobs
+
+**Generated audio:**
+- Output wav files stored in `/opt/qwen3-tts/outputs`
+- Kept indefinitely (manual cleanup needed)
 
 Recommended: add retention cleanup timer (e.g., delete outputs older than 7 days).
