@@ -193,7 +193,9 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 2. Upload reference audio (3-60s, clear speech)
    - **Supported formats:** MP3, WAV, OGG, OPUS, M4A, FLAC, AAC, and any ffmpeg-compatible format
    - Automatically converted to 16kHz mono WAV for processing
-3. Provide exact transcription of reference audio
+3. **Transcription options:**
+   - ✨ **Auto-transcribe:** Check "Auto-transcribe with Whisper" to automatically detect speech (skip manual transcription)
+   - **Manual:** Leave unchecked and type exact words spoken in the reference audio
 4. ✅ **Check "Save this voice for reuse"** if you want to keep it
    - Enter voice name (e.g., "John", "Maria", "Narrator")
    - Optional: add description (e.g., "Male, deep voice, British accent")
@@ -253,6 +255,8 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 - Warm-up inference can take 10-20s
 - Subsequent generations: ~1.2-1.5x real-time on RTX 2070 Super
 - Longer text (>200 words) may take several minutes
+- **Auto-transcription:** Adds ~5-15 seconds (runs Whisper small on GPU)
+- **Output format:** MP3 (~90% smaller than WAV, ~190kbps VBR quality)
 
 ### Data lifecycle
 
