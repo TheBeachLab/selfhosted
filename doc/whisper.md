@@ -24,6 +24,18 @@ Expose a protected `/whisper` endpoint to upload media and generate transcript a
 
 ## Quick operations
 
+**⚠️ On-Demand Service:** Whisper does NOT auto-start on boot. Use `gpu-service` to manage it:
+
+```bash
+gpu-service status                    # Check if running
+gpu-service start whisper             # Start when needed
+gpu-service stop whisper              # Stop when done
+```
+
+See [GPU Service Management](gpu-services.md) for details.
+
+Status check (when running):
+
 ```bash
 systemctl status whisper-web
 curl -I https://beachlab.org/whisper/

@@ -24,6 +24,18 @@ Run a local high-precision RAG pipeline where documents are dropped via SFTP and
 
 ## Quick operations
 
+**⚠️ On-Demand Service:** RAG library does NOT auto-start on boot. Use `gpu-service` to manage it:
+
+```bash
+gpu-service status                    # Check if running
+gpu-service start rag                 # Start when needed (e.g., before uploading docs)
+gpu-service stop rag                  # Stop when inbox is empty
+```
+
+See [GPU Service Management](gpu-services.md) for details.
+
+Status check (when running):
+
 ```bash
 systemctl status rag-library-ingest
 journalctl -u rag-library-ingest -n 120 --no-pager

@@ -65,7 +65,7 @@ IoT and Databases
 
 AI Related
 - [GPU](doc/gpu.md)
-- [Hailo Dataflow Compiler](doc/ai.md)
+- [GPU Service Management (on-demand Whisper/RAG/TTS)](doc/gpu-services.md)
 - [Whisper Web (protected upload + diarization)](doc/whisper.md)
 - [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
 - [Qwen3-TTS Voice Cloning (multilingual)](doc/qwen3-tts.md)
