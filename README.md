@@ -68,6 +68,7 @@ AI Related
 - [Hailo Dataflow Compiler](doc/ai.md)
 - [Whisper Web (protected upload + diarization)](doc/whisper.md)
 - [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
+- [Qwen3-TTS Voice Cloning (multilingual)](doc/qwen3-tts.md)
 
 
 To improve or fix
