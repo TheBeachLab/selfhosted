@@ -191,6 +191,8 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 
 1. Select "Clone new voice" radio button
 2. Upload reference audio (3-60s, clear speech)
+   - **Supported formats:** MP3, WAV, OGG, OPUS, M4A, FLAC, AAC, and any ffmpeg-compatible format
+   - Automatically converted to 16kHz mono WAV for processing
 3. Provide exact transcription of reference audio
 4. ✅ **Check "Save this voice for reuse"** if you want to keep it
    - Enter voice name (e.g., "John", "Maria", "Narrator")
