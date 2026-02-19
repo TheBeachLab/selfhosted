@@ -69,6 +69,7 @@ AI Related
 - [Whisper Web (protected upload + diarization)](doc/whisper.md)
 - [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
 - [Qwen3-TTS Voice Cloning (multilingual)](doc/qwen3-tts.md)
+- [ComfyUI (Stable Diffusion node editor)](doc/comfyui.md)
 
 
 To improve or fix
