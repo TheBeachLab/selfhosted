@@ -17,7 +17,7 @@
 
 ## Goal
 
-Manage GPU-intensive services (Whisper, RAG, Qwen3-TTS) with on-demand start/stop to avoid VRAM exhaustion.
+Monitor and manage GPU-intensive services (Whisper, RAG, Qwen3-TTS) with automatic lazy-loading and manual control to avoid VRAM exhaustion.
 
 ## Hardware context
 
@@ -35,15 +35,54 @@ VRAM usage per service (approximate):
 
 ## Services
 
-All three GPU services are configured to **NOT auto-start** on boot:
+GPU service behavior:
 
-- `whisper-web.service` (port 8060, `/whisper` endpoint)
-- `rag-library-ingest.service` (SFTP inbox watcher)
-- `qwen3-tts.service` (port 8070, `/tts` endpoint)
+- **`whisper-web.service`** (port 8060, `/whisper` endpoint)
+  - ✨ **Auto-loading:** Frontend always active, GPU model loads on first job
+  - Auto-unloads after 120 seconds of inactivity
+  - Auto-starts on boot
+
+- **`qwen3-tts.service`** (port 8070, `/tts` endpoint)
+  - ✨ **Auto-loading:** Frontend always active, GPU model loads on first job
+  - Auto-unloads after 120 seconds of inactivity
+  - Auto-starts on boot
+
+- **`rag-library-ingest.service`** (SFTP inbox watcher)
+  - ⚠️ **Manual control:** Must be started/stopped manually with `gpu-service`
+  - Does NOT auto-start on boot
+  - Runs continuously when active (no auto-unload)
+
+## Auto-Loading Behavior (Whisper/TTS)
+
+**How it works:**
+
+1. **Service always running:** FastAPI frontend available 24/7
+2. **GPU model lazy-loads:** Only loaded when first job arrives in queue
+3. **Auto-unload on idle:** After 120 seconds with no jobs, model is unloaded and VRAM freed
+4. **Failsafe:** If GPU OOM during load, job fails with clear error message
+
+**Example timeline:**
+
+```
+00:00 - User visits https://beachlab.org/whisper/
+00:01 - User uploads audio and clicks "Transcribe"
+00:02 - Worker thread detects queued job
+00:03 - GPU model begins loading (~10-20s first time)
+00:22 - Model loaded, transcription starts
+00:45 - Job completes, marked as 'done'
+02:45 - No new jobs for 120s → model unloads, VRAM freed
+```
+
+**Benefits:**
+
+- No 502 errors (frontend always available)
+- No manual service management needed
+- Efficient VRAM usage (only allocated when needed)
+- Multiple users can queue jobs (processed sequentially)
 
 ## Management tool
 
-`/usr/local/bin/gpu-service` — CLI tool for start/stop/status
+`/usr/local/bin/gpu-service` — CLI tool for monitoring and manual control
 
 ## Usage
 
@@ -97,39 +136,59 @@ Wait 2-3 seconds between stop and start for VRAM cleanup.
 
 ### Typical workflows
 
-**Transcription job:**
+**Transcription job (automatic):**
 
-1. `gpu-service start whisper`
-2. Upload audio to `https://beachlab.org/whisper/`
-3. Wait for job to complete
-4. Download transcript
-5. `gpu-service stop whisper` (when done with transcriptions)
+1. Navigate to `https://beachlab.org/whisper/`
+2. Upload audio and submit job
+3. GPU model loads automatically (first job may take 10-20s)
+4. Wait for job to complete
+5. Download transcript
+6. Model auto-unloads after 2 minutes of inactivity
 
-**eBook indexing:**
+**Voice cloning (automatic):**
 
-1. `gpu-service start rag`
-2. Upload PDFs/EPUBs via SFTP to `/home/sftpuser/library_inbox`
-3. Monitor logs: `journalctl -u rag-library-ingest -f`
-4. `gpu-service stop rag` (when inbox is empty)
+1. Navigate to `https://beachlab.org/tts/`
+2. Upload reference audio + enter text
+3. GPU model loads automatically (first job may take 10-20s)
+4. Wait for generation to complete
+5. Download wav file
+6. Model auto-unloads after 2 minutes of inactivity
 
-**Voice cloning:**
+**eBook indexing (manual):**
 
-1. `gpu-service start tts`
-2. Navigate to `https://beachlab.org/tts/`
-3. Upload reference audio + generate speech
-4. Download wav files
-5. `gpu-service stop tts` (when done)
+1. Check GPU status: `gpu-service status`
+2. If Whisper/TTS are idle, proceed. If not, wait or use `gpu-service stop all`
+3. `gpu-service start rag`
+4. Upload PDFs/EPUBs via SFTP to `/home/sftpuser/library_inbox`
+5. Monitor logs: `journalctl -u rag-library-ingest -f`
+6. `gpu-service stop rag` (when inbox is empty)
 
-### Quick check before starting
+### VRAM conflict handling
+
+**Automatic (Whisper/TTS):**
+
+If you submit a job and GPU memory is full:
+- Job will be marked as `failed`
+- Error message: "GPU memory full. Please stop other GPU services (gpu-service stop all) and try again."
+- Check `gpu-service status` to see what's using VRAM
+- Stop conflicting service or wait for auto-unload (120s idle)
+
+**Manual (RAG):**
+
+Before starting RAG, check for conflicts:
 
 ```bash
 gpu-service status
 ```
 
-If any service shows `active`, stop it first:
+If Whisper or TTS are using GPU:
+- Wait for auto-unload (check logs for "unloading model" message)
+- Or force stop: `gpu-service stop all`
+
+Then start RAG:
 
 ```bash
-gpu-service stop all
+gpu-service start rag
 ```
 
 ### Emergency: all services stuck
@@ -144,18 +203,26 @@ Or kill GPU processes directly (last resort):
 sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 ```
 
-## Why on-demand
+## Why lazy-loading + manual control
 
 1. **VRAM limit:** 8GB is not enough to run all three services simultaneously
 2. **Sporadic use:** Whisper, RAG, and TTS are used infrequently, not 24/7
 3. **Resource efficiency:** GPU idle when not needed
-4. **Flexibility:** Easy to swap services depending on task
+4. **User experience:** Frontends always accessible, no manual service management needed
 
-Alternative approaches considered but rejected:
+**Design decisions:**
+
+- ✅ **Auto-loading (Whisper/TTS):** Frontend always available, GPU loads on demand
+  - No CUDA OOM on startup (model loads when first job arrives)
+  - Auto-unload after idle timeout (frees VRAM for other services)
+  - Failsafe: if GPU memory full, job fails with clear message
+- ⚠️ **Manual control (RAG):** Continuous processing when active
+  - No auto-unload (watcher runs continuously until stopped)
+  - Requires explicit `gpu-service start rag` before use
+  - Prevents unexpected VRAM usage when uploading large batches
+
+**Alternative approaches considered but rejected:**
 
 - ❌ **Smaller models:** Qwen3-TTS 0.6B has noticeably lower quality
-- ❌ **Auto-stop on idle:** Complex to implement reliably, race conditions
-- ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without model unloading
-- ✅ **Manual on-demand:** Simple, explicit, predictable
-
-Future improvement (if needed): systemd socket activation to auto-start services on first HTTP request.
+- ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
+- ❌ **Always-on all services:** Exceeds 8GB VRAM capacity

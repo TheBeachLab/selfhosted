@@ -24,23 +24,19 @@ Expose a protected `/whisper` endpoint to upload media and generate transcript a
 
 ## Quick operations
 
-**⚠️ On-Demand Service:** Whisper does NOT auto-start on boot. Use `gpu-service` to manage it:
+**✨ Auto-Loading Service:** Frontend always active at `https://beachlab.org/whisper/`
 
-```bash
-gpu-service status                    # Check if running
-gpu-service start whisper             # Start when needed
-gpu-service stop whisper              # Stop when done
-```
-
-See [GPU Service Management](gpu-services.md) for details.
-
-Status check (when running):
+- GPU model loads automatically when you submit a job
+- Auto-unloads after 120 seconds of inactivity (frees VRAM)
+- If GPU memory is full, job fails with clear error message
 
 ```bash
 systemctl status whisper-web
-curl -I https://beachlab.org/whisper/
 journalctl -u whisper-web -n 80 --no-pager
+gpu-service status                    # Check GPU memory usage
 ```
+
+See [GPU Service Management](gpu-services.md) for troubleshooting.
 
 Implemented:
 

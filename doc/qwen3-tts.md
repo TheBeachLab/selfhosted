@@ -24,23 +24,19 @@ Self-hosted voice cloning and multilingual TTS with Qwen3-TTS 1.7B. Clone any vo
 
 ## Quick operations
 
-**⚠️ On-Demand Service:** Qwen3-TTS does NOT auto-start on boot. Use `gpu-service` to manage it:
+**✨ Auto-Loading Service:** Frontend always active at `https://beachlab.org/tts/`
 
-```bash
-gpu-service status                    # Check if running
-gpu-service start tts                 # Start when needed
-gpu-service stop tts                  # Stop when done
-```
-
-See [GPU Service Management](gpu-services.md) for details.
-
-Status check (when running):
+- GPU model loads automatically when you submit a job
+- Auto-unloads after 120 seconds of inactivity (frees VRAM)
+- If GPU memory is full, job fails with clear error message
 
 ```bash
 systemctl status qwen3-tts
-curl -I https://beachlab.org/tts/
 journalctl -u qwen3-tts -n 80 --no-pager
+gpu-service status                    # Check GPU memory usage
 ```
+
+See [GPU Service Management](gpu-services.md) for troubleshooting.
 
 Implemented:
 
