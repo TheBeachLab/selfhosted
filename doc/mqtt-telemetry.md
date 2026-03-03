@@ -303,3 +303,52 @@ topic read alpha/stats/#
 ## Security reminder
 
 Do **not** publish credentials in repo/docs. Keep credentials in local runtime config only.
+
+## Sensor robustness (`validate_json`)
+
+When a hardware sensor fails (e.g. GPU in ERR! state returning `[GPU requires reset]` instead of a number), passing that value to `jq --argjson` produces invalid JSON and the whole script aborts — no MQTT message is published, DB goes stale.
+
+### Fix applied (2026-03-03)
+
+Added a `validate_json()` helper that sanitizes each sensor output before it reaches `jq`:
+
+```bash
+# Returns the value if it is valid JSON, otherwise returns "null"
+validate_json() {
+  local val="$1"
+  if echo "$val" | jq -e . >/dev/null 2>&1; then
+    echo "$val"
+  else
+    echo "null"
+  fi
+}
+```
+
+All sensor variables are wrapped:
+
+```bash
+cpu_t="$(validate_json "$(cpu_temp 2>/dev/null || echo null)")"
+gpu="$(validate_json  "$(gpu_json  2>/dev/null || echo null)")"
+mem="$(validate_json  "$(mem_json  2>/dev/null || echo null)")"
+disk="$(validate_json "$(disk_json 2>/dev/null || echo null)")"
+load="$(validate_json "$(load_json 2>/dev/null || echo null)")"
+```
+
+Additional hardening in `gpu_json()` — NVIDIA fields like `[GPU requires reset]` and `[N/A]` are sanitized via `sed` before building the JSON object:
+
+```bash
+nvidia-smi ... 2>/dev/null \
+  | sed 's/\[[^]]*\]/null/g' \
+  | awk -F', *' '...'
+```
+
+Final guard — abort silently if the assembled payload is still invalid:
+
+```bash
+if ! echo "$payload" | jq -e . >/dev/null 2>&1; then
+  echo "publish_telemetry: invalid payload, skipping" >&2
+  exit 1
+fi
+```
+
+Result: if any sensor breaks, that field becomes `null` in the dashboard; all other metrics continue flowing normally.

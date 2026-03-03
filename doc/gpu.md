@@ -171,3 +171,73 @@ umount ~/mnt/ml
 diskutil unmount force ~/mnt/ml
 ```
 
+
+## eGPU stability (Thunderbolt / Razer Core X)
+
+**Author:** Mr. Watson 🦄
+**Date:** 2026-03-03
+
+### Problem: recurring GPU firmware crash (Xid 62/119/154)
+
+RTX 2070 Super via Thunderbolt 3 (Razer Core X) is bandwidth-limited to 8 Gb/s vs 32+ Gb/s native PCIe. Under heavy inference load the GPU System Processor (GSP) firmware can timeout on RPC calls, leaving the GPU in an unrecoverable ERR! state until reboot.
+
+Signature in `dmesg`/`journalctl -k`:
+
+```
+NVRM: Xid 62   — GPU error event
+NVRM: Xid 119  — GSP RPC timeout after 45s
+NVRM: Xid 154  — GPU Reset Required (reset fails, GPU stuck)
+```
+
+Check current GPU state:
+
+```bash
+nvidia-smi
+# ERR! in temperature/util columns = GPU needs reboot
+sudo journalctl -k | grep -i "NVRM\|Xid"
+```
+
+### Fix 1: keep GPU awake (nvidia-persistenced)
+
+Prevents GPU from entering low-power sleep between jobs (avoids a separate cold-start crash):
+
+```bash
+sudo mkdir -p /etc/systemd/system/nvidia-persistenced.service.d
+sudo tee /etc/systemd/system/nvidia-persistenced.service.d/override.conf << 'CONF'
+[Unit]
+StopWhenUnneeded=false
+
+[Service]
+ExecStart=
+ExecStart=/usr/bin/nvidia-persistenced --user nvidia-persistenced --verbose
+
+[Install]
+WantedBy=multi-user.target
+CONF
+
+sudo systemctl daemon-reload
+sudo systemctl enable nvidia-persistenced
+sudo systemctl restart nvidia-persistenced
+nvidia-smi -q | grep "Persistence Mode"   # should show: Enabled
+```
+
+### Fix 2: disable GSP firmware (eliminates Xid 119)
+
+Moves GPU management from the GSP chip to the CPU driver. Eliminates RPC timeouts entirely. No performance impact on CUDA workloads.
+
+```bash
+echo 'options nvidia NVreg_EnableGpuFirmware=0' | sudo tee /etc/modprobe.d/nvidia-no-gsp.conf
+sudo update-initramfs -u
+sudo reboot
+```
+
+Verify after reboot — no Xid 119 entries should appear in `journalctl -k`.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `ERR!` in `nvidia-smi` | GPU in Xid 154 state | Reboot |
+| `nvidia-smi` returns `[N/A]` / `[GPU requires reset]` | Same — GPU stuck | Reboot |
+| Xid 119 recurring every few days | GSP firmware bug on Thunderbolt | Apply Fix 2 |
+| GPU goes to sleep between jobs, won't wake | Persistence mode off | Apply Fix 1 |
