@@ -352,3 +352,223 @@ fi
 ```
 
 Result: if any sensor breaks, that field becomes `null` in the dashboard; all other metrics continue flowing normally.
+
+## Adding physical sensors (BME280 + K30 CO2)
+
+Physical sensors publish to `alpha/sensors/<device_id>` via MQTT. The server subscribes and writes each reading to the `sensors` table, which triggers the SSE bridge for real-time frontend updates.
+
+### MQTT payload format
+
+Each device publishes a JSON object to `alpha/sensors/<device_id>`:
+
+```json
+{
+  "device_id": "room1",
+  "timestamp": "2026-03-03T10:00:00Z",
+  "readings": {
+    "temperature_c":  23.4,
+    "humidity_pct":   61.2,
+    "pressure_hpa":  1013.1,
+    "co2_ppm":        812
+  }
+}
+```
+
+The ingest script expands each key in `readings` into one row in `sensors(time, device_id, sensor_name, value)`.
+
+### BME280 (I2C — temperature, humidity, pressure)
+
+**Wiring (Raspberry Pi):**
+
+| BME280 | RPi pin |
+|--------|---------|
+| VCC    | 3.3V (pin 1) |
+| GND    | GND (pin 6) |
+| SDA    | GPIO 2 / SDA (pin 3) |
+| SCL    | GPIO 3 / SCL (pin 5) |
+
+Default I2C address: `0x76` (SDO to GND) or `0x77` (SDO to VCC).
+
+**Enable I2C on Raspberry Pi:**
+
+```bash
+sudo raspi-config  # Interface Options → I2C → Enable
+# or:
+sudo sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/' /boot/config.txt
+echo "i2c-dev" | sudo tee -a /etc/modules
+sudo reboot
+# verify:
+i2cdetect -y 1   # should show 0x76 or 0x77
+```
+
+**Install deps:**
+
+```bash
+sudo apt install python3-smbus python3-pip mosquitto-clients
+pip3 install smbus2 bme280 paho-mqtt
+```
+
+**Reading script (`read_bme280.py`):**
+
+```python
+#!/usr/bin/env python3
+import json, time
+from datetime import datetime, timezone
+import smbus2, bme280
+import paho.mqtt.client as mqtt
+
+DEVICE_ID   = "room1"         # change per location
+MQTT_HOST   = "YOUR_SERVER_IP"
+MQTT_PORT   = 1883
+MQTT_TOPIC  = f"alpha/sensors/{DEVICE_ID}"
+MQTT_USER   = "YOUR_PUBLISH_USER"
+MQTT_PASS   = "YOUR_PUBLISH_PASSWORD"
+I2C_PORT    = 1
+I2C_ADDRESS = 0x76
+INTERVAL_S  = 60
+
+bus = smbus2.SMBus(I2C_PORT)
+calibration = bme280.load_calibration_params(bus, I2C_ADDRESS)
+client = mqtt.Client()
+client.username_pw_set(MQTT_USER, MQTT_PASS)
+client.connect(MQTT_HOST, MQTT_PORT)
+client.loop_start()
+
+while True:
+    data = bme280.sample(bus, I2C_ADDRESS, calibration)
+    payload = json.dumps({
+        "device_id": DEVICE_ID,
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "readings": {
+            "temperature_c": round(data.temperature, 2),
+            "humidity_pct":  round(data.humidity, 2),
+            "pressure_hpa":  round(data.pressure, 2),
+        }
+    })
+    client.publish(MQTT_TOPIC, payload, qos=1, retain=True)
+    time.sleep(INTERVAL_S)
+```
+
+Run as a service or via cron every minute.
+
+### K30 CO2 sensor (UART)
+
+The SenseAir K30 uses UART at 9600 baud, 8N1. Connect via a USB-UART adapter or directly to the Raspberry Pi UART pins (disable serial console first).
+
+**Wiring (USB-UART adapter):**
+
+| K30      | Adapter |
+|----------|---------|
+| G+  (Tx) | RX      |
+| G0  (Rx) | TX      |
+| G+  (5V) | 5V      |
+| GND      | GND     |
+
+Find the device: `ls /dev/ttyUSB*` or `/dev/ttyS0` for native UART.
+
+**Install deps:**
+
+```bash
+pip3 install pyserial paho-mqtt
+```
+
+**Reading script (`read_k30.py`):**
+
+```python
+#!/usr/bin/env python3
+import json, time, serial
+from datetime import datetime, timezone
+import paho.mqtt.client as mqtt
+
+DEVICE_ID  = "room1"
+MQTT_HOST  = "YOUR_SERVER_IP"
+MQTT_PORT  = 1883
+MQTT_TOPIC = f"alpha/sensors/{DEVICE_ID}"
+MQTT_USER  = "YOUR_PUBLISH_USER"
+MQTT_PASS  = "YOUR_PUBLISH_PASSWORD"
+SERIAL_DEV = "/dev/ttyUSB0"
+INTERVAL_S = 60
+
+# K30 read CO2 command (Modbus-style)
+CMD = bytes([0xFE, 0x44, 0x00, 0x08, 0x02, 0x9F, 0x25])
+
+def read_co2(ser):
+    ser.write(CMD)
+    time.sleep(0.5)
+    resp = ser.read(7)
+    if len(resp) < 7 or resp[0] != 0xFE:
+        return None
+    return (resp[3] << 8) | resp[4]
+
+client = mqtt.Client()
+client.username_pw_set(MQTT_USER, MQTT_PASS)
+client.connect(MQTT_HOST, MQTT_PORT)
+client.loop_start()
+
+with serial.Serial(SERIAL_DEV, 9600, timeout=1) as ser:
+    while True:
+        ppm = read_co2(ser)
+        if ppm is not None:
+            payload = json.dumps({
+                "device_id": DEVICE_ID,
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "readings": {"co2_ppm": ppm}
+            })
+            client.publish(MQTT_TOPIC, payload, qos=1, retain=True)
+        time.sleep(INTERVAL_S)
+```
+
+**Combine both sensors** by merging `readings` dicts and publishing one payload per device.
+
+### Server-side ingest
+
+Add a subscriber to `mqtt_to_timescale.py` (or a separate script) that handles `alpha/sensors/#` and writes to the `sensors` table:
+
+```python
+SENSOR_INSERT = """
+INSERT INTO public.sensors (time, device_id, sensor_name, value)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT (time, device_id, sensor_name) DO NOTHING;
+"""
+
+def on_sensor_message(client, userdata, msg):
+    try:
+        data = json.loads(msg.payload)
+        ts   = parse_time(data.get("timestamp"))
+        did  = data.get("device_id", msg.topic.split("/")[-1])
+        for name, val in (data.get("readings") or {}).items():
+            if val is not None:
+                with conn.cursor() as cur:
+                    cur.execute(SENSOR_INSERT, (ts, did, name, float(val)))
+    except Exception as e:
+        log.exception("sensor ingest error: %s", e)
+```
+
+Subscribe to the additional topic in `on_connect`:
+
+```python
+client.subscribe("alpha/sensors/#", qos=1)
+```
+
+Update Mosquitto ACL to allow reads from `alpha/sensors/#`:
+
+```conf
+topic read alpha/sensors/#
+```
+
+### Quick test
+
+From the server, verify a sensor is publishing:
+
+```bash
+mosquitto_sub -h 127.0.0.1 -t "alpha/sensors/#" -C 1 -v
+```
+
+Check the last inserted reading:
+
+```sql
+SELECT time, device_id, sensor_name, value
+FROM sensors
+ORDER BY time DESC
+LIMIT 10;
+```
