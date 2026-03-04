@@ -226,3 +226,77 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 - ❌ **Smaller models:** Qwen3-TTS 0.6B has noticeably lower quality
 - ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
 - ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
+
+## Restablecer tras PSU/GPU muerta
+
+**Contexto:** PSU del Razer Core X murió el 2026-03-04. Los siguientes servicios fueron deshabilitados para evitar errores y freezes continuos.
+
+### Estado actual (sin GPU)
+
+| Servicio | Estado |
+|---|---|
+| `whisper-web` | disabled |
+| `qwen3-tts` | disabled |
+| `comfyui` | disabled |
+| `nvidia-persistenced` | disabled |
+| `egpu-watchdog` | disabled |
+| Telegraf `inputs.nvidia_smi` | comentado |
+
+### Pasos para restablecer (nueva GPU/PSU instalada)
+
+**1. Verificar que la GPU es visible:**
+
+```bash
+lspci | grep -i nvidia
+nvidia-smi
+```
+
+Si `nvidia-smi` falla, cargar el driver manualmente:
+
+```bash
+sudo modprobe nvidia
+nvidia-smi   # debe mostrar la GPU sin ERR!
+```
+
+**2. Re-habilitar servicios GPU:**
+
+```bash
+sudo systemctl enable --now nvidia-persistenced
+sudo systemctl enable --now whisper-web
+sudo systemctl enable --now qwen3-tts
+sudo systemctl enable --now comfyui
+sudo systemctl enable --now egpu-watchdog.timer
+```
+
+**3. Re-habilitar monitoreo en Telegraf:**
+
+Editar `/etc/telegraf/telegraf.d/nuc-timescale.conf` y descomentar:
+
+```toml
+[[inputs.nvidia_smi]]
+  bin_path = "/usr/bin/nvidia-smi"
+  timeout = "5s"
+```
+
+Luego:
+
+```bash
+sudo systemctl restart telegraf
+sudo journalctl -u telegraf -n 10 --no-pager | grep -E "Error|nvidia"
+```
+
+**4. Verificar telemetría:**
+
+```bash
+DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | python3 -m json.tool | grep gpu
+```
+
+El campo `gpu` debe mostrar temp/util reales en vez de `null`.
+
+**5. Test rápido de servicios:**
+
+```bash
+curl -s http://localhost:8060/health   # whisper-web
+curl -s http://localhost:8070/health   # qwen3-tts
+curl -s http://localhost:8188/         # comfyui
+```
