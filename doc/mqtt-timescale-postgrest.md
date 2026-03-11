@@ -1,4 +1,4 @@
-# MQTT → TimescaleDB + PostgREST (Telemetry History, 1-Month Retention)
+# MQTT → TimescaleDB + PostgREST (Telemetry History)
 
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-07
@@ -386,4 +386,57 @@ journalctl -u postgrest-telemetry -n 100 --no-pager
 
 # Row count
 sudo -u postgres psql -d sensors -c "SELECT count(*) FROM public.telemetry_stats;"
+```
+
+---
+
+## Updates (2026-03-11)
+
+### Indefinite retention + compression
+
+Removed the 32-day retention policy. Data is now kept forever. TimescaleDB compression (already configured) compresses chunks older than 7 days (~10-20x ratio, ~10-20 MB/year).
+
+```bash
+# Remove retention
+sudo -u postgres psql -d sensors -c "SELECT remove_retention_policy('telemetry_stats');"
+
+# Verify compression policy still active
+sudo -u postgres psql -d sensors -c "SELECT * FROM timescaledb_information.jobs WHERE hypertable_name = 'telemetry_stats';"
+
+# Check table size
+sudo -u postgres psql -d sensors -c "SELECT pg_size_pretty(hypertable_size('telemetry_stats')) AS total_size, (SELECT count(*) FROM telemetry_stats) AS rows, (SELECT min(time) FROM telemetry_stats) AS oldest;"
+```
+
+### Auto-reconnect in mqtt_to_timescale.py
+
+The ingestor used a module-level DB connection that was never re-established after a PostgreSQL restart or timeout. Added `get_conn()` helper that checks if the connection is alive and reconnects if closed. Symptom: no new rows in `telemetry_stats` despite cron running normally.
+
+```bash
+# If telemetry stops flowing, check logs first:
+journalctl -u telemetry-ingest -n 30 --no-pager
+
+# Restart to recover (now also self-heals on next message):
+sudo systemctl restart telemetry-ingest
+```
+
+### Environment data (building sensors + Open-Meteo)
+
+`telemetry_stats` and `telemetry_latest` now include environment columns:
+
+| Column | Source | Notes |
+|---|---|---|
+| `temp` | Open-Meteo `temperature_2m` | Replace with physical sensor when available |
+| `humidity` | Open-Meteo `relative_humidity_2m` | Replace with physical sensor |
+| `pressure` | Open-Meteo `surface_pressure` | Replace with physical sensor |
+| `co2` | — | NULL until physical sensor |
+| `uv_index` | Open-Meteo | Outdoor, always from API |
+| `wind_kph` | Open-Meteo `wind_speed_10m` | Outdoor |
+| `sunrise` | Open-Meteo daily | HH:MM format |
+| `sunset` | Open-Meteo daily | HH:MM format |
+
+Location: Sitges, Barcelona (`41.2369, 1.8119`, `Europe/Madrid`). Open-Meteo is fetched every 15 min and cached at `scripts/openmeteo_cache.json`. NULL is stored (never 0) if a value is unavailable — the frontend shows `-` for null.
+
+```bash
+# Force fresh Open-Meteo fetch:
+rm /home/pink/.openclaw/workspace/scripts/openmeteo_cache.json
 ```
