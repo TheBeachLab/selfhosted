@@ -10,7 +10,7 @@
 
 Extract all maps-related work from `selfhosted` and `orbita-web` into a new private GitHub repository: `github.com/TheBeachLab/maps`. The repo will be a broader maps monorepo — not scoped to a single product — to support current work (maps.beachlab.org weather/fuel/wind layers, Gaia-style topo) and future map projects (toll calculator, routing, etc.).
 
-orbita-web is **not** included. It becomes self-contained with its own grayscale style. The Gaia topo style assets move to the new repo as a maps asset, decoupled from orbita.
+orbita-web is **not** included. It becomes self-contained with its own grayscale style. The Gaia topo style assets move to the new repo as a maps asset, decoupled from orbita. The orbita-web grayscale migration (replacing the topo style in `OrbiterMap.svelte`, `FabLabMap.svelte`, `OrbiterForm.svelte`) is a **separate task in orbita-web** and out of scope here. `contours.js` stays in orbita-web until that migration is complete.
 
 ---
 
@@ -19,21 +19,22 @@ orbita-web is **not** included. It becomes self-contained with its own grayscale
 ```
 maps/
 ├── apps/
-│   └── maps.beachlab.org/        # frontend: index.html, lib/, assets
+│   └── maps.beachlab.org/        # frontend: index.html, assets, etc.
+│                                  # lib/ is NOT here — see shared/libs/
 ├── shared/
 │   ├── styles/
 │   │   └── topo/                 # Gaia-style builder script + generated JSON
 │   └── libs/
 │       ├── weather-overlays.js   # temperature/precipitation/pressure layers
-│       └── contours.js           # maplibre-contour wrapper
+│       └── contours.js           # maplibre-contour wrapper (copy, not remove from orbita-web yet)
 ├── scripts/
 │   ├── weather/                  # GFS pipeline: fetch_gfs.sh + grib2json.py
 │   └── fuel/                    # fetch_fuel_prices.py
 ├── config/                       # cron files, logrotate configs
-├── doc/                          # runbooks
+├── doc/                          # runbooks (note: uses doc/, not docs/)
 ├── docs/
 │   └── superpowers/
-│       ├── specs/
+│       ├── specs/                # includes this spec
 │       └── plans/
 └── ignore/                       # gitignored (large binaries, reference assets)
     ├── gaia_gps_assets/          # Gaia GPS reference sprites, JSON, analysis
@@ -42,11 +43,15 @@ maps/
 
 `.gitignore` must cover `ignore/` and `node_modules/`.
 
+`doc/` holds runbooks (migrated from `selfhosted/doc/` and `orbita-web/docs/`). `docs/superpowers/` holds specs and plans. The two directories coexist: runbooks go in `doc/`, design artifacts in `docs/`.
+
 ---
 
 ## Source Migration
 
 ### From `selfhosted`
+
+Files are **moved** (removed from selfhosted after migration):
 
 | Source | Destination |
 |---|---|
@@ -65,64 +70,113 @@ maps/
 | `config/fuel-logrotate.conf` | `config/` |
 | `docs/superpowers/specs/2026-03-11-weather-layers-design.md` | `docs/superpowers/specs/` |
 | `docs/superpowers/specs/2026-03-14-fuel-price-layer-design.md` | `docs/superpowers/specs/` |
+| `docs/superpowers/specs/2026-03-17-maps-repo-design.md` (this file) | `docs/superpowers/specs/` |
 | `docs/superpowers/plans/2026-03-11-weather-layers.md` | `docs/superpowers/plans/` |
-| All `wind-*.png` / `pressure-*.png` / `weather-*.png` in repo root | `ignore/dev-shots/` |
+
+PNG files in selfhosted root (`wind-*.png`, `pressure-*.png`, `weather-*.png`) are untracked in git — copy to `ignore/dev-shots/`, then delete from selfhosted root.
 
 Frontend and GFS scripts are pulled from the server (not currently tracked in selfhosted):
 
-| Server path | Destination |
-|---|---|
-| `/var/www/tiles.beachlab.org/map/` (all files) | `apps/maps.beachlab.org/` |
-| `/opt/weather/scripts/fetch_gfs.sh` | `scripts/weather/` |
-| `/opt/weather/scripts/grib2json.py` | `scripts/weather/` |
+| Server path | Destination | Note |
+|---|---|---|
+| `/var/www/tiles.beachlab.org/map/` (excluding `lib/`) | `apps/maps.beachlab.org/` | `lib/` is handled separately below |
+| `/opt/weather/scripts/fetch_gfs.sh` | `scripts/weather/` | |
+| `/opt/weather/scripts/grib2json.py` | `scripts/weather/` | |
+
+The `lib/` subdirectory on the server contains several files. Their disposition:
+
+| Server file | Tracked in maps repo | Location |
+|---|---|---|
+| `lib/weather-overlays.js` | Yes | `shared/libs/weather-overlays.js` |
+| `lib/contours.js` | Yes (copy only) | `shared/libs/contours.js` |
+| `lib/maplibre-wind-gl.js` (also called `wind-gl.js`) | No | Server-only; managed via `TheBeachLab/maplibre-wind-gl` npm package |
+| `lib/d3-contour.min.js` | No | Server-only vendored dependency |
+| `lib/d3-array.min.js` | No | Server-only vendored dependency |
+
+The `apps/maps.beachlab.org/` directory does **not** contain a `lib/` subdirectory. The post-receive hook writes shared libs directly to `…/map/lib/` on deploy.
 
 ### From `orbita-web`
 
-| Source | Destination |
-|---|---|
-| `tools/build_orbita_style.py` | `shared/styles/topo/` |
-| `tools/style-orbita.json` | `shared/styles/topo/` |
-| `tools/build_orbita_style_v1.py` | `shared/styles/topo/` |
-| `tools/style-orbita-v1.json` | `shared/styles/topo/` |
-| `ignore/gaia_gps_assets/` | `ignore/gaia_gps_assets/` |
-| `docs/gaia-to-orbita-translation.md` | `doc/` |
-| `docs/gaiatopo-feet-layer-analysis.md` | `doc/` |
-| `src/lib/contours.js` | `shared/libs/` |
+Files are **moved** (removed from orbita-web after migration), except `contours.js` which is **copied** (stays in orbita-web until grayscale migration):
 
-After migration, remove all moved files from orbita-web. orbita-web will add a simple grayscale MapLibre style inline or as a local file — no dependency on the maps repo.
+| Source | Destination | Action |
+|---|---|---|
+| `tools/build_orbita_style.py` | `shared/styles/topo/` | Move |
+| `tools/style-orbita.json` | `shared/styles/topo/` | Move |
+| `tools/build_orbita_style_v1.py` | `shared/styles/topo/` | Move |
+| `tools/style-orbita-v1.json` | `shared/styles/topo/` | Move |
+| `ignore/gaia_gps_assets/` | `ignore/gaia_gps_assets/` | Move (gitignored in both) |
+| `docs/gaia-to-orbita-translation.md` | `doc/` | Move |
+| `docs/gaiatopo-feet-layer-analysis.md` | `doc/` | Move |
+| `src/lib/contours.js` | `shared/libs/` | **Copy** (not removed from orbita-web yet) |
+
+The `tools/` directory in orbita-web is removed after migration. `src/lib/contours.js` stays in orbita-web until the grayscale migration replaces the topo style and removes `addContourLayers` calls from the three map components.
 
 ---
 
 ## Deployment
 
-### Bare repo on server
+### Server pre-requisites
 
-Create a bare repo at `/home/git/public/maps.git` on beachlab.org. Add it as a git remote named `deploy`:
+Before the bare repo and post-receive hook can be set up:
+
+1. **Create bare repo** on server:
+   ```bash
+   ssh -p 622 git@beachlab.org "git init --bare /home/git/public/maps.git"
+   ```
+
+2. **Passwordless sudo for git user** — the `git` user needs sudo rights for deploying scripts. Add a sudoers entry:
+   ```
+   git ALL=(ALL) NOPASSWD: /usr/bin/rsync, /usr/bin/cp, /usr/bin/chown
+   ```
+   Scope to specific destination paths if tighter control is needed. Test with:
+   ```bash
+   ssh -p 622 git@beachlab.org "sudo rsync --version"
+   ```
+
+### Post-receive hook
+
+File: `/home/git/public/maps.git/hooks/post-receive` (chmod +x)
+
+Bare repos have no working tree. The hook extracts files via `git archive` into a temp directory, deploys from there, then cleans up:
 
 ```bash
-git remote add deploy ssh://git@beachlab.org:622/home/git/public/maps.git
+#!/bin/bash
+TMPDIR=$(mktemp -d)
+git archive HEAD | tar -x -C "$TMPDIR"
+# rsync/cp from $TMPDIR/... to server destinations
+rm -rf "$TMPDIR"
 ```
 
-A `post-receive` hook deploys changed directories to their server destinations:
+Deployment mapping:
 
-| Repo path | Server destination | Owner |
-|---|---|---|
-| `apps/maps.beachlab.org/` | `/var/www/tiles.beachlab.org/map/` | `git:git` |
-| `shared/styles/topo/style-orbita.json` | `/var/www/tiles.beachlab.org/map/style-orbita.json` | `git:git` |
-| `shared/libs/weather-overlays.js` | `/var/www/tiles.beachlab.org/map/lib/weather-overlays.js` | `git:git` |
-| `shared/libs/contours.js` | `/var/www/tiles.beachlab.org/map/lib/contours.js` | `git:git` |
-| `scripts/weather/` | `/opt/weather/scripts/` | `root:root` |
-| `scripts/fuel/` | `/opt/fuel/scripts/` | `root:root` |
+| Repo path | Server destination | Owner | Method |
+|---|---|---|---|
+| `apps/maps.beachlab.org/` | `/var/www/tiles.beachlab.org/map/` | `git:git` | rsync |
+| `shared/styles/topo/style-orbita.json` | `/var/www/tiles.beachlab.org/map/style-orbita.json` | `git:git` | cp |
+| `shared/libs/weather-overlays.js` | `/var/www/tiles.beachlab.org/map/lib/weather-overlays.js` | `git:git` | cp |
+| `shared/libs/contours.js` | `/var/www/tiles.beachlab.org/map/lib/contours.js` | `git:git` | cp |
+| `scripts/weather/` | `/opt/weather/scripts/` | `root:root` | sudo rsync |
+| `scripts/fuel/` | `/opt/fuel/scripts/` | `root:root` | sudo rsync |
 
-The hook uses `rsync` for directory deployments and `cp` for individual files. Scripts directories require `sudo` — the `git` user needs passwordless sudo for those specific paths.
+**`style-orbita.json` must be committed** after each run of `build_orbita_style.py`. It is not regenerated on the server — the hook deploys the committed JSON as-is.
 
-### GitHub remote
+### Initialization order
+
+1. Populate local repo with migrated files
+2. `git init` + initial commit
+3. Create private GitHub repo `TheBeachLab/maps`, push to `origin`
+4. Create bare repo on server, install post-receive hook
+5. `git push deploy master` to verify
+
+### Git remotes
 
 ```bash
 git remote add origin git@github.com:TheBeachLab/maps.git
+git remote add deploy ssh://git@beachlab.org:622/home/git/public/maps.git
 ```
 
-Push to both remotes independently. No GitHub Actions CI/CD — the bare repo handles deploy.
+No CI/CD — bare repo handles deploy.
 
 ---
 
@@ -136,33 +190,44 @@ Claude's project memory is keyed to the working directory path. The new memory l
 
 ### Memories to migrate
 
-| Source file | Source repo | Action |
+| Source file | Source repo memory dir | Action |
 |---|---|---|
-| `project_wind_libraries.md` | selfhosted | Move to maps memory |
-| `project_fuel_price_layer.md` | selfhosted | Move to maps memory |
-| `project_server_services.md` (maps sections) | selfhosted | Extract maps sections → maps memory; keep server/infra sections in selfhosted |
-| `map-styling.md` | orbita-web | Move to maps memory |
+| `memory/project_wind_libraries.md` | selfhosted | Move to maps memory |
+| `memory/project_fuel_price_layer.md` | selfhosted | Move to maps memory |
+| `memory/project_server_services.md` (specific sections) | selfhosted | Extract → maps memory; keep remainder in selfhosted |
+| `memory/map-styling.md` | orbita-web (`memory/map-styling.md`) | Move to maps memory |
+
+Sections to extract from `project_server_services.md` into maps memory:
+- "Weather layers (deployed 2026-03-11)" — full section
+- "Tiles infrastructure" — full section
+- "Web properties" — only the `maps.beachlab.org` / `tiles.beachlab.org` entries; keep `beachlab.org` and `mods.beachlab.org` in selfhosted
 
 ### Memories to update after migration
 
-- `selfhosted/memory/project_server_services.md` — remove weather layers, tiles frontend, fuel data sections; add reference pointer to maps repo
-- `orbita-web/memory/MEMORY.md` — remove Map Styling section; update OrbiterMap/FabLabMap to note grayscale-only style
+- `selfhosted/memory/project_server_services.md` — remove the three sections above; add a pointer: "Maps infrastructure: see TheBeachLab/maps repo memory"
+- `selfhosted/memory/MEMORY.md` — remove `project_wind_libraries` and `project_fuel_price_layer` entries
+- `orbita-web/memory/MEMORY.md` — remove Map Styling entry; update component notes to reflect grayscale-only style (pending orbita-web grayscale migration task)
+- `selfhosted/memory/project_open_todos.md` — stays in selfhosted; the GPU-blocked and actionable todos are server infrastructure concerns, not maps product work
+- `selfhosted/memory/user_fran.md` and `selfhosted/memory/feedback_workflow.md` — cross-project preferences; **duplicate** these into maps memory so the new Claude project context has Fran's preferences and the frontend no-touch rule from the start
+- `selfhosted/memory/reference_npm_token.md` — **duplicate** into maps memory; future maps packages may need npm publishing
 
 ---
 
 ## What Stays in Each Repo
 
 ### selfhosted
-Retains everything not maps-specific: server infrastructure docs, GPU services, telemetry, OpenClaw, Whisper/TTS/ComfyUI, DNS, backups, web, mail, VPN, etc. Maps sections in `project_server_services.md` are replaced with a pointer to the maps repo.
+Retains everything not maps-specific: server infrastructure docs, GPU services, telemetry, OpenClaw, Whisper/TTS/ComfyUI, DNS, backups, web, mail, VPN, etc.
 
 ### orbita-web
-Map components (`OrbiterMap.svelte`, `FabLabMap.svelte`) stay — they're tightly coupled to orbita auth/data. Style becomes a simple grayscale defined locally. `src/lib/contours.js` is removed (no longer needed without topo style). `tools/` directory is removed after migration.
+Map components (`OrbiterMap.svelte`, `FabLabMap.svelte`, `OrbiterForm.svelte`) stay. `src/lib/contours.js` stays until grayscale migration. `tools/` is removed. Style transition (topo → grayscale) is a separate task tracked in orbita-web.
 
 ---
 
 ## Out of Scope
 
-- No CI/CD pipeline (bare repo deploy is sufficient)
-- No npm workspaces (premature — add when a second JS package is needed)
-- No `maplibre-wind-gl` migration (already has its own public repo: `TheBeachLab/maplibre-wind-gl`)
-- No large tile files (planet.pmtiles, MDT02) — server-only, never tracked in git
+- Orbita-web grayscale migration — separate task in orbita-web
+- CI/CD pipeline — bare repo deploy is sufficient
+- npm workspaces — premature; add when a second JS package is needed
+- `maplibre-wind-gl` migration — already has its own public repo (`TheBeachLab/maplibre-wind-gl`)
+- Large tile files (planet.pmtiles, MDT02) — server-only, never tracked in git
+- `d3-contour.min.js`, `d3-array.min.js` — server-only vendored deps, not tracked
