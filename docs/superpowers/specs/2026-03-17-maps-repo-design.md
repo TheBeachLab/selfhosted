@@ -97,7 +97,7 @@ The `apps/maps.beachlab.org/` directory does **not** contain a `lib/` subdirecto
 
 ### From `orbita-web`
 
-Files are **moved** (removed from orbita-web after migration), except `contours.js` which is **copied** (stays in orbita-web until grayscale migration):
+All files **moved** (removed from orbita-web):
 
 | Source | Destination | Action |
 |---|---|---|
@@ -108,9 +108,16 @@ Files are **moved** (removed from orbita-web after migration), except `contours.
 | `ignore/gaia_gps_assets/` | `ignore/gaia_gps_assets/` | Move (gitignored in both) |
 | `docs/gaia-to-orbita-translation.md` | `doc/` | Move |
 | `docs/gaiatopo-feet-layer-analysis.md` | `doc/` | Move |
-| `src/lib/contours.js` | `shared/libs/` | **Copy** (not removed from orbita-web yet) |
+| `src/lib/contours.js` | `shared/libs/` | Move |
 
-The `tools/` directory in orbita-web is removed after migration. `src/lib/contours.js` stays in orbita-web until the grayscale migration replaces the topo style and removes `addContourLayers` calls from the three map components.
+The orbita-web grayscale migration is **included in this implementation** (not deferred). The new orbita-web style requirements are:
+- Grayscale palette
+- Hillshade (moderate depth — not dramatic)
+- Max zoom: city level (~z14) — projects must not be pinpointable
+- No contours, no topo features, no Gaia-GPS-style complexity
+- Defined inline or as a local JSON in orbita-web — no external style server dependency
+
+As part of this migration: remove `addContourLayers` calls from `OrbiterMap.svelte`, `FabLabMap.svelte`, and `OrbiterForm.svelte`; remove `src/lib/contours.js` from orbita-web; remove the `style-orbita.json` URL reference.
 
 ---
 
@@ -206,7 +213,7 @@ Sections to extract from `project_server_services.md` into maps memory:
 
 - `selfhosted/memory/project_server_services.md` — remove the three sections above; add a pointer: "Maps infrastructure: see TheBeachLab/maps repo memory"
 - `selfhosted/memory/MEMORY.md` — remove `project_wind_libraries` and `project_fuel_price_layer` entries
-- `orbita-web/memory/MEMORY.md` — remove Map Styling entry; update component notes to reflect grayscale-only style (pending orbita-web grayscale migration task)
+- `orbita-web/memory/MEMORY.md` — remove Map Styling entry; update component notes to reflect grayscale style (hillshade, max z14, no contours)
 - `selfhosted/memory/project_open_todos.md` — stays in selfhosted; the GPU-blocked and actionable todos are server infrastructure concerns, not maps product work
 - `selfhosted/memory/user_fran.md` and `selfhosted/memory/feedback_workflow.md` — cross-project preferences; **duplicate** these into maps memory so the new Claude project context has Fran's preferences and the frontend no-touch rule from the start
 - `selfhosted/memory/reference_npm_token.md` — **duplicate** into maps memory; future maps packages may need npm publishing
@@ -219,13 +226,13 @@ Sections to extract from `project_server_services.md` into maps memory:
 Retains everything not maps-specific: server infrastructure docs, GPU services, telemetry, OpenClaw, Whisper/TTS/ComfyUI, DNS, backups, web, mail, VPN, etc.
 
 ### orbita-web
-Map components (`OrbiterMap.svelte`, `FabLabMap.svelte`, `OrbiterForm.svelte`) stay. `src/lib/contours.js` stays until grayscale migration. `tools/` is removed. Style transition (topo → grayscale) is a separate task tracked in orbita-web.
+Map components (`OrbiterMap.svelte`, `FabLabMap.svelte`, `OrbiterForm.svelte`) stay but are simplified: `addContourLayers` calls removed, style URL replaced with a local grayscale style. `tools/` and `src/lib/contours.js` are removed.
 
 ---
 
 ## Out of Scope
 
-- Orbita-web grayscale migration — separate task in orbita-web
+- Orbita-web grayscale style builder script — grayscale is simple enough to define inline
 - CI/CD pipeline — bare repo deploy is sufficient
 - npm workspaces — premature; add when a second JS package is needed
 - `maplibre-wind-gl` migration — already has its own public repo (`TheBeachLab/maplibre-wind-gl`)
