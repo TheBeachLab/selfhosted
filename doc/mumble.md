@@ -31,7 +31,7 @@ port=50000
 host=walkie.beachlab.org
 
 ; Password to join server.
-serverpassword=supersecret
+serverpassword=YOUR_SERVER_PASSWORD
 
 ; Maximum number of concurrent clients allowed.
 users=20
