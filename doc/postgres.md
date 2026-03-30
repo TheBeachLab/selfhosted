@@ -2,17 +2,62 @@
 
 **Author:** Fran
 
+- [Current state](#current-state)
+- [Quick checks](#quick-checks)
 - [Install](#install)
 - [Install pgbouncer](#install-pgbouncer)
-- [Upgrade](#upgrade)
+- [Upgrade history](#upgrade-history)
 - [Remote connection](#remote-connection)
 - [Common psql commands](#common-psql-commands)
-- [Create a new role](#create-a-new-role)
-- [Create a new database](#create-a-new-database)
-- [Open a postgres prompt with iot role](#open-a-postgres-prompt-with-iot-role)
+- [Roles and databases](#roles-and-databases)
 - [Managing PostgreSQL with pgAdmin](#managing-postgresql-with-pgadmin)
 - [SQL Tips and tricks](#sql-tips-and-tricks)
 - [API and REST](#api-and-rest)
+
+## Current state
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| PostgreSQL | 18.3 | Active cluster on port 5432 |
+| TimescaleDB | 2.25.2 | Extensions for PG 17 and 18 |
+| PostGIS | 3.6.2 | For PG 18 |
+| pgBouncer | active | Connection pooler |
+| pgAdmin | 9.13 | Web UI via Apache on port 5050 |
+
+Databases:
+
+| Database | Purpose |
+|----------|---------|
+| `sensors` | Telemetry: `telemetry_stats`, `bluetti_stats` (TimescaleDB hypertables) |
+| `orbita` | Orbita web app |
+| `nextcloud` | Nextcloud file sync |
+| `iot` | IoT data |
+| `misc_data` | Misc lookup tables (countries, territories, etc.) |
+| `fmcu` | FMCU project |
+
+Config path: `/etc/postgresql/18/main/`
+
+## Quick checks
+
+```bash
+# Version
+sudo -u postgres psql -c 'SELECT version();'
+
+# Clusters
+pg_lsclusters
+
+# Service
+systemctl status postgresql
+
+# Databases
+sudo -u postgres psql -c '\l'
+
+# Roles
+sudo -u postgres psql -c '\du'
+
+# Disk usage per database
+sudo -u postgres psql -c "SELECT datname, pg_size_pretty(pg_database_size(datname)) FROM pg_database ORDER BY pg_database_size(datname) DESC;"
+```
 
 ## Install
 
@@ -21,11 +66,14 @@ sudo apt update
 sudo apt install postgresql postgresql-contrib
 ```
 
-Check
+Check:
 
 ```bash
-pink@thebeachlab:~$ sudo -u postgres psql
-psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
+sudo -u postgres psql
+```
+
+```
+psql (18.3 (Ubuntu 18.3-1.pgdg22.04+1))
 Type "help" for help.
 
 postgres=#
@@ -35,166 +83,149 @@ Exit with `\q`
 
 ## Install pgbouncer
 
-PgBouncer is a lightweight connection pooler for PostgreSQL whose purpose is to manage and reuse database connections efficiently. Instead of each client (like your APIs or apps) opening and closing expensive PostgreSQL connections, they connect to PgBouncer, which maintains a small pool of persistent connections to the database and hands them out as needed. This reduces overhead, improves scalability, and lets PostgreSQL handle many more clients with fewer resources.
-
-`sudo apt install pgbouncer`
-
-Is it running? `systemctl status pgbouncer`if not start and enable
-
-`sudo systemctl enable --now pgbouncer`
-
-## Upgrade
-
-Check version running `sudo -u postgres psql -c 'SELECT version();'`
-
-Output if you are currently runnin 12:
+PgBouncer is a lightweight connection pooler for PostgreSQL. Instead of each client opening expensive direct connections, they connect to PgBouncer, which maintains a pool of persistent connections and hands them out as needed. Reduces overhead and lets PostgreSQL handle many more clients.
 
 ```bash
- PostgreSQL 12.12 (Ubuntu 12.12-0ubuntu0.20.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0, 64-bit
-(1 row)
+sudo apt install pgbouncer
+sudo systemctl enable --now pgbouncer
+systemctl status pgbouncer
 ```
 
-Check what postgres versions you have installed `pg_lsclusters`  
+## Upgrade history
+
+Current cluster: **18/main** on port 5432. Old versions (12, 14, 16, 17) have been migrated and removed over time.
+
+Installed packages (as of 2026-03-30):
+
+```
+postgresql-16, postgresql-17, postgresql-18
+timescaledb-2-postgresql-17, timescaledb-2-postgresql-18
+postgresql-18-postgis-3
+```
+
+### General upgrade procedure
 
 ```bash
-Ver Cluster       Port Status Owner    Data directory                       Log file
-12  main          5432 online postgres /var/lib/postgresql/12/main          /var/log/postgresql/postgresql-12-main.log
-14  main          5434 online postgres /var/lib/postgresql/14/main          /var/log/postgresql/postgresql-14-main.log
-```
+# Check current version
+sudo -u postgres psql -c 'SELECT version();'
+pg_lsclusters
 
-Please be aware that the installation of postgresql-14 will automatically create a default cluster 14/main. If you want to upgrade the 12/main cluster, you need to remove the already existing 14 cluster:
+# Install new version (e.g., 18)
+sudo apt install postgresql-18
 
-`sudo pg_dropcluster --stop 14 main`
+# Drop the auto-created empty cluster
+sudo pg_dropcluster --stop 18 main
 
-Use `dpkg -l | grep postgresql` to check which postgres packages are installed:
+# Upgrade data from old cluster
+sudo pg_upgradecluster 17 main
 
-```
-ii  postgresql                            14+238                                  all          object-relational SQL database (supported version)
-ii  postgresql-12                         12.12-0ubuntu0.20.04.1                  amd64        object-relational SQL database, version 12 server
-ii  postgresql-14                         14.6-0ubuntu0.22.04.1                   amd64        The World's Most Advanced Open Source Relational Database
-ii  postgresql-client-12                  12.12-0ubuntu0.20.04.1                  amd64        front-end programs for PostgreSQL 12
-ii  postgresql-client-14                  14.6-0ubuntu0.22.04.1                   amd64        front-end programs for PostgreSQL 14
-ii  postgresql-client-common              238                                     all          manager for multiple PostgreSQL client versions
-ii  postgresql-common                     238                                     all          PostgreSQL database-cluster manager
-ii  postgresql-contrib                    14+238                                  all          additional facilities for PostgreSQL (supported version)
-ii  timescaledb-loader-postgresql-12      1.7.5~ubuntu20.04                       amd64        The loader for TimescaleDB to load individual versions.
-ii  timescaledb-postgresql-12             1.7.5~ubuntu20.04                       amd64        An open-source time-series database based on PostgreSQL, as an extension.
-```
-
-> Somehow my timescaledb was broken after upgrading to Ubuntu 22 so I had to reinstall it. In any case you have to make sure you have already the version according to postgres before migrating the data.  
-`curl -s https://packagecloud.io/install/repositories/timescale/timescaledb/script.deb.sh | sudo bash`  
-`sudo apt install timescaledb-2-postgresql-14`
-
-Now start with the data migration
-
-`sudo pg_upgradecluster 12 main`
-
-After this process 12 is down and 14 is up. Now tune timescale:
-
-```
-sudo apt install timescaledb-tools
+# Tune TimescaleDB for new version
+sudo apt install timescaledb-2-postgresql-18
 sudo timescaledb-tune
+
+# Drop old cluster and purge packages
+sudo pg_dropcluster 17 main
+sudo apt purge postgresql-17 postgresql-client-17
 ```
 
-> When I upgraded to Ubuntu 22 I also had to reinstall pgadmin4 and rerun `sudo /usr/pgadmin4/bin/setup-web.sh` but normally that is not required
-
-Now drop the old database `sudo pg_dropcluster 12 main` and purge old packages `sudo apt-get purge postgresql-12 postgresql-client-12`
+> After major upgrades, also rerun `sudo /usr/pgadmin4/bin/setup-web.sh` if pgAdmin breaks.
 
 ## Remote connection
 
-- Add a firewall rule `sudo ufw allow 5432 comment 'postgres'`and `sudo ufw reload`
-- Listen connections in `/etc/postgresql/14/main/postgresql.conf`
+Config: `/etc/postgresql/18/main/postgresql.conf`
 
 ```bash
-listen_addresses = '*' 
+listen_addresses = '*'
 ```
 
-- Accept connections on `/etc/postgresql/14/main/pg_hba.conf` from local network `192.168.1.0/24`
+Auth: `/etc/postgresql/18/main/pg_hba.conf`
 
 ```
-# IPv4 local connections:
-host    all             all             127.0.0.1/32            scram-sha-256
-host    all             all             192.168.1.0/24          scram-sha-256
+local   all             postgres                                peer
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            md5
+host    all             all             192.168.1.0/24          md5
+host    all             all             ::1/128                 md5
 ```
 
-- On remote (arch) install `postgresql-libs` package
-- Test `psql -h 192.168.1.50 -U postgres`
+Firewall:
+
+```bash
+sudo ufw allow 5432 comment 'postgres'
+sudo ufw reload
+```
+
+Test from remote: `psql -h 192.168.1.50 -U postgres`
 
 ## Common psql commands
 
-- List databases `\l`
-- List databases with size, tablespace and description `\l+`
-- Connect to database `\c database`
-- Display tables `\dt` and `\dt+`
-- Display users `\du`
+| Command | Description |
+|---------|-------------|
+| `\l` | List databases |
+| `\l+` | List databases with size |
+| `\c database` | Connect to database |
+| `\dt` / `\dt+` | List tables |
+| `\du` | List users/roles |
+| `\conninfo` | Show current connection |
+| `\q` | Exit |
 
-## Create a new role
+## Roles and databases
+
+### Create a role
 
 ```bash
 sudo -u postgres createuser --interactive
-Enter name of role to add: iot
-Shall the new role be a superuser? (y/n) y
 ```
 
-## Create a new database
+### Create a database
 
-A postgres assumption is that a role will have a database with the same name which it can access. That means `iot` role will attempt to connect to `iot` database by default. So let's create `iot` database.
-
-`sudo -u postgres createdb iot`
-
-## Open a postgres prompt with `iot` role
-
-Due to the ident based authentication, you need a Linux user with the same name as your postgres role and database.
-
-`sudo adduser iot`
-
-Now you can connect to the `iot` database with
-
-`sudo -u iot psql`
-
-Check your connection with `\connifo`
+A PostgreSQL convention: a role will try to connect to a database with the same name by default.
 
 ```bash
-iot=# \conninfo
-You are connected to database "iot" as user "iot" via socket in "/var/run/postgresql" at port "5432"
+sudo -u postgres createdb mydb
 ```
 
-Exit with `\q`. A role can also connect to a different database
+### Create a read-only user
+
+```sql
+CREATE USER readonly WITH PASSWORD '<PASSWORD>';
+\c mydb
+GRANT CONNECT ON DATABASE mydb TO readonly;
+GRANT USAGE ON SCHEMA public TO readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
+```
+
+### Connect as a role
+
+Due to ident-based authentication, you need a Linux user with the same name as the role:
 
 ```bash
-pink@thebeachlab:~$ sudo -u iot psql -d postgres
-psql (12.4 (Ubuntu 12.4-0ubuntu0.20.04.1))
-Type "help" for help.
+sudo adduser myuser
+sudo -u myuser psql
+```
 
-postgres=# \conninfo
-You are connected to database "postgres" as user "iot" via socket in "/var/run/postgresql" at port "5432".
+A role can also connect to a different database:
+
+```bash
+sudo -u myuser psql -d postgres
 ```
 
 ## Managing PostgreSQL with pgAdmin
 
-### Install pgadmin4
+### Install pgAdmin 4
 
 ```bash
-#
-# Setup the repository
-#
-
-# Install the public key for the repository (if not done previously):
+# Add repository
 sudo curl https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo apt-key add
-
-# Create the repository configuration file:
 sudo sh -c 'echo "deb https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list && apt update'
 
-#
-# Install pgAdmin
-#
-# Install for web mode only:
+# Install web mode
 sudo apt install pgadmin4-web
 ```
 
-### Apache and nginx together
+### Apache coexistence with Nginx
 
-To avoid both web servers listening to the same port change the default listening port from 80 to 5050 and 443 to 8090 in `/etc/apache2/ports.conf`
+pgAdmin runs under Apache. To avoid port conflicts with Nginx, change Apache ports in `/etc/apache2/ports.conf`:
 
 ```apache
 Listen 5050
@@ -202,99 +233,54 @@ Listen 5050
 <IfModule ssl_module>
         Listen 8090
 </IfModule>
-
-<IfModule mod_gnutls.c>
-        Listen 8090
-</IfModule>
 ```
 
-and `sudo nano /etc/apache2/sites-available/000-default.conf` and set
+Update `/etc/apache2/sites-available/000-default.conf`:
 
 ```apache
 <VirtualHost *:5050>
 ```
 
-Then reload the service `sudo systemctl restart apache2` and verify Apache is listening to 8080 `sudo netstat -tlpn`
-
-Also create the ufw rules `sudo ufw allow 5050 comment 'apache pgadmin'` and `sudo ufw reload`
-
-pgadmin will be located at `http://server-address:5050/pgadmin4`
-
-### Creating a subdomain (optional)
-
-I created and enabled `/etc/nginx/sites-available/postgres.beachlab.org` with this content
-
-```nginx
-server {
-        listen 80;
-        listen [::]:80;
-        server_name postgres.beachlab.org;
-        return 301 http://beachlab.org:5050/pgadmin4;
-}
+```bash
+sudo systemctl restart apache2
+sudo ufw allow 5050 comment 'apache pgadmin'
 ```
 
-If you don't require https that's all.
+pgAdmin is at `http://server-address:5050/pgadmin4`
 
-### Securing pgadmin with https (optional)
-
-NOT WORKING YET. Check modules /etc/apache2/ports.conf and files in /etc/apache2/sites-enabled then change redisect in /etc/nginx/sites-available/postgres.beachlab.org (and remove ufw apache full rules?)
-
-`sudo certbot certonly --standalone -d postgres.beachlab.org` which creates certificates in `/etc/letsencrypt/live/postgres.beachlab.org/`. Certificates will renew automatically.
-
-Set
+### Setup and configuration
 
 ```bash
-ServerName beachlab.org
-ServerAlias postgres.beachlab.org
+sudo /usr/pgadmin4/bin/setup-web.sh
 ```
 
-in `/etc/apache2/sites-available/000-default.conf`. Check syntax `sudo apache2ctl configtest` and `sudo systemctl reload apache2`
+### Reset password
 
-Install certbot apache plugin `sudo apt install certbot python3-certbot-apache` and run `sudo certbot --apache` but not redirect`
+```bash
+mv /var/lib/pgadmin/pgadmin4.db /var/lib/pgadmin/pgadmin4.db.backup
+sudo /usr/pgadmin4/bin/setup-web.sh
+```
 
+### Unlock account (after 3 failed logins)
 
-### Configure pgadmin
+```bash
+sudo apt install sqlite3
+sudo sqlite3 /var/lib/pgadmin/pgadmin4.db "UPDATE USER SET LOCKED = false, LOGIN_ATTEMPTS = 0 WHERE USERNAME = 'user@domain.com';" ".exit"
+```
 
-Run `/usr/pgadmin4/bin/setup-web.sh`
+### Storage
 
-### Running pgadmin
-
-Go to `http://server-ip:5050/pgadmin4`
-
-### Reset pgadmin password
-if you don't remember the credentials `mv /var/lib/pgadmin/pgadmin4.db /var/lib/pgadmin/pgadmin4.db.backup` and run `/usr/pgadmin4/bin/setup-web.sh` again.
-
-Add a server and enter the connection details. You might have to connect to `sudo -u postgres psql` and `ALTER USER postgres PASSWORD 'mynewpassword';` if you don't remember your credentials.
-
-### unlock pgadmin account
-After 3 unsuccessful login attempts your account will be locked. Install `sudo apt install sqlite3` and run as root `sqlite3 pgadmin4.db "UPDATE USER SET LOCKED = false, LOGIN_ATTEMPTS = 0 WHERE USERNAME = 'user@domain.com';" ".exit"`
-
-### pgadmin storage
-ERD and other files are stored in `/var/lib/pgadmin/storage/email_account.org/`
+ERD and other files: `/var/lib/pgadmin/storage/email_account.org/`
 
 ## SQL Tips and tricks
 
-### Create a readonly user
+### Table conventions
 
-```sql
-CREATE USER readonly WITH PASSWORD 'your_password';
-\c air
-GRANT CONNECT ON DATABASE air TO readonly;
-GRANT USAGE ON SCHEMA public TO readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
-```
+- Column `id` with `bigint` or `int` IDENTITY as primary key
+- Column `created` of `timestamp with timezone` default `now()`
+- Column `modified` of `timestamp with timezone` default `now()`
 
-### For every table
-
-- create a column named `id` with `bigint` or `int` datatype and IDENTITY. This will be the primary key. Enroll tables, also known as join tables will have more records than other records.
-- create a column named `created` of `timestamp with timezone` datatype and default value `now()`
-- create a column named `modified` of `timestamp with timezone` datatype and default value `now()`
-
-Probably best to set all these in a table template.
-
-### Autoupdate the modified timestamp when a record is updated
-
-Using pgadmin query tool create a function `update_timestamp_modified_column()`
+### Auto-update modified timestamp
 
 ```sql
 CREATE OR REPLACE FUNCTION update_timestamp_modified_column()
@@ -310,7 +296,7 @@ END;
 $$ LANGUAGE 'plpgsql';
 ```
 
-This function will appear under `trigger functions`. Now, for every table, we create a trigger for each table
+Then for each table:
 
 ```sql
 CREATE TRIGGER update_modified
@@ -325,28 +311,20 @@ EXECUTE PROCEDURE update_timestamp_modified_column();
 CREATE TABLE template (LIKE users INCLUDING ALL);
 ```
 
-Does not copy triggers. You will have to do this manually
+Does not copy triggers.
 
-### Add new column to existing table
-
-Here adding a foreign key
+### Add column with foreign key
 
 ```sql
 ALTER TABLE interests ADD COLUMN IF NOT EXISTS interest_group_id INTEGER NOT NULL;
-```
 
-### Add one to many
-
-Altered table has the many, select the foreign key. The reference table and (id) has the one
-
-```sql
 ALTER TABLE public.interests
     ADD FOREIGN KEY (interest_group_id)
     REFERENCES public.interest_group (id)
     NOT VALID;
 ```
 
-### Create a JSON from a TABLE
+### Create JSON from a table
 
 ```sql
 SELECT json_agg(row_to_json(t))
@@ -356,33 +334,34 @@ FROM (
 ) t
 ```
 
-### Check the size of a TABLE
+### Check table size
 
 ```sql
 SELECT pg_size_pretty(pg_total_relation_size('table_name')) AS table_size;
 ```
 
-### Create a unique constraint combination of 2 COLUMNS
+### Unique constraint on column combination
 
 ```sql
--- Add a unique constraint on the combination of region_code and country_code
 ALTER TABLE regions
 ADD CONSTRAINT unique_region_country UNIQUE (region_code, country_code);
 ```
 
-### Copy a TABLE from one DATABASE to another (same pg server)
+### Copy table between databases (same server)
 
 ```bash
 sudo -u postgres pg_dump -d misc_data -t territories -f /tmp/territories.sql
 sudo -u postgres psql -d air -f /tmp/territories.sql
 ```
 
-### Delete ROWS
+### Delete rows
+
 ```sql
 DELETE FROM countries WHERE alpha_2_code IS NULL;
 ```
 
-### Create a VIEW with fallback values
+### View with fallback values
+
 ```sql
 DROP VIEW IF EXISTS countries_view;
 CREATE VIEW countries_view AS
@@ -397,9 +376,8 @@ SELECT
 FROM countries;
 ```
 
-### Get the definition that created a VIEW
+### Get view definition
 
-Useful if you need to rename a column/recreate a view, etc.
 ```sql
 SELECT view_definition
 FROM information_schema.views
@@ -410,53 +388,41 @@ WHERE table_name = 'view_name';
 
 ### PostgREST
 
-PostgREST is an open-source tool that automatically generates a RESTful API from a PostgreSQL database. Instead of writing backend code, you define your data model and permissions directly in the database, and PostgREST exposes them as secure, standards-compliant endpoints. This makes it easy to build scalable APIs quickly while leveraging PostgreSQL’s features like views, roles, and functions.
+PostgREST automatically generates a RESTful API from a PostgreSQL database. You define your data model and permissions in the database, and PostgREST exposes them as secure endpoints.
 
-A RESTful API is an interface that allows systems to communicate over HTTP using the principles of Representational State Transfer (REST). It organizes resources into endpoints, typically accessed with standard HTTP methods like GET, POST, PUT, and DELETE, making interactions predictable and stateless. This approach simplifies integration, scalability, and flexibility across different platforms and clients.
-
-Visit [PostgREST](postgrest.md) section
+See [PostgREST](postgrest.md) and [PostgREST JWT Gateway](postgrest-jwt.md) for details.
 
 ### FastAPI
 
-FastAPI is a modern, high-performance web framework for building APIs with Python. It’s designed around Python type hints, which enable automatic validation, serialization, and interactive documentation. Known for its speed and ease of use, FastAPI makes it simple to create secure, production-ready APIs with minimal boilerplate code.
-
-Install
+FastAPI is a high-performance Python API framework using type hints for validation and auto-docs.
 
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip
 ```
 
-Create the virtual environment (as pink)
+Create the virtual environment (as pink):
 
 ```bash
 mkdir -p ~/fastapi-app && cd ~/fastapi-app
 python3 -m venv .venv
 source .venv/bin/activate
-```
-Install dependencies
-
-```bash
 pip install --upgrade pip
 pip install fastapi "uvicorn[standard]" gunicorn psycopg[binary]
 ```
 
-Make a hello world app 
+Hello world app at `/home/pink/fastapi-app/main.py`:
 
-`/home/pink/fastapi-app/main.py`
-
-```bash
+```python
 from fastapi import FastAPI
 app = FastAPI()
 @app.get("/api/health")
 def health(): return {"ok": True}
-``` 
+```
 
-Create a system service
+Service at `/etc/systemd/system/fastapi.service`:
 
-`sudo nano /etc/systemd/system/fastapi.service`
-
-```bash
+```ini
 [Unit]
 Description=FastAPI (pink)
 After=network.target
@@ -467,7 +433,7 @@ Group=pink
 WorkingDirectory=/home/pink/fastapi-app
 Environment="PATH=/home/pink/fastapi-app/.venv/bin"
 # (optional) add your variables here:
-# Environment="DATABASE_URL=postgres://api_ro:***@127.0.0.1:5432/tu_db"
+# Environment="DATABASE_URL=postgres://api_ro:***@127.0.0.1:5432/mydb"
 ExecStart=/home/pink/fastapi-app/.venv/bin/gunicorn \
           -k uvicorn.workers.UvicornWorker -w 4 \
           -b 127.0.0.1:8000 main:app
@@ -477,14 +443,12 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-and then
-
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now fastapi
 ```
 
-For nginx reverse proxy, in the domain you desire add the following location
+Nginx reverse proxy (add to your site config):
 
 ```nginx
 location /api/ {
@@ -494,12 +458,6 @@ location /api/ {
 }
 ```
 
-and then
-
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
-
-
-
-
