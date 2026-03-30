@@ -246,7 +246,41 @@ sudo systemctl restart apache2
 sudo ufw allow 5050 comment 'apache pgadmin'
 ```
 
-pgAdmin is at `http://server-address:5050/pgadmin4`
+pgAdmin is at `http://localhost:5050/pgadmin4` (local only).
+
+### HTTPS via Nginx reverse proxy
+
+Nginx proxies `https://pgadmin.beachlab.org` → Apache on port 5050. Config: `/etc/nginx/sites-available/pgadmin.beachlab.org`
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name pgadmin.beachlab.org;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name pgadmin.beachlab.org;
+
+    ssl_certificate /etc/letsencrypt/live/nodered.beachlab.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nodered.beachlab.org/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:5050;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+> Note: uses the `nodered.beachlab.org` SAN cert. If that cert is renewed/changed, check that `pgadmin.beachlab.org` is still covered.
 
 ### Setup and configuration
 
