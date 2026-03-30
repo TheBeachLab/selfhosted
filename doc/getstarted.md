@@ -1,5 +1,7 @@
 # Getting started
 
+**Author:** Fran
+
 <!-- vim-markdown-toc GFM -->
 
 - [Installing Ubuntu Server](#installing-ubuntu-server)

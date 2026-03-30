@@ -1,4 +1,7 @@
-# Nodejs server
+# Node.js server
+
+**Author:** Fran
+**Status:** Incomplete — only PM2 user setup, needs server.js examples and deployment workflow
 
 This server is useful to execute backend commands in the computer hosting a website. We will generate a `server.js` file that node will run. We will keep the server running in the background by using the process manager PM2.
 

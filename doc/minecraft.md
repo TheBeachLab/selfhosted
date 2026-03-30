@@ -1,5 +1,7 @@
 # Minecraft server
 
+**Author:** Fran
+
 I'm not too much in Minecraft. but both my sons are... so by popular demand...
 
 - [Java (Computer)](#java-computer)

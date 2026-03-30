@@ -1,5 +1,7 @@
 # SFTP Server
 
+**Author:** Fran
+
 - [SFTP Server](#sftp-server)
 	- [Why](#why)
 	- [Install](#install)

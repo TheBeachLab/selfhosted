@@ -1,5 +1,7 @@
 # Setup an DNS server (WIP)
 
+**Author:** Fran
+
 This was one of the most difficult parts to undertand for me. Actually one of the last parts I did even though you see it at the beginning of this doc. The difficulty was a naming convention. DNS server, like mail server, has multiple meanings. Hence the confusion while reading. BTW, a DNS is a yellow pages book of The Internet.
 
 <!-- vim-markdown-toc GFM -->

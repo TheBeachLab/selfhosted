@@ -1,5 +1,7 @@
 # TimescaleDB
 
+**Author:** Fran
+
 IoT stores huge time series data. Relational databases can be used to store the data but processing can be slow. TimescaleDB is an NoSQL database optimized to store time-series data. It is implemented as an extension of PostgreSQL combining the ease of use of relational databases and the speed of NoSQL databases.
 
 - [TimescaleDB](#timescaledb)

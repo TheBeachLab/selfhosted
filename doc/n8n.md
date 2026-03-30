@@ -1,4 +1,6 @@
-# n8n 
+# n8n
+
+**Author:** Fran
 
 ```bash
 docker run -it --rm \

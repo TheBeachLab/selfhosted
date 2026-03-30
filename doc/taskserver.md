@@ -1,5 +1,7 @@
 # Task server (taskwarrior)
 
+**Author:** Fran
+
 <!-- vim-markdown-toc GFM -->
 
 - [Task server (taskwarrior)](#task-server-taskwarrior)

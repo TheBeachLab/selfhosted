@@ -1,5 +1,7 @@
 # PostgREST
 
+**Author:** Fran
+
 - [PostgREST](#postgrest)
   - [Prepare firewall](#prepare-firewall)
   - [Install](#install)

@@ -1,5 +1,7 @@
 # WireGuard Setup: Raspberry Pi (Starlink) ↔ Server (beachlab.org) ↔ Laptop
 
+**Author:** Fran
+
 This guide describes how to configure a private, persistent WireGuard VPN between:
 - Server: beachlab.org (10.10.10.1)
 - Raspberry Pi: behind Starlink (10.10.10.2)

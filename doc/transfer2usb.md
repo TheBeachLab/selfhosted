@@ -1,5 +1,7 @@
 # Auto Transfer contents to USB
 
+**Author:** Fran
+
 - [Auto Transfer contents to USB](#auto-transfer-contents-to-usb)
   - [Install](#install)
   - [Prepare](#prepare)

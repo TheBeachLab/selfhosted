@@ -1,5 +1,7 @@
 # WIP. OBS ninja
 
+**Author:** Fran
+
 Only God knows how much I hate Zoom and it's lack of support for Linux. This is day and night for streaming.
 
 Create a CNAME in your DNS server, e.g. `webrtc.example.org`.

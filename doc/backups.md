@@ -1,5 +1,7 @@
 # Backups with rsnapshot
 
+**Author:** Fran
+
 > There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up.
 >
 > From the videogame "Getting Over It with Bennett Foddyd"

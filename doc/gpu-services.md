@@ -227,38 +227,38 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 - ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
 - ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
 
-## Restablecer tras PSU/GPU muerta
+## Recovery after dead PSU/GPU
 
-**Contexto:** PSU del Razer Core X murió el 2026-03-04. Los siguientes servicios fueron deshabilitados para evitar errores y freezes continuos.
+**Context:** The Razer Core X PSU died on 2026-03-04. The following services were disabled to avoid continuous errors and freezes.
 
-### Estado actual (sin GPU)
+### Current state (no GPU)
 
-| Servicio | Estado |
+| Service | State |
 |---|---|
 | `whisper-web` | disabled |
 | `qwen3-tts` | disabled |
 | `comfyui` | disabled |
 | `nvidia-persistenced` | disabled |
 | `egpu-watchdog` | disabled |
-| Telegraf `inputs.nvidia_smi` | comentado |
+| Telegraf `inputs.nvidia_smi` | commented out |
 
-### Pasos para restablecer (nueva GPU/PSU instalada)
+### Steps to restore (new GPU/PSU installed)
 
-**1. Verificar que la GPU es visible:**
+**1. Verify the GPU is visible:**
 
 ```bash
 lspci | grep -i nvidia
 nvidia-smi
 ```
 
-Si `nvidia-smi` falla, cargar el driver manualmente:
+If `nvidia-smi` fails, load the driver manually:
 
 ```bash
 sudo modprobe nvidia
-nvidia-smi   # debe mostrar la GPU sin ERR!
+nvidia-smi   # should show the GPU without ERR!
 ```
 
-**2. Re-habilitar servicios GPU:**
+**2. Re-enable GPU services:**
 
 ```bash
 sudo systemctl enable --now nvidia-persistenced
@@ -268,9 +268,9 @@ sudo systemctl enable --now comfyui
 sudo systemctl enable --now egpu-watchdog.timer
 ```
 
-**3. Re-habilitar monitoreo en Telegraf:**
+**3. Re-enable Telegraf monitoring:**
 
-Editar `/etc/telegraf/telegraf.d/nuc-timescale.conf` y descomentar:
+Edit `/etc/telegraf/telegraf.d/nuc-timescale.conf` and uncomment:
 
 ```toml
 [[inputs.nvidia_smi]]
@@ -278,22 +278,22 @@ Editar `/etc/telegraf/telegraf.d/nuc-timescale.conf` y descomentar:
   timeout = "5s"
 ```
 
-Luego:
+Then:
 
 ```bash
 sudo systemctl restart telegraf
 sudo journalctl -u telegraf -n 10 --no-pager | grep -E "Error|nvidia"
 ```
 
-**4. Verificar telemetría:**
+**4. Verify telemetry:**
 
 ```bash
 DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | python3 -m json.tool | grep gpu
 ```
 
-El campo `gpu` debe mostrar temp/util reales en vez de `null`.
+The `gpu` field should show real temp/util values instead of `null`.
 
-**5. Test rápido de servicios:**
+**5. Quick service test:**
 
 ```bash
 curl -s http://localhost:8060/health   # whisper-web

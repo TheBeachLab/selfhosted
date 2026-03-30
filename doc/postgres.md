@@ -1,5 +1,7 @@
 # PostgreSQL
 
+**Author:** Fran
+
 - [Install](#install)
 - [Install pgbouncer](#install-pgbouncer)
 - [Upgrade](#upgrade)

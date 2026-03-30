@@ -1,5 +1,7 @@
 # Nginx web server
 
+**Author:** Fran
+
 <!-- vim-markdown-toc GFM -->
 
 - [Nginx web server](#nginx-web-server)

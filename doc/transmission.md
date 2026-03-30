@@ -1,5 +1,7 @@
 # Transmission Daemon with NordVPN
 
+**Author:** Fran
+
 - [Transmission Daemon with NordVPN](#transmission-daemon-with-nordvpn)
 
 

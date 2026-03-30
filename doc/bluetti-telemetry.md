@@ -76,6 +76,11 @@ All under `bluetti/state/<device_id>/` where device_id is `AC200M-2241000242252`
 | `power_generation` | float | Total generation (W) |
 | `ac_output_on` | string | `ON`/`OFF` → boolean |
 | `dc_output_on` | string | `ON`/`OFF` → boolean |
+| `ac_output_mode` | string | AC output mode |
+| `internal_ac_voltage` | float | Internal AC voltage (V) |
+| `internal_dc_input_voltage` | float | Internal DC input voltage (V) |
+| `internal_dc_input_power` | float | Internal DC input power (W) |
+| `auto_sleep_mode` | string | Auto sleep mode |
 | `pack_details1` | JSON | Battery pack 1 details |
 | `pack_details2` | JSON | Battery pack 2 details |
 
@@ -251,6 +256,16 @@ ORDER BY device_id, time DESC;
 GRANT SELECT ON public.bluetti_latest TO web_anon;
 ```
 
+### Grants
+
+```sql
+GRANT SELECT        ON public.bluetti_stats  TO web_anon, telemetry_api;
+GRANT SELECT        ON public.bluetti_latest TO web_anon, telemetry_api;
+GRANT INSERT,SELECT ON public.bluetti_stats  TO telemetry_ingest;
+```
+
+> **Note:** `ON CONFLICT ... DO NOTHING` requires SELECT in addition to INSERT. Grant both to the ingest role.
+
 Data retention: indefinite (compression after 7 days). As of 2026-03-29: ~12k rows, ~10 MB, oldest row 2026-03-25.
 
 ## Ingest script
@@ -329,6 +344,20 @@ For real-time IMU/GPS visualization, browsers connect directly to Mosquitto over
 - **Port 8083:** open in firewall, TLS with Let's Encrypt cert
 - **Client library:** MQTT.js (browser build)
 
+### Mosquitto ACL
+
+File: `/etc/mosquitto/aclfile`
+
+```
+# Bluetti / Home Assistant (vehicle pibot1)
+user door
+topic readwrite bluetti/#
+topic readwrite homeassistant/#
+
+# Anonymous read for Bluetti telemetry
+topic read bluetti/#
+```
+
 Fast topics (2–5 Hz): `imu_pitch_deg`, `imu_roll_deg`, `imu_yaw_rate_dps`, `heading_deg`, `gps_speed_kmh`, `altitude_m`.
 
 All other topics publish at 30s intervals and are better consumed via API polling.
@@ -354,13 +383,19 @@ sudo systemctl restart bluetti-ingest
 # Reload PostgREST schema (after view/table changes)
 sudo -u postgres psql -d sensors -c "NOTIFY pgrst, 'reload schema';"
 
+# Note: PostgREST does not support config reload — always use restart after config changes:
+# sudo systemctl restart postgrest-telemetry
+
 # Row count and size
 sudo -u postgres psql -d sensors -c "SELECT pg_size_pretty(hypertable_size('bluetti_stats')) AS size, count(*) AS rows FROM bluetti_stats;"
 
 # IMU calibration reset
 mosquitto_pub -h 127.0.0.1 -t 'bluetti/cmd/AC200M-2241000242252/imu_reset' -m 'reset'
 
-# Check MQTT topics live
+# Quick MQTT check (10 messages, 5s timeout)
+mosquitto_sub -t 'bluetti/state/#' -C 10 -W 5
+
+# Check MQTT topics live (continuous)
 mosquitto_sub -h 127.0.0.1 -t 'bluetti/state/#' -v
 ```
 

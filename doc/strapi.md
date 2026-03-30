@@ -1,5 +1,7 @@
 # Strapi CMS
 
+**Author:** Fran
+
 - [Strapi CMS](#strapi-cms)
   - [Install](#install)
 

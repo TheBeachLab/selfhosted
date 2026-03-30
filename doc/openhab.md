@@ -1,4 +1,7 @@
 # OpenHab Server
+
+**Author:** Fran
+
 [OpenHab](https://www.openhab.org) is an agnostic open source automation software to control your smart devices at home.
 
 - [Install](#install)

@@ -1,5 +1,7 @@
 # Push Notifications with iGotify
 
+**Author:** Fran
+
 - [Overview](#overview)
 - [Deployment Steps](#deployment-steps)
 - [Notifier Script](#notifier-script)
