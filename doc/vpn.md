@@ -4,11 +4,9 @@
 
 The VPN server allows me to teleport home and access the LAN even when I am traveling
 
-- [VPN Server](#vpn-server)
-  - [Install the server in Ubuntu Server](#install-the-server-in-ubuntu-server)
-  - [Set the Firewall rules](#set-the-firewall-rules)
-  - [Set the client side](#set-the-client-side)
-
+- [Install the server in Ubuntu Server](#install-the-server-in-ubuntu-server)
+- [Set the Firewall rules](#set-the-firewall-rules)
+- [Set the client side](#set-the-client-side)
 
 ## Install the server in Ubuntu Server
 

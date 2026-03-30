@@ -1,8 +1,19 @@
 # ComfyUI
 
-> Author: Watson
+**Author:** Watson
 
 ComfyUI node-based Stable Diffusion GUI, served at `https://comfyui.beachlab.org` with basic auth.
+
+- [Stack](#stack)
+- [Install paths](#install-paths)
+- [Service](#service)
+- [Nginx](#nginx)
+- [Change auth password](#change-auth-password)
+- [Add/update models](#addupdate-models)
+- [Custom nodes (ComfyUI Manager)](#custom-nodes-comfyui-manager)
+- [Update ComfyUI](#update-comfyui)
+- [DNS + SSL setup (one-time, after DNS propagation)](#dns--ssl-setup-one-time-after-dns-propagation)
+- [Troubleshooting](#troubleshooting)
 
 ## Stack
 

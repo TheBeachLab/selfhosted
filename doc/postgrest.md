@@ -2,17 +2,15 @@
 
 **Author:** Fran
 
-- [PostgREST](#postgrest)
-  - [Prepare firewall](#prepare-firewall)
-  - [Install](#install)
-  - [Create roles](#create-roles)
-  - [Check permissions of readonly](#check-permissions-of-readonly)
-  - [JWT Gateway (Nginx + auth_request)](postgrest-jwt.md)
-  - [Configure](#configure)
-  - [Create service](#create-service)
-  - [Make calls](#make-calls)
-  - [Create web proxy](#create-web-proxy)
-
+- [Prepare firewall](#prepare-firewall)
+- [Install](#install)
+- [Create roles](#create-roles)
+- [Check permissions of readonly](#check-permissions-of-readonly)
+- [JWT (TODO)](#jwt-todo)
+- [Configure](#configure)
+- [Create service](#create-service)
+- [Make calls](#make-calls)
+- [Create web proxy](#create-web-proxy)
 
 ## Prepare firewall
 ```bash

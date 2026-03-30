@@ -71,7 +71,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Taskwarrior server](doc/taskserver.md)
 - [OBS ninja (WebRTC)](doc/obsninja.md) `[WIP]`
 - [STUN/TURN Server](doc/turn.md) `[WIP]`
-- [Minecraft server](doc/minecraft.md) `[ARCHIVED]`
-- [Nextcloud](doc/cloud.md) `[ARCHIVED]`
+- [Minecraft server](doc/minecraft.md)
+- [Nextcloud](doc/cloud.md)
 - [Mail server (Postfix)](doc/mail.md) `[INCOMPLETE]`
 - [OpenHab](doc/openhab.md) `[ARCHIVED]`

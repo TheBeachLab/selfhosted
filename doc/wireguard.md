@@ -7,8 +7,19 @@ This guide describes how to configure a private, persistent WireGuard VPN betwee
 - Raspberry Pi: behind Starlink (10.10.10.2)
 - Laptop: external device (10.10.10.3)
 
-The server acts as the central hub, reachable from anywhere. 
+The server acts as the central hub, reachable from anywhere.
 All traffic between nodes is encrypted and routed through beachlab.org.
+
+- [1. Install WireGuard](#1-install-wireguard)
+- [2. Generate Keys](#2-generate-keys)
+- [3. Server Configuration (/etc/wireguard/wg0.conf)](#3-server-configuration-etcwireguardwg0conf)
+- [4. Raspberry Pi Configuration (/etc/wireguard/wg0.conf)](#4-raspberry-pi-configuration-etcwireguardwg0conf)
+- [5. Laptop Configuration (/etc/wireguard/wg0.conf)](#5-laptop-configuration-etcwireguardwg0conf)
+- [6. Enable IP Forwarding on the Server](#6-enable-ip-forwarding-on-the-server)
+- [7. Open the WireGuard Port (Server Only)](#7-open-the-wireguard-port-server-only)
+- [8. Start and Enable the Interface](#8-start-and-enable-the-interface)
+- [9. Test Connectivity](#9-test-connectivity)
+- [10. Result](#10-result)
 
 ## 1. Install WireGuard
 

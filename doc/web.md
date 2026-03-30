@@ -169,11 +169,6 @@ Add a stream_key if you want and start streaming
 
 Launch VLC, open your stream by clicking on Media > Open Network Stream. Enter the path to your stream, adding the Stream Key you set up in OBS, then click Play. For example, rtmp://IP-ADDRESS/live/SECRET-KEY. You should now be viewing your very own live video stream!
 
-### TODO
-
-- How to protect the stream server so no one can stream to it without a stream key.
-- Record videos
-
 ## The result
 
 My proud website hosted in my suitcase:
@@ -185,5 +180,3 @@ To deploy your website with git check the [git](git.md) section.
 ## Not yet: Apache 2
 
 My initial intention was to run all my web services through nginx. But there are still some software that require you to run apache. In fact, the reason my Nextcloud server is broken is probably related to refusing to install Apache 2.
-
-WIP

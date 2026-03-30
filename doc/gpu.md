@@ -1,5 +1,7 @@
 # GPU server for machine learning
 
+**Author:** Fran
+
 <!-- vim-markdown-toc GFM -->
 
 - [Install necessary packages](#install-necessary-packages)

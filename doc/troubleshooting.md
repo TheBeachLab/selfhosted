@@ -2,12 +2,10 @@
 
 **Author:** Fran
 
-- [Ongoing and past troubleshooting](#ongoing-and-past-troubleshooting)
-  - [Computer shutdowns after exactly 20 minutes](#computer-shutdowns-after-exactly-20-minutes)
-  - [Updates cannot be automatically installed](#updates-cannot-be-automatically-installed)
-  - [Removing wrong PPAs](#removing-wrong-ppas)
-  - [Old keyring](#old-keyring)
-
+- [Computer shutdowns after exactly 20 minutes](#computer-shutdowns-after-exactly-20-minutes)
+- [Updates cannot be automatically installed](#updates-cannot-be-automatically-installed)
+- [Removing wrong PPAs](#removing-wrong-ppas)
+- [Old keyring](#old-keyring)
 
 ## Computer shutdowns after exactly 20 minutes
 

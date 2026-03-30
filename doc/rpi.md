@@ -2,6 +2,15 @@
 
 **Author:** Fran
 
+- [Overview](#overview)
+- [Hardware](#hardware)
+- [Network](#network)
+- [Services](#services)
+- [Key paths](#key-paths)
+- [Quick checks](#quick-checks)
+- [Cross-references](#cross-references)
+- [MAVROS Docker (legacy)](#mavros-docker-legacy)
+
 ## Overview
 
 pibot1 is a Raspberry Pi 5 mounted in the G Mobile Lab (vehicle). It runs sensor collection, a Bluetti BLE bridge, Starlink monitoring, and publishes everything to the server via MQTT.

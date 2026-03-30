@@ -2,13 +2,11 @@
 
 **Author:** Fran
 
-- [SFTP Server](#sftp-server)
-	- [Why](#why)
-	- [Install](#install)
-	- [Configuration](#configuration)
+- [Why](#why)
+- [Install](#install)
+- [Configuration](#configuration)
 
-
-## Why 
+## Why
 For some static sites and for uploading files in folders not accessible or not tracked by git.
 
 ## Install

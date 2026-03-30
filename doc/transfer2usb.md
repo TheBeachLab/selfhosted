@@ -2,13 +2,11 @@
 
 **Author:** Fran
 
-- [Auto Transfer contents to USB](#auto-transfer-contents-to-usb)
-  - [Install](#install)
-  - [Prepare](#prepare)
+- [Install](#install)
+- [Prepare](#prepare)
 - [Script](#script)
-  - [systemd Service](#systemd-service)
-  - [udev Rule](#udev-rule)
-
+- [systemd Service](#systemd-service)
+- [udev Rule](#udev-rule)
 
 ## Install
 ```bash
@@ -75,7 +73,7 @@ mkfs.exfat -n LEFTUSB "$TARGET" >/dev/null
 mount -o uid=1000,gid=1000 "$TARGET" "$MNT"
 notify "USB mounted"
 
-# tamaños
+# sizes
 need=$(du -sb "$SRC" 2>/dev/null | awk '{print $1+0}')
 avail=$(df -B1 --output=avail "$MNT" | tail -1 | tr -d ' ')
 if [ "${need:-0}" -le 0 ]; then
