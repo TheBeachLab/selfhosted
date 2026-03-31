@@ -66,6 +66,28 @@ openclaw tui --session main --deliver
 tmux new-session -A -s watson 'openclaw tui --session main --deliver'
 ```
 
+## Updating OpenClaw
+
+Installed via npm global. `openclaw update --yes` does **not** work (not a git checkout) — use npm directly:
+
+```bash
+sudo npm install -g openclaw@latest
+openclaw gateway restart
+```
+
+A daily cron runs this automatically at 04:15 UTC:
+
+```
+15 4 * * * sudo npm install -g openclaw@latest --silent >> /tmp/openclaw-update.log 2>&1 && openclaw gateway restart >> /tmp/openclaw-update.log 2>&1
+```
+
+Check current vs latest:
+
+```bash
+openclaw --version
+npm show openclaw version
+```
+
 ## Notes
 
 - If Gateway is down, start it first: `openclaw gateway start`
