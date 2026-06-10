@@ -229,36 +229,52 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 
 ## Recovery after dead PSU/GPU
 
-**Context:** The Razer Core X PSU died on 2026-03-04. The following services were disabled to avoid continuous errors and freezes.
+**Historical context:** The Razer Core X PSU died on 2026-03-04, so GPU services were disabled for a while to avoid continuous errors and freezes.
 
-### Current state (no GPU)
+### Current state (restored on 2026-06-10)
 
 | Service | State |
 |---|---|
-| `whisper-web` | disabled |
-| `qwen3-tts` | disabled |
-| `comfyui` | disabled |
-| `nvidia-persistenced` | disabled |
-| `egpu-watchdog` | disabled |
-| Telegraf `inputs.nvidia_smi` | commented out |
+| `whisper-web` | enabled + active |
+| `qwen3-tts` | enabled + active |
+| `comfyui` | enabled + active |
+| `nvidia-persistenced` | enabled + active |
+| `egpu-watchdog.timer` | enabled + active |
+| Telegraf `inputs.nvidia_smi` | enabled |
 
-### Steps to restore (new GPU/PSU installed)
+Current runtime after restore:
 
-**1. Verify the GPU is visible:**
+- eGPU: `Razer Core X` authorized via Thunderbolt
+- GPU: `NVIDIA GeForce RTX 2070 SUPER`
+- Driver: `595.71.05`
+- `nvidia-smi`: OK
+- Persistence mode: ON
+
+### Restore procedure (if the eGPU disappears again)
+
+**1. Prefer cold boot, not hot-plug:**
+
+1. Power off host
+2. Connect/power the Razer Core X
+3. Wait 5-10 seconds
+4. Boot host
+
+**2. Verify the GPU is visible:**
 
 ```bash
+boltctl
 lspci | grep -i nvidia
 nvidia-smi
 ```
 
-If `nvidia-smi` fails, load the driver manually:
+If `nvidia-smi` fails, try:
 
 ```bash
 sudo modprobe nvidia
-nvidia-smi   # should show the GPU without ERR!
+nvidia-smi
 ```
 
-**2. Re-enable GPU services:**
+**3. Re-enable GPU services if they were disabled:**
 
 ```bash
 sudo systemctl enable --now nvidia-persistenced
@@ -268,9 +284,9 @@ sudo systemctl enable --now comfyui
 sudo systemctl enable --now egpu-watchdog.timer
 ```
 
-**3. Re-enable Telegraf monitoring:**
+**4. Re-enable Telegraf monitoring if needed:**
 
-Edit `/etc/telegraf/telegraf.d/nuc-timescale.conf` and uncomment:
+Ensure `/etc/telegraf/telegraf.d/nuc-timescale.conf` contains:
 
 ```toml
 [[inputs.nvidia_smi]]
@@ -285,7 +301,7 @@ sudo systemctl restart telegraf
 sudo journalctl -u telegraf -n 10 --no-pager | grep -E "Error|nvidia"
 ```
 
-**4. Verify telemetry:**
+**5. Verify telemetry:**
 
 ```bash
 DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | python3 -m json.tool | grep gpu
@@ -293,10 +309,26 @@ DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | 
 
 The `gpu` field should show real temp/util values instead of `null`.
 
-**5. Quick service test:**
+**6. Quick service test:**
 
 ```bash
-curl -s http://localhost:8060/health   # whisper-web
-curl -s http://localhost:8070/health   # qwen3-tts
-curl -s http://localhost:8188/         # comfyui
+curl -I http://localhost:8060/      # whisper-web
+curl -I http://localhost:8070/      # qwen3-tts
+curl -I http://localhost:8188/      # comfyui
+curl http://localhost:8060/openapi.json | jq '.info'
+curl http://localhost:8070/openapi.json | jq '.info'
+```
+
+Note: `whisper-web` and `qwen3-tts` do not expose `/health`; use `/`, `/docs`, or `/openapi.json` instead.
+
+### Log checks
+
+```bash
+journalctl -k -b | grep -iE 'NVRM|Xid|nvidia|thunderbolt|bolt'
+```
+
+On the 2026-06-10 restore there were no `Xid` errors after boot. Only one benign-looking line appeared during bring-up:
+
+```text
+nvidia-gpu 0000:04:00.3: i2c timeout error e0000000
 ```
