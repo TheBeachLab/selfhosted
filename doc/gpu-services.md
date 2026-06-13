@@ -12,6 +12,7 @@
 - [Usage](#usage)
 - [Operations](#operations)
 - [Why on-demand](#why-on-demand)
+- [Thunderbolt Hot-Unplug Caveat](#thunderbolt-hot-unplug-caveat)
 
 <!-- vim-markdown-toc -->
 
@@ -226,6 +227,62 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 - ❌ **Smaller models:** Qwen3-TTS 0.6B has noticeably lower quality
 - ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
 - ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
+
+## Thunderbolt Hot-Unplug Caveat
+
+**Observed on `thebeachlab` (NUC11TNKi3 + Razer Core X + RTX 2070 SUPER, June 2026):**
+
+- Normal boot with eGPU attached works
+- `boltctl` shows `Razer Core X` as `authorized`
+- `nvidia-smi` works
+- GPU services (`comfyui`, `qwen3-tts`, `whisper-web`) can use the card normally
+
+**What breaks it reliably:**
+
+- Unplugging the Thunderbolt cable while the eGPU is live
+- Reconnecting the cable in the same runtime session
+
+**What Linux reports when it breaks:**
+
+```text
+thunderbolt 0-3: device disconnected
+pcieport 0000:00:07.0: pciehp: Slot(0): Link Down
+NVRM: Xid (PCI:0000:04:00): 79, GPU has fallen off the bus.
+NVRM: Xid (PCI:0000:04:00): 154, GPU recovery action changed ... GPU Reset Required
+```
+
+**Typical broken-state symptoms after reconnect:**
+
+- Core X light comes back on
+- `boltctl` may return to `authorized`
+- `lspci` may still list the NVIDIA device, sometimes as `rev ff`
+- `nvidia-smi` fails with `No devices were found`
+- Server fan can ramp hard during the failure window
+
+**Operational rule:**
+
+- Do **not** hot-unplug or hot-replug the Thunderbolt cable while GPU workloads are active
+- Treat the eGPU cable as effectively non-hot-swappable for production use on this host
+
+**Recovery:**
+
+1. Stop touching the Thunderbolt cable
+2. Reboot the host
+3. Re-check:
+
+```bash
+boltctl list
+lspci | grep -i nvidia
+nvidia-smi
+```
+
+If the reboot path does not recover cleanly, escalate to full power-off / power-on.
+
+**Notes from local testing:**
+
+- Updating BIOS from `0073` to `0078` improved overall stability but did **not** make hot-unplug safe
+- `pcie_port_pm=off` is currently kept as part of the stable baseline while investigating
+- The issue matches known Linux/NVIDIA/Thunderbolt reports around `Xid 79` and "fallen off the bus"
 
 ## Recovery after dead PSU/GPU
 
