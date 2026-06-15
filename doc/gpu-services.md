@@ -347,7 +347,7 @@ Ensure `/etc/telegraf/telegraf.d/nuc-timescale.conf` contains:
 
 ```toml
 [[inputs.nvidia_smi]]
-  bin_path = "/usr/bin/nvidia-smi"
+  bin_path = "/usr/local/bin/nvidia-smi-safe.sh"
   timeout = "5s"
 ```
 
@@ -358,7 +358,26 @@ sudo systemctl restart telegraf
 sudo journalctl -u telegraf -n 10 --no-pager | grep -E "Error|nvidia"
 ```
 
-**5. Verify telemetry:**
+**5. Verify watchdog + heartbeat instrumentation:**
+
+```bash
+systemctl status egpu-watchdog.timer host-heartbeat-log.timer --no-pager
+tail -n 20 /var/log/host-heartbeat.log
+```
+
+Expected behavior:
+
+- one alert when the eGPU is lost
+- one alert when it recovers
+- no repeating half-hour alerts while it remains missing
+- heartbeat log includes explicit transition lines such as:
+
+```text
+event=egpu_lost last_ok=2026-06-15T05:03:29Z detected_at=2026-06-15T05:04:33Z
+event=egpu_recovered missing_since=2026-06-15T05:04:33Z detected_at=2026-06-15T05:18:12Z
+```
+
+**6. Verify telemetry:**
 
 ```bash
 DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | python3 -m json.tool | grep gpu
@@ -366,7 +385,7 @@ DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | 
 
 The `gpu` field should show real temp/util values instead of `null`.
 
-**6. Quick service test:**
+**7. Quick service test:**
 
 ```bash
 curl -I http://localhost:8060/      # whisper-web
