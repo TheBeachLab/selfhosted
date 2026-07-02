@@ -1,136 +1,169 @@
 # Minecraft Servers
 
-**Author:** Fran / updated Mr. Watson 🦄 (2026-03-30)
+**Author:** Fran / updated Mr. Watson (2026-07-02)
 
-Two servers running: Java Edition (for PC) and Bedrock Edition (for iPad/mobile).
+This host currently runs:
 
-<!-- vim-markdown-toc GFM -->
-
-- [Current state](#current-state)
-- [Java Edition](#java-edition)
-- [Bedrock Edition](#bedrock-edition)
-- [Quick checks](#quick-checks)
-
-<!-- vim-markdown-toc -->
+- Java server: Fabric `26.2`, world `Hariburi-World`, service-managed
+- Bedrock server: separate `bedrock.service`
 
 ## Current state
 
 | | Java | Bedrock |
 |---|---|---|
 | Path | `/opt/minecraft/server/` | `/home/pink/minecraftbe/bedrock/` |
-| User | pink | pink |
-| Java | OpenJDK 21 | N/A |
-| Version | 1.21.x | 1.21.30.03 |
-| World | Hariburi-World | — |
-| Service | none (manual) | `bedrock.service` (active) |
-| Port | 25565 | 19132 UDP |
+| User | `minecraft` | `pink` |
+| Runtime | Java 25 | N/A |
+| Version | Minecraft `26.2` + Fabric Loader `0.19.3` | 1.21.x line |
+| Service | `minecraft-java.service` | `bedrock.service` |
+| Port | `25565/TCP` | `19132/UDP` |
 
-## Java Edition
+## Java server
 
-No systemd service — started manually via screen or similar.
-
-```bash
-# Start server
-cd /opt/minecraft/server
-screen -dmS minecraft java -Xmx4G -Xms1G -jar server.jar nogui
-
-# Attach to console
-screen -r minecraft
-
-# Detach: Ctrl+A then D
-
-# Stop (from console)
-stop
-```
-
-### Config files
+### Service control
 
 ```bash
-/opt/minecraft/server/server.properties   # main config
-/opt/minecraft/server/ops.json            # operators
-/opt/minecraft/server/whitelist.json      # whitelist
-/opt/minecraft/server/eula.txt            # must be true
+sudo systemctl status minecraft-java.service
+sudo systemctl restart minecraft-java.service
+sudo journalctl -u minecraft-java.service -n 100 --no-pager
 ```
 
-### Update Java server
-
-```bash
-# Download latest from https://www.minecraft.net/en-us/download/server
-cd /opt/minecraft/server
-wget https://piston-data.mojang.com/v1/objects/.../server.jar -O server.jar
-```
-
-### Java runtime
-
-```bash
-java --version
-# openjdk 21.0.10 2026-01-20
-```
-
-If Java needs updating: `sudo apt install openjdk-21-jdk-headless`
-
-## Bedrock Edition
-
-Managed by `bedrock.service`. Auto-updates to latest version on each restart via `start.sh`.
-
-```bash
-# Service control
-sudo systemctl status bedrock
-sudo systemctl start bedrock
-sudo systemctl stop bedrock
-sudo systemctl restart bedrock
-
-# Attach to server console
-screen -r servername
-
-# Detach: Ctrl+A then D
-```
-
-### Files
-
-```bash
-/home/pink/minecraftbe/bedrock/start.sh         # starts server, checks for updates
-/home/pink/minecraftbe/bedrock/stop.sh          # graceful stop
-/home/pink/minecraftbe/bedrock/server.properties
-/home/pink/minecraftbe/bedrock/backups/         # auto-backups on start
-/home/pink/minecraftbe/bedrock/downloads/       # downloaded server zips
-```
-
-### Service file
-
-`/etc/systemd/system/bedrock.service`
+Main unit:
 
 ```ini
-[Unit]
-Description=bedrock Minecraft Bedrock Server
-After=network-online.target
+/etc/systemd/system/minecraft-java.service
+```
 
-[Service]
-User=pink
-WorkingDirectory=/home/pink/minecraftbe/bedrock
-Type=forking
-ExecStart=/bin/bash /home/pink/minecraftbe/bedrock/start.sh
-ExecStop=/bin/bash /home/pink/minecraftbe/bedrock/stop.sh
-GuessMainPID=no
-TimeoutStartSec=600
+Key paths:
 
-[Install]
-WantedBy=multi-user.target
+```bash
+/opt/minecraft/server/server.properties
+/opt/minecraft/server/ops.json
+/opt/minecraft/server/whitelist.json
+/opt/minecraft/server/start-fabric.sh
+/opt/minecraft/server/Hariburi-World/
+```
+
+### Current mods
+
+Base stack in `/opt/minecraft/server/mods/`:
+
+- `fabric-api`
+- `lifesteal`
+- `lithium`
+- `ferritecore`
+- `noisium`
+- `LuckPerms`
+- `Simple Voice Chat`
+- `Chunky`
+
+Voice Chat listens on `24454/UDP`.
+
+### RCON helpers
+
+```bash
+/usr/local/bin/minecraft-rcon.sh
+/usr/local/bin/minecraft-chat-notify.sh
+```
+
+Examples:
+
+```bash
+/usr/local/bin/minecraft-rcon.sh list
+/usr/local/bin/minecraft-rcon.sh "say test"
+```
+
+### World backups
+
+Daily world backup runs without stopping the server:
+
+- chat warning at `05:55 UTC`
+- backup at `06:00 UTC`
+- retention: keep last `2`
+
+Scripts:
+
+```bash
+/usr/local/bin/minecraft-world-backup.sh
+/usr/local/bin/minecraft-chat-notify.sh
+```
+
+Cron (`pink`):
+
+```cron
+55 5 * * * /usr/local/bin/minecraft-chat-notify.sh "World backup in 5 minutes." >>/tmp/minecraft-backup-warnings.log 2>&1
+0 6 * * * /usr/local/bin/minecraft-world-backup.sh >/tmp/minecraft-world-backup.log 2>&1
+```
+
+Backups land in:
+
+```bash
+/opt/minecraft/backups/worlds/
+```
+
+### Grace period trigger
+
+There is a datapack in the world for a PvP grace period:
+
+```bash
+/opt/minecraft/server/Hariburi-World/datapacks/watson-grace-pack
+```
+
+Player command:
+
+```mcfunction
+/trigger start
+```
+
+Behavior:
+
+- starts a `1h` grace period
+- announces start in chat
+- warns at `30m` and `5m`
+- announces the end
+- blocks PvP during the grace period using a temporary team with `friendlyFire false`
+
+### Locator bar
+
+The vanilla locator bar is disabled persistently in world data:
+
+- gamerule: `locatorBar=false`
+- applied directly in `Hariburi-World/level.dat`
+
+### Watchdog / Discord
+
+Status notifications are handled by:
+
+```bash
+/usr/local/bin/minecraft-discord-watchdog.sh
+/usr/local/bin/minecraft-server-state.sh
+```
+
+The watchdog runs every minute from `pink`'s crontab.
+
+## Bedrock server
+
+Managed by `bedrock.service`.
+
+```bash
+sudo systemctl status bedrock.service
+sudo systemctl restart bedrock.service
+```
+
+Files:
+
+```bash
+/home/pink/minecraftbe/bedrock/start.sh
+/home/pink/minecraftbe/bedrock/stop.sh
+/home/pink/minecraftbe/bedrock/server.properties
+/home/pink/minecraftbe/bedrock/backups/
+/home/pink/minecraftbe/bedrock/downloads/
 ```
 
 ## Quick checks
 
 ```bash
-# Bedrock running?
-systemctl status bedrock
-
-# Java running?
-screen -list | grep minecraft
-ps aux | grep server.jar | grep -v grep
-
-# Ports open?
-ss -tulnp | grep -E "25565|19132"
-
-# Bedrock version
-ls /home/pink/minecraftbe/bedrock/downloads/ | grep bedrock-server | sort | tail -1
+systemctl status minecraft-java.service --no-pager
+systemctl status bedrock.service --no-pager
+ss -tulnp | grep -E "25565|19132|24454"
 ```
