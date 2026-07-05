@@ -54,10 +54,43 @@ Base stack in `/opt/minecraft/server/mods/`:
 - `ferritecore`
 - `noisium`
 - `LuckPerms`
+- `SkinsRestorer`
 - `Simple Voice Chat`
 - `Chunky`
 
 Voice Chat listens on `24454/UDP`.
+
+### Offline launcher support / skins
+
+Current Java auth/skin mode:
+
+- `online-mode=false`
+- `enforce-secure-profile=false`
+- `SkinsRestorer` installed server-side on Fabric
+
+What this means:
+
+- non-premium/offline launchers can join
+- skin restoration is handled server-side
+- player identity is no longer verified by Mojang, so nickname trust is lower than premium mode
+
+Recommended command for players:
+
+```mcfunction
+/skin <name>
+```
+
+Useful examples:
+
+```mcfunction
+/skin Notch
+/skin url "https://example.com/skin.png"
+```
+
+Permission notes:
+
+- default players should have at least `skinsrestorer.command`
+- if you want `/skin set <name>`, also grant `skinsrestorer.command.set`
 
 ### RCON helpers
 
