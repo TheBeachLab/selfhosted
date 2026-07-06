@@ -110,7 +110,6 @@ Examples:
 
 Daily world backup runs without stopping the server:
 
-- chat warning at `04:55 Europe/Madrid`
 - backup at `05:00 Europe/Madrid`
 - retention: keep last `2`
 
@@ -118,14 +117,12 @@ Scripts:
 
 ```bash
 /usr/local/bin/minecraft-world-backup.sh
-/usr/local/bin/minecraft-chat-notify.sh
 ```
 
 Cron (`pink`):
 
 ```cron
 CRON_TZ=Europe/Madrid
-55 4 * * * /usr/local/bin/minecraft-chat-notify.sh "World backup in 5 minutes." >>/tmp/minecraft-backup-warnings.log 2>&1
 0 5 * * * /usr/local/bin/minecraft-world-backup.sh >/tmp/minecraft-world-backup.log 2>&1
 ```
 
