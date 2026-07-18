@@ -87,8 +87,8 @@ The repository is encrypted and stored at:
 /mnt/nas-downloads/backups/thebeachlab-restic
 ```
 
-The password is root-only on the host. A recovery copy is stored beside the
-repository on the NAS:
+The host password copy is root-only. A recovery copy is stored beside the
+repository on the NAS and is protected by the NAS share permissions:
 
 ```bash
 /root/.config/thebeachlab-backup/restic-password
@@ -134,8 +134,8 @@ sudo env \
   restic restore latest --target /var/tmp/restic-restore-test \
   --include /etc/ssh/sshd_config
 sudo test -s /var/tmp/restic-restore-test/etc/ssh/sshd_config
+sudo rm -rf /var/tmp/restic-restore-test
 ```
 
 The script refuses to run if `/mnt/nas-downloads` is not an NFS mount, so a
 NAS outage cannot silently fill the local root filesystem.
-
