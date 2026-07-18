@@ -281,7 +281,12 @@ If the reboot path does not recover cleanly, escalate to full power-off / power-
 **Notes from local testing:**
 
 - Updating BIOS from `0073` to `0078` improved overall stability but did **not** make hot-unplug safe
-- `pcie_port_pm=off` is currently kept as part of the stable baseline while investigating
+- `pcie_port_pm=off` is kept as part of the stable baseline
+- On 2026-07-18, `pcie_aspm=off` was added alongside it after confirming that
+  both Thunderbolt root ports still had ASPM L1 enabled. GRUB was regenerated
+  and validated; a cold boot with the Core X connected is required to activate
+  and verify the change
+- Pre-change GRUB backup: `/etc/default/grub.pre-aspm-20260718`
 - The issue matches known Linux/NVIDIA/Thunderbolt reports around `Xid 79` and "fallen off the bus"
 
 ## Recovery after dead PSU/GPU
