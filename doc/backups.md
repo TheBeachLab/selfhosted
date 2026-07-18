@@ -1,6 +1,6 @@
 # Backups with rsnapshot
 
-**Author:** Fran
+**Author:** Fran / updated Mr. Watson 🦄 (2026-07-18)
 
 > There’s no feeling more intense than starting over. If you've deleted your homework the day before it was due, as I have, or if you left your wallet at home and you have to go back, after spending an hour in the commute, if you won some money at the casino and then put all your winnings on red, but it came up black, if you got your best shirt dry-cleaned before a wedding and then immediately dropped food on it, if you won an argument with a friend and then later discovered that they just returned to their original view, starting over is harder than starting up.
 >
@@ -10,6 +10,7 @@
 
 - [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
 - [Install and setup rsnapshot](#install-and-setup-rsnapshot)
+- [Current production setup: Restic](#current-production-setup-restic)
 
 <!-- vim-markdown-toc -->
 
@@ -67,4 +68,74 @@ Automate your backups in ` crontab -e` **as the root user**
 > Make sure that root will have read/write **and admin (change permissions, take ownership)** permissions on the NFS drive. Otherwise you will get errors like:
 > `/bin/cp: failed to preserve ownership for '/mnt/backups/alpha.1/localhost/var': Operation not permitted`
 
+## Current production setup: Restic
+
+The active server backup uses Restic against the Synology NFS mount at
+`/mnt/nas-downloads`. It replaces the old disabled rsnapshot cron entries.
+
+Main files:
+
+```bash
+/usr/local/sbin/thebeachlab-backup
+/etc/systemd/system/thebeachlab-backup.service
+/etc/systemd/system/thebeachlab-backup.timer
+```
+
+The repository is encrypted and stored at:
+
+```bash
+/mnt/nas-downloads/backups/thebeachlab-restic
+```
+
+The password is root-only on the host. A recovery copy is stored beside the
+repository on the NAS:
+
+```bash
+/root/.config/thebeachlab-backup/restic-password
+/mnt/nas-downloads/backups/thebeachlab-restic-password
+```
+
+The backup runs every day around `03:10 UTC` with a randomized delay of up to
+10 minutes. It includes:
+
+- all PostgreSQL databases plus global roles;
+- `/etc`, `/usr/local/bin`, and `/usr/local/etc`;
+- Git repositories, OpenClaw state, Minecraft, Gotify, Grafana, OpenHAB,
+  Headscale, Mosquitto, and all web/Nextcloud data.
+
+Retention is 7 daily, 4 weekly, and 6 monthly snapshots. Every run prunes old
+data and checks 5% of repository data.
+
+Run and inspect:
+
+```bash
+sudo systemctl start thebeachlab-backup.service
+systemctl status thebeachlab-backup.service
+sudo journalctl -u thebeachlab-backup.service -n 100 --no-pager
+systemctl list-timers thebeachlab-backup.timer
+```
+
+List snapshots:
+
+```bash
+sudo env \
+  RESTIC_REPOSITORY=/mnt/nas-downloads/backups/thebeachlab-restic \
+  RESTIC_PASSWORD_FILE=/root/.config/thebeachlab-backup/restic-password \
+  restic snapshots
+```
+
+Test a restore into a temporary directory:
+
+```bash
+sudo mkdir -p /var/tmp/restic-restore-test
+sudo env \
+  RESTIC_REPOSITORY=/mnt/nas-downloads/backups/thebeachlab-restic \
+  RESTIC_PASSWORD_FILE=/root/.config/thebeachlab-backup/restic-password \
+  restic restore latest --target /var/tmp/restic-restore-test \
+  --include /etc/ssh/sshd_config
+sudo test -s /var/tmp/restic-restore-test/etc/ssh/sshd_config
+```
+
+The script refuses to run if `/mnt/nas-downloads` is not an NFS mount, so a
+NAS outage cannot silently fill the local root filesystem.
 
