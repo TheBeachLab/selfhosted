@@ -107,7 +107,8 @@ The backup runs every day around `03:10 UTC` with a randomized delay of up to
   `/usr/local/sbin`.
 
 Retention is 7 daily, 4 weekly, and 6 monthly snapshots. Every run prunes old
-data and checks 5% of repository data.
+data and checks 5% of repository data. Transient caches, logs, crash reports,
+and Nextcloud's obsolete updater copies are excluded.
 
 Run and inspect:
 
