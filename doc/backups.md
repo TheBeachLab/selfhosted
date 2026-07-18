@@ -110,6 +110,11 @@ Retention is 7 daily, 4 weekly, and 6 monthly snapshots. Every run prunes old
 data and checks 5% of repository data. Transient caches, logs, crash reports,
 and Nextcloud's obsolete updater copies are excluded.
 
+On 2026-07-18, 15 GB of obsolete Nextcloud updater backups (versions 23 to 30)
+were removed from the live filesystem. The updater workspace was preserved and
+Nextcloud 31.0.14 remained healthy. The first Restic snapshot still contains
+those files until normal retention removes that snapshot.
+
 Run and inspect:
 
 ```bash
