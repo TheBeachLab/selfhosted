@@ -100,8 +100,11 @@ The backup runs every day around `03:10 UTC` with a randomized delay of up to
 
 - all PostgreSQL databases plus global roles;
 - `/etc`, `/usr/local/bin`, and `/usr/local/etc`;
-- Git repositories, OpenClaw state, Minecraft, Gotify, Grafana, OpenHAB,
-  Headscale, Mosquitto, and all web/Nextcloud data.
+- Git repositories, OpenClaw state, Minecraft server files and its consistent
+  world archives, Gotify, Grafana, OpenHAB, Headscale, Mosquitto, and all
+  web/Nextcloud data;
+- custom administration scripts in both `/usr/local/bin` and
+  `/usr/local/sbin`.
 
 Retention is 7 daily, 4 weekly, and 6 monthly snapshots. Every run prunes old
 data and checks 5% of repository data.
