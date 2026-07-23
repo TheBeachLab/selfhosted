@@ -8,8 +8,8 @@ Chromium remoto accesible en:
 https://beachlab.org/browser/
 ```
 
-Usa la misma autenticación HTTP Basic que Drop. El contenedor solo publica su
-puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
+Usa autenticación HTTP Basic propia, separada de Drop. El contenedor solo
+publica su puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
 
 ## Archivos
 
@@ -20,6 +20,7 @@ puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
 /etc/systemd/system/remote-browser.service
 /etc/systemd/system/remote-browser-firewall.service
 /etc/nginx/snippets/remote-browser.conf
+/etc/nginx/.htpasswd-browser
 ```
 
 El perfil, las cookies y las descargas persisten bajo
@@ -54,6 +55,8 @@ sudo systemctl restart remote-browser
 
 - Chromium corre aislado en Docker, sin montar el socket de Docker ni rutas del
   host salvo su directorio de configuración.
+- Las credenciales son exclusivas de este servicio y solo se guardan como hash
+  bcrypt en `/etc/nginx/.htpasswd-browser`.
 - `HARDEN_DESKTOP` deshabilita terminales y `sudo` dentro de la sesión.
 - La red `172.31.250.0/28` no puede iniciar conexiones hacia rangos privados,
   loopback, link-local ni otras redes Docker.
