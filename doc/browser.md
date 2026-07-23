@@ -23,8 +23,11 @@ publica su puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
 /etc/nginx/.htpasswd-browser
 ```
 
-El perfil, las cookies y las descargas persisten bajo
-`/srv/remote-browser/config/`. El panel lateral permite subir y bajar archivos.
+El perfil y las cookies persisten bajo `/srv/remote-browser/config/`. Las
+descargas quedan en `/srv/remote-browser/config/Downloads`. El panel lateral
+permite subir y bajar archivos mediante la sección **Archivos**.
+La unidad systemd prepara `Downloads` con modo `0755` y deja `/config` en `0711`
+para que el Nginx interno pueda servir esa ruta sin poder listar el perfil.
 Es una única sesión de navegador: no abrirla simultáneamente entre personas.
 Las cookies y sesiones iniciadas quedan almacenadas en el servidor.
 
@@ -57,7 +60,10 @@ sudo systemctl restart remote-browser
   host salvo su directorio de configuración.
 - Las credenciales son exclusivas de este servicio y solo se guardan como hash
   bcrypt en `/etc/nginx/.htpasswd-browser`.
-- `HARDEN_DESKTOP` deshabilita terminales y `sudo` dentro de la sesión.
+- Terminales, `sudo` y las herramientas para abrir aplicaciones externas están
+  deshabilitados explícitamente. No se usa `HARDEN_DESKTOP`, porque las
+  versiones actuales de la imagen eliminan el gestor de archivos cuando está
+  activo, incluso si `SELKIES_FILE_TRANSFERS` solicita habilitarlo.
 - La red `172.31.250.0/28` no puede iniciar conexiones hacia rangos privados,
   loopback, link-local ni otras redes Docker.
 - `remote-browser.service` arranca después del filtro de red; Docker no inicia

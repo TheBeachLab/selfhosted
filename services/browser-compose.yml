@@ -15,7 +15,10 @@ services:
       START_DOCKER: "false"
       DISABLE_IPV6: "true"
       NO_GAMEPAD: "true"
-      HARDEN_DESKTOP: "true"
+      HARDEN_DESKTOP: "false"
+      DISABLE_OPEN_TOOLS: "true"
+      DISABLE_SUDO: "true"
+      DISABLE_TERMINALS: "true"
       SELKIES_UI_TITLE: BeachLab Browser
       SELKIES_COMMAND_ENABLED: "false"
       SELKIES_FILE_TRANSFERS: upload,download

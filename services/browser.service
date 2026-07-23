@@ -8,6 +8,8 @@ PartOf=docker.service
 [Service]
 Type=simple
 WorkingDirectory=/srv/remote-browser
+ExecStartPre=/usr/bin/install -d -o 1000 -g 1000 -m 0755 /srv/remote-browser/config/Downloads
+ExecStartPre=/usr/bin/chmod 0711 /srv/remote-browser/config
 ExecStart=/usr/bin/docker compose -f /srv/remote-browser/docker-compose.yml up --remove-orphans
 ExecStop=/usr/bin/docker compose -f /srv/remote-browser/docker-compose.yml down
 Restart=always
