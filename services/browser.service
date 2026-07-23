@@ -1,0 +1,19 @@
+[Unit]
+Description=Protected remote Chromium browser
+Requires=docker.service remote-browser-firewall.service
+After=network-online.target docker.service remote-browser-firewall.service
+Wants=network-online.target
+PartOf=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/remote-browser
+ExecStart=/usr/bin/docker compose -f /srv/remote-browser/docker-compose.yml up --remove-orphans
+ExecStop=/usr/bin/docker compose -f /srv/remote-browser/docker-compose.yml down
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target

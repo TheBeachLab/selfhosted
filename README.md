@@ -39,6 +39,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Mumble voice server](doc/mumble.md)
 - [iOS Push Notifications (iGotify)](doc/igotify.md)
 - [Drop (protected URL downloads)](doc/drop.md)
+- [Remote browser](doc/browser.md)
 - [n8n automation](doc/n8n.md)
 - [Auto USB copy](doc/transfer2usb.md)
 - [Node.js / PM2](doc/nodejs.md)

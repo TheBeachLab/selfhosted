@@ -1,0 +1,51 @@
+services:
+  browser:
+    image: lscr.io/linuxserver/chromium:latest
+    container_name: remote-browser
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: Etc/UTC
+      LC_ALL: es_ES.UTF-8
+      TITLE: BeachLab Browser
+      SUBFOLDER: /browser/
+      FILE_MANAGER_PATH: /config/Downloads
+      PIXELFLUX_WAYLAND: "true"
+      AUTO_GPU: "true"
+      START_DOCKER: "false"
+      DISABLE_IPV6: "true"
+      NO_GAMEPAD: "true"
+      HARDEN_DESKTOP: "true"
+      SELKIES_UI_TITLE: BeachLab Browser
+      SELKIES_COMMAND_ENABLED: "false"
+      SELKIES_FILE_TRANSFERS: upload,download
+      SELKIES_UI_SIDEBAR_SHOW_FILES: "true"
+      SELKIES_UI_SIDEBAR_SHOW_APPS: "false"
+      SELKIES_UI_SIDEBAR_SHOW_SHARING: "false"
+      SELKIES_UI_SIDEBAR_SHOW_GAMEPADS: "false"
+      SELKIES_ENABLE_SHARING: "false"
+      SELKIES_MICROPHONE_ENABLED: "false|locked"
+      SELKIES_GAMEPAD_ENABLED: "false|locked"
+      SELKIES_SECOND_SCREEN: "false|locked"
+    volumes:
+      - /srv/remote-browser/config:/config
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 127.0.0.1:3015:3000
+    networks:
+      browser_net:
+        ipv4_address: 172.31.250.2
+    shm_size: 1gb
+    mem_limit: 3g
+    cpus: 2.0
+    pids_limit: 1024
+    restart: "no"
+
+networks:
+  browser_net:
+    name: remote-browser
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.250.0/28

@@ -1,0 +1,14 @@
+[Unit]
+Description=Block remote browser access to private networks
+Requires=docker.service
+After=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/remote-browser-firewall add
+ExecStop=/usr/local/sbin/remote-browser-firewall remove
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
