@@ -1,6 +1,6 @@
 # Drop
 
-**Author:** Mr. Watson 🦄  
+**Author:** Mr. Watson 🦄
 **Date:** 2026-07-23
 
 ## Objetivo
