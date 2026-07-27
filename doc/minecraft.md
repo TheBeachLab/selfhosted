@@ -108,25 +108,16 @@ Examples:
 
 ### World backups
 
-Daily world backup runs without stopping the server:
+Automatic world backups are disabled. There is no backup entry in `pink`'s
+crontab.
 
-- backup at `05:00 Europe/Madrid`
-- retention: keep last `2`
-
-Scripts:
+The former script remains available for a manual backup if needed:
 
 ```bash
 /usr/local/bin/minecraft-world-backup.sh
 ```
 
-Cron (`pink`):
-
-```cron
-CRON_TZ=Europe/Madrid
-0 5 * * * /usr/local/bin/minecraft-world-backup.sh >/tmp/minecraft-world-backup.log 2>&1
-```
-
-Backups land in:
+Manual backups land in:
 
 ```bash
 /opt/minecraft/backups/worlds/
