@@ -34,12 +34,15 @@ The bridge uses these safeguards:
 ```properties
 startDelay="120"
 useDummyAccessories="true"
+blockUserDeletion="true"
 ```
 
 `useDummyAccessories` keeps a placeholder when an Item is temporarily absent,
 which helps Apple Home preserve its controller-side configuration. `startDelay`
-gives openHAB time to finish loading Items before publishing the bridge. See the
-official [HomeKit dummy-accessory documentation](https://www.openhab.org/addons/integrations/homekit/#dummy-accessories).
+gives openHAB time to finish loading Items before publishing the bridge.
+`blockUserDeletion` protects an established pairing from controller-side user
+deletion; disable it before an intentional unpairing. See the official
+[HomeKit integration documentation](https://www.openhab.org/addons/integrations/homekit/).
 
 Do not clear HomeKit pairings or delete the bridge identity during routine
 maintenance. Both operations make Apple Home see a new bridge and require a new
@@ -102,6 +105,12 @@ sudo journalctl -u openhab.service -b
 Also confirm in the openHAB console that the OpenWebNet and HomeKit bundles are
 active, the BTicino gateway Thing is online, the expected accessories are
 advertised and no unexpected dummy accessories remain.
+
+OpenWebNet roller shutters can report `UNDEF` after an openHAB restart because
+their position is estimated from travel time rather than read directly. Move a
+shutter fully up or down to synchronize it again; do not invent a stored
+position. See the official
+[OpenWebNet shutter-position notes](https://www.openhab.org/addons/bindings/openwebnet/#shutter-position).
 
 Keep credentials, pairing codes, QR codes, bridge identities, controller keys,
 private addresses and raw configuration exports out of issues, commits and CI
