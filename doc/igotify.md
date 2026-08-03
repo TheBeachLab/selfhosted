@@ -8,7 +8,7 @@
 
 ## Overview
 
-Gotify is a self-hosted server for sending and receiving push notifications, offering a simple web interface and apps for real-time message delivery. iGotify is a containerized notification bridge that works alongside a Gotify server. Deployed via Docker (commonly with Docker Compose on Ubuntu), iGotify decrypts Gotify messages and forwards them as push notifications through Apple’s APNs to iOS devices—addressing Gotify’s lack of native support for iOS push alerts.
+Gotify is the local push server and iGotify is the iOS push bridge. On this host both run as Docker containers behind Nginx, bound only to loopback.
 
 ## Deployment Steps
 
@@ -17,11 +17,9 @@ Gotify is a self-hosted server for sending and receiving push notifications, off
 Create or edit `/srv/gotify/docker-compose.yml` with the following content:
 
 ```yaml
-version: "3.8"
-
 services:
   gotify:
-    image: gotify/server
+    image: gotify/server:latest
     container_name: gotify
     restart: unless-stopped
     volumes:
@@ -34,10 +32,8 @@ services:
     image: ghcr.io/androidseb25/igotify-notification-assist:latest
     container_name: igotify
     restart: unless-stopped
-    environment:
-      - GOTIFY_URLS=http://gotify
-      - SECNTFY_TOKENS=NTFY-DEVICE-xxxxx
-      - GOTIFY_CLIENT_TOKENS=CLe.xxxx
+    env_file:
+      - ./igotify.env
     depends_on:
       - gotify
     ports:
@@ -46,16 +42,45 @@ services:
       - ./igotify-data:/app/data
 ```
 
-2. **Deploy or update containers**
+2. **Store iGotify secrets outside compose**
+
+Create `/srv/gotify/igotify.env` and keep real tokens there, not in docs or in the compose file:
+
+```bash
+sudo install -m 600 /dev/null /srv/gotify/igotify.env
+sudoedit /srv/gotify/igotify.env
+```
+
+Contents:
+
+```dotenv
+GOTIFY_URLS=http://gotify
+SECNTFY_TOKENS=NTFY-DEVICE-xxxxx
+GOTIFY_CLIENT_TOKENS=CLe.xxxx
+```
+
+3. **Deploy or update containers**
 
 ```bash
 cd /srv/gotify
-docker compose down --remove-orphans  # optional
 sudo docker compose pull
-sudo docker compose up -d
+sudo docker compose up -d --remove-orphans
+sudo docker compose ps
 ```
 
-3. **Configure Nginx reverse proxy**
+Quick health check:
+
+```bash
+curl -fsS http://127.0.0.1:8180/health
+curl -I http://127.0.0.1:2080/
+```
+
+Expected:
+
+- Gotify health returns JSON with `"green"`
+- iGotify may return `404` on `/` and that is fine; the container just needs to be up
+
+4. **Configure Nginx reverse proxy**
 
 Create or edit `/etc/nginx/sites-available/ntfy.beachlab.org` with:
 
@@ -100,19 +125,19 @@ server {
 }
 ```
 
-4. **Reload and test Nginx**
+5. **Reload and test Nginx**
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-5. **iOS app setup**
+6. **iOS app setup**
 
 - Gotify Server URL: `https://ntfy.beachlab.org`
 - Notification Assist URL: `https://ntfy.beachlab.org/igotify/`
 
-6. **Get token in iOS app and test**
+7. **Get token in iOS app and test**
 
 Obtain a token in the iOS app, then test sending a notification:
 
@@ -123,7 +148,7 @@ curl -s -X POST "https://ntfy.beachlab.org/message" \
   -F "message=Hola desde APNs"
 ```
 
-7. **Setup notifier script and environment variables**
+8. **Setup notifier script and environment variables**
 
 Create environment variables file `/etc/notify.env` (replace tokens accordingly):
 
@@ -182,3 +207,40 @@ To send notifications that bypass Do Not Disturb mode, use a higher priority (e.
 ```bash
 notify "Backup failed ❌" "Disk full" 10
 ```
+
+## Operations
+
+### Manual update
+
+The stack does **not** auto-update just because it uses `:latest`. Pull and recreate it manually:
+
+```bash
+cd /srv/gotify
+sudo docker compose pull
+sudo docker compose up -d --remove-orphans
+sudo docker compose ps
+```
+
+### Weekly automatic update
+
+Install updater script:
+
+```bash
+sudo tee /usr/local/bin/update-gotify-stack.sh >/dev/null <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /srv/gotify
+docker compose pull
+docker compose up -d --remove-orphans
+EOF
+sudo chmod 755 /usr/local/bin/update-gotify-stack.sh
+```
+
+Root cron:
+
+```cron
+40 4 * * 0 /usr/local/bin/update-gotify-stack.sh >> /var/log/gotify-stack-update.log 2>&1
+```
+
+This host uses that exact weekly cron as of `2026-07-02`.

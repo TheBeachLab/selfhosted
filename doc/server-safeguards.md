@@ -124,6 +124,10 @@ Files:
 - `/etc/systemd/system/egpu-watchdog.service`
 - `/etc/systemd/system/egpu-watchdog.timer`
 - `/etc/egpu-watchdog.env`
+- `/usr/local/bin/host-heartbeat-log.sh`
+- `/etc/systemd/system/host-heartbeat-log.service`
+- `/etc/systemd/system/host-heartbeat-log.timer`
+- `/var/log/host-heartbeat.log`
 
 Behavior:
 
@@ -133,15 +137,33 @@ Behavior:
   - restart `bolt`
   - `echo 1 > /sys/bus/pci/rescan`
   - try `modprobe nvidia*`
-- if still missing, sends iGotify alert (with cooldown)
-- sends recovery notification when NVIDIA reappears
+- if still missing, sends one iGotify alert on the `ok -> missing` transition
+- sends one recovery notification on the `missing -> ok` transition
+- does not send repeating reminders while the device stays missing
+- a separate heartbeat log records regular samples plus explicit transition events
 
 Current env:
 
 ```bash
 EGPU_NAME=Razer Core X
-COOLDOWN_S=1800
 ```
+
+Current timer cadence:
+
+- `egpu-watchdog.timer`: every 1 minute
+- `host-heartbeat-log.timer`: every 1 minute
+
+Heartbeat transition lines look like:
+
+```text
+event=egpu_lost last_ok=2026-06-15T05:03:29Z detected_at=2026-06-15T05:04:33Z
+event=egpu_recovered missing_since=2026-06-15T05:04:33Z detected_at=2026-06-15T05:18:12Z
+```
+
+Operational note:
+
+- this is still polling rather than instant event capture
+- practical precision for loss detection is about 1 minute
 
 ## 6) Reverse-proxy consolidation for admin services
 
@@ -280,10 +302,13 @@ systemctl show rag-library-ingest --property=MemoryMax,MemoryHigh,CPUQuotaPerSec
 systemctl show whisper-web --property=MemoryMax,MemoryHigh,CPUQuotaPerSecUSec,OnFailure
 
 # timers
-systemctl list-timers --all | grep -E 'system-load-guard|egpu-watchdog'
+systemctl list-timers --all | grep -E 'system-load-guard|egpu-watchdog|host-heartbeat-log'
 
 # run one eGPU check manually
 sudo /usr/local/bin/egpu-watchdog.sh --verbose
+
+# inspect eGPU heartbeat history
+tail -n 20 /var/log/host-heartbeat.log
 
 # check certs
 sudo certbot certificates

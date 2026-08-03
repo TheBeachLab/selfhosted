@@ -12,6 +12,7 @@
 - [Usage](#usage)
 - [Operations](#operations)
 - [Why on-demand](#why-on-demand)
+- [Thunderbolt Hot-Unplug Caveat](#thunderbolt-hot-unplug-caveat)
 
 <!-- vim-markdown-toc -->
 
@@ -227,38 +228,115 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 - ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
 - ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
 
-## Recovery after dead PSU/GPU
+## Thunderbolt Hot-Unplug Caveat
 
-**Context:** The Razer Core X PSU died on 2026-03-04. The following services were disabled to avoid continuous errors and freezes.
+**Observed on `thebeachlab` (NUC11TNKi3 + Razer Core X + RTX 2070 SUPER, June 2026):**
 
-### Current state (no GPU)
+- Normal boot with eGPU attached works
+- `boltctl` shows `Razer Core X` as `authorized`
+- `nvidia-smi` works
+- GPU services (`comfyui`, `qwen3-tts`, `whisper-web`) can use the card normally
 
-| Service | State |
-|---|---|
-| `whisper-web` | disabled |
-| `qwen3-tts` | disabled |
-| `comfyui` | disabled |
-| `nvidia-persistenced` | disabled |
-| `egpu-watchdog` | disabled |
-| Telegraf `inputs.nvidia_smi` | commented out |
+**What breaks it reliably:**
 
-### Steps to restore (new GPU/PSU installed)
+- Unplugging the Thunderbolt cable while the eGPU is live
+- Reconnecting the cable in the same runtime session
 
-**1. Verify the GPU is visible:**
+**What Linux reports when it breaks:**
+
+```text
+thunderbolt 0-3: device disconnected
+pcieport 0000:00:07.0: pciehp: Slot(0): Link Down
+NVRM: Xid (PCI:0000:04:00): 79, GPU has fallen off the bus.
+NVRM: Xid (PCI:0000:04:00): 154, GPU recovery action changed ... GPU Reset Required
+```
+
+**Typical broken-state symptoms after reconnect:**
+
+- Core X light comes back on
+- `boltctl` may return to `authorized`
+- `lspci` may still list the NVIDIA device, sometimes as `rev ff`
+- `nvidia-smi` fails with `No devices were found`
+- Server fan can ramp hard during the failure window
+
+**Operational rule:**
+
+- Do **not** hot-unplug or hot-replug the Thunderbolt cable while GPU workloads are active
+- Treat the eGPU cable as effectively non-hot-swappable for production use on this host
+
+**Recovery:**
+
+1. Stop touching the Thunderbolt cable
+2. Reboot the host
+3. Re-check:
 
 ```bash
+boltctl list
 lspci | grep -i nvidia
 nvidia-smi
 ```
 
-If `nvidia-smi` fails, load the driver manually:
+If the reboot path does not recover cleanly, escalate to full power-off / power-on.
+
+**Notes from local testing:**
+
+- Updating BIOS from `0073` to `0078` improved overall stability but did **not** make hot-unplug safe
+- `pcie_port_pm=off` is kept as part of the stable baseline
+- On 2026-07-18, `pcie_aspm=off` was added alongside it after confirming that
+  both Thunderbolt root ports still had ASPM L1 enabled. GRUB was regenerated
+  and validated; a cold boot with the Core X connected is required to activate
+  and verify the change
+- Pre-change GRUB backup: `/etc/default/grub.pre-aspm-20260718`
+- The issue matches known Linux/NVIDIA/Thunderbolt reports around `Xid 79` and "fallen off the bus"
+
+## Recovery after dead PSU/GPU
+
+**Historical context:** The Razer Core X PSU died on 2026-03-04, so GPU services were disabled for a while to avoid continuous errors and freezes.
+
+### Current state (restored on 2026-06-10)
+
+| Service | State |
+|---|---|
+| `whisper-web` | enabled + active |
+| `qwen3-tts` | enabled + active |
+| `comfyui` | enabled + active |
+| `nvidia-persistenced` | enabled + active |
+| `egpu-watchdog.timer` | enabled + active |
+| Telegraf `inputs.nvidia_smi` | enabled |
+
+Current runtime after restore:
+
+- eGPU: `Razer Core X` authorized via Thunderbolt
+- GPU: `NVIDIA GeForce RTX 2070 SUPER`
+- Driver: `595.71.05`
+- `nvidia-smi`: OK
+- Persistence mode: ON
+
+### Restore procedure (if the eGPU disappears again)
+
+**1. Prefer cold boot, not hot-plug:**
+
+1. Power off host
+2. Connect/power the Razer Core X
+3. Wait 5-10 seconds
+4. Boot host
+
+**2. Verify the GPU is visible:**
+
+```bash
+boltctl
+lspci | grep -i nvidia
+nvidia-smi
+```
+
+If `nvidia-smi` fails, try:
 
 ```bash
 sudo modprobe nvidia
-nvidia-smi   # should show the GPU without ERR!
+nvidia-smi
 ```
 
-**2. Re-enable GPU services:**
+**3. Re-enable GPU services if they were disabled:**
 
 ```bash
 sudo systemctl enable --now nvidia-persistenced
@@ -268,13 +346,13 @@ sudo systemctl enable --now comfyui
 sudo systemctl enable --now egpu-watchdog.timer
 ```
 
-**3. Re-enable Telegraf monitoring:**
+**4. Re-enable Telegraf monitoring if needed:**
 
-Edit `/etc/telegraf/telegraf.d/nuc-timescale.conf` and uncomment:
+Ensure `/etc/telegraf/telegraf.d/nuc-timescale.conf` contains:
 
 ```toml
 [[inputs.nvidia_smi]]
-  bin_path = "/usr/bin/nvidia-smi"
+  bin_path = "/usr/local/bin/nvidia-smi-safe.sh"
   timeout = "5s"
 ```
 
@@ -285,7 +363,26 @@ sudo systemctl restart telegraf
 sudo journalctl -u telegraf -n 10 --no-pager | grep -E "Error|nvidia"
 ```
 
-**4. Verify telemetry:**
+**5. Verify watchdog + heartbeat instrumentation:**
+
+```bash
+systemctl status egpu-watchdog.timer host-heartbeat-log.timer --no-pager
+tail -n 20 /var/log/host-heartbeat.log
+```
+
+Expected behavior:
+
+- one alert when the eGPU is lost
+- one alert when it recovers
+- no repeating half-hour alerts while it remains missing
+- heartbeat log includes explicit transition lines such as:
+
+```text
+event=egpu_lost last_ok=2026-06-15T05:03:29Z detected_at=2026-06-15T05:04:33Z
+event=egpu_recovered missing_since=2026-06-15T05:04:33Z detected_at=2026-06-15T05:18:12Z
+```
+
+**6. Verify telemetry:**
 
 ```bash
 DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | python3 -m json.tool | grep gpu
@@ -293,10 +390,26 @@ DRY_RUN=true bash /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh | 
 
 The `gpu` field should show real temp/util values instead of `null`.
 
-**5. Quick service test:**
+**7. Quick service test:**
 
 ```bash
-curl -s http://localhost:8060/health   # whisper-web
-curl -s http://localhost:8070/health   # qwen3-tts
-curl -s http://localhost:8188/         # comfyui
+curl -I http://localhost:8060/      # whisper-web
+curl -I http://localhost:8070/      # qwen3-tts
+curl -I http://localhost:8188/      # comfyui
+curl http://localhost:8060/openapi.json | jq '.info'
+curl http://localhost:8070/openapi.json | jq '.info'
+```
+
+Note: `whisper-web` and `qwen3-tts` do not expose `/health`; use `/`, `/docs`, or `/openapi.json` instead.
+
+### Log checks
+
+```bash
+journalctl -k -b | grep -iE 'NVRM|Xid|nvidia|thunderbolt|bolt'
+```
+
+On the 2026-06-10 restore there were no `Xid` errors after boot. Only one benign-looking line appeared during bring-up:
+
+```text
+nvidia-gpu 0000:04:00.3: i2c timeout error e0000000
 ```
