@@ -70,3 +70,23 @@ tmux new-session -A -s watson 'openclaw tui --session main --deliver'
 
 - If Gateway is down, start it first: `openclaw gateway start`
 - Detach from tmux without stopping TUI: `Ctrl+b` then `d`
+
+## Recovery after reboot
+
+The gateway and the TUI session have separate lifecycles. A running gateway does
+not prove that the persistent tmux session exists.
+
+Check both before changing the gateway configuration:
+
+```bash
+openclaw gateway status
+tmux ls
+```
+
+If the gateway is healthy but the tmux session is absent, recreate only the TUI
+session:
+
+```bash
+tmux new-session -d -s watson 'openclaw tui --session main --deliver'
+tmux ls
+```

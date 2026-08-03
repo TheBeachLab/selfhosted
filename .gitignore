@@ -2,3 +2,4 @@
 ignore
 .DS_Store
 .vscode
+.playwright-mcp/

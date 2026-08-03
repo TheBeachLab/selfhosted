@@ -12,7 +12,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 ## Current infrastructure
 
-**Server:** Intel NUC 11, 16 GB RAM, 1 TB NVMe. Ubuntu Server. Connected via 1 Gbps symmetric FTTH (dynamic IP). eGPU (Razer Core X + RTX 2070 Super) currently offline — PSU dead since 2026-03-04.
+**Server:** Intel NUC 11, 16 GB RAM, 1 TB NVMe. Ubuntu Server. Connected via 1 Gbps symmetric FTTH (dynamic IP). The external GPU is currently unavailable under Linux because its Thunderbolt/PCIe link is not coming up. An operator report that the enclosure powers on under macOS supersedes the earlier unverified PSU-failure note.
 
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
 
@@ -74,4 +74,4 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Minecraft server](doc/minecraft.md)
 - [Nextcloud](doc/cloud.md)
 - [Mail server (Postfix)](doc/mail.md) `[INCOMPLETE]`
-- [OpenHab](doc/openhab.md) `[ARCHIVED]`
+- [openHAB (BTicino/OpenWebNet and Apple Home)](doc/openhab.md)

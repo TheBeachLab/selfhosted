@@ -243,3 +243,24 @@ Verify after reboot — no Xid 119 entries should appear in `journalctl -k`.
 | `nvidia-smi` returns `[N/A]` / `[GPU requires reset]` | Same — GPU stuck | Reboot |
 | Xid 119 recurring every few days | GSP firmware bug on Thunderbolt | Apply Fix 2 |
 | GPU goes to sleep between jobs, won't wake | Persistence mode off | Apply Fix 1 |
+| `boltctl` reports the enclosure as disconnected and `lspci` has no NVIDIA device | Thunderbolt/PCIe link is not established; NVIDIA cannot initialize a device that PCIe does not expose | Check firmware, BIOS Thunderbolt settings, cable and enclosure power before changing NVIDIA drivers |
+
+### Thunderbolt link diagnosis
+
+When the enclosure is disconnected in `boltctl` and no NVIDIA device appears in
+`lspci`, treat `nvidia-smi` failure as a downstream symptom. Driver changes will
+not repair a missing PCIe device.
+
+An operator check on 2026-06-13 found the installed firmware newer than the
+proposed downgrade target and found no newer system firmware through the host's
+normal update service. This is an internal observation, not externally verified
+evidence about the cause. Do not downgrade solely to troubleshoot this symptom.
+
+Follow the vendor's current guidance instead:
+
+- [ASUS NUC BIOS update and recovery instructions](https://www.asus.com/support/faq/1052506/)
+- [ASUS NUC Thunderbolt device troubleshooting](https://www.asus.com/support/faq/1052760/)
+
+ASUS advises against BIOS downgrades and recommends checking that the
+Thunderbolt controller is enabled, using current firmware and drivers, and
+testing with a certified short Thunderbolt cable.
