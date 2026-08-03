@@ -38,10 +38,14 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Transmission Daemon (NordVPN)](doc/transmission.md)
 - [Mumble voice server](doc/mumble.md)
 - [iOS Push Notifications (iGotify)](doc/igotify.md)
-- [n8n automation](doc/n8n.md)
+- [n8n automation](doc/n8n.md) `[REMOVED]`
 - [Auto USB copy](doc/transfer2usb.md)
 - [Node.js / PM2](doc/nodejs.md)
 - [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
+- [OpenClaw runtime maintenance](doc/watson-openclaw-runtime.md)
+
+### Monitoring
+- [Grafana (TimescaleDB dashboards)](doc/grafana.md)
 
 ### IoT and telemetry
 - [IoT (Mosquitto MQTT)](doc/iot.md)

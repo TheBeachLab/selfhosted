@@ -143,6 +143,26 @@ IMU reset: publish any message to `bluetti/cmd/<device_id>/imu_reset` to zero th
 | `starlink_tilt_deg` | float | Physical tilt (°) |
 | `starlink_alerts` | string | Comma-separated alerts, or `none` |
 
+### OBD2
+
+| Topic | Type | Notes |
+|---|---|---|
+| `obd_rpm` | float | Engine RPM |
+| `obd_speed_kmh` | float | Vehicle speed (km/h) |
+| `obd_throttle_pct` | float | Throttle position (%) |
+| `obd_engine_load_pct` | float | Calculated engine load (%) |
+| `obd_boost_kpa` | float | Turbo boost pressure (kPa) |
+| `obd_coolant_temp_c` | float | Coolant temperature (C) |
+| `obd_intake_temp_c` | float | Intake air temperature (C) |
+| `obd_oil_temp_c` | float | Oil temperature (C) |
+| `obd_fuel_level_pct` | float | Fuel level (%) |
+| `obd_fuel_rail_pressure_kpa` | float | Fuel rail pressure (kPa) |
+| `obd_maf_gps` | float | Mass air flow (g/s) |
+| `obd_runtime_s` | int | Engine runtime (s) |
+| `obd_voltage_v` | float | OBD adapter voltage (V) |
+| `obd_dtc_count` | int | Diagnostic trouble code count |
+| `obd_connected` | string | `true`/`false` → boolean |
+
 ### Combined JSON topics (not ingested to DB)
 
 - `environment` — co2, temp, humidity, pressure, altitude_m, baro_altitude_m
@@ -150,6 +170,10 @@ IMU reset: publish any message to `bluetti/cmd/<device_id>/imu_reset` to zero th
 - `imu` — combined IMU JSON (includes raw accel/gyro)
 - `navigation` — lat, lon, speed, heading, altitude, pitch, roll, yaw_rate
 - `starlink` — full JSON with all Starlink fields
+- `obd` — combined OBD JSON
+- `obd_engine` — engine-specific OBD JSON
+- `obd_status` — OBD connection status JSON
+- `obd_dtcs` — diagnostic trouble codes JSON array
 
 ### Event topics
 
@@ -160,7 +184,7 @@ IMU reset: publish any message to `bluetti/cmd/<device_id>/imu_reset` to zero th
 
 Database: `sensors`. Table: `public.bluetti_stats` (TimescaleDB hypertable, 1-day chunks).
 
-43 columns total: 2 keys + 10 power + 4 environment + 12 GPS/IMU + 14 Starlink + 1 extra (`starlink_ping_ms_avg`).
+58 columns total: 2 keys + 10 power + 4 environment + 12 GPS/IMU + 14 Starlink + 1 extra (`starlink_ping_ms_avg`) + 15 OBD2.
 
 ```sql
 -- Current schema (2026-03-29)
@@ -213,7 +237,23 @@ CREATE TABLE public.bluetti_stats (
   -- IMU
   imu_pitch_deg     real,
   imu_roll_deg      real,
-  imu_yaw_rate_dps  real
+  imu_yaw_rate_dps  real,
+  -- OBD2
+  obd_rpm               real,
+  obd_speed_kmh         real,
+  obd_throttle_pct      real,
+  obd_engine_load_pct   real,
+  obd_boost_kpa         real,
+  obd_coolant_temp_c    real,
+  obd_intake_temp_c     real,
+  obd_oil_temp_c        real,
+  obd_fuel_level_pct    real,
+  obd_fuel_rail_pressure_kpa real,
+  obd_maf_gps           real,
+  obd_runtime_s         integer,
+  obd_voltage_v         real,
+  obd_dtc_count         integer,
+  obd_connected         boolean
 );
 
 SELECT create_hypertable('bluetti_stats', 'time',
@@ -249,7 +289,11 @@ SELECT DISTINCT ON (device_id)
   gps_lat, gps_lon, gps_speed_kmh, gps_altitude_m,
   gps_satellites, gps_fix, heading_deg,
   altitude_m, baro_altitude_m,
-  imu_pitch_deg, imu_roll_deg, imu_yaw_rate_dps
+  imu_pitch_deg, imu_roll_deg, imu_yaw_rate_dps,
+  obd_rpm, obd_speed_kmh, obd_throttle_pct, obd_engine_load_pct,
+  obd_boost_kpa, obd_coolant_temp_c, obd_intake_temp_c, obd_oil_temp_c,
+  obd_fuel_level_pct, obd_fuel_rail_pressure_kpa, obd_maf_gps,
+  obd_runtime_s, obd_voltage_v, obd_dtc_count, obd_connected
 FROM bluetti_stats
 ORDER BY device_id, time DESC;
 
@@ -419,6 +463,7 @@ When new sensors are added to pibot1:
 
 ## Changelog
 
+- **2026-04-02:** Added 15 OBD-II telemetry columns. A dedicated collector publishes scalar vehicle diagnostics through an ELM327-compatible adapter; the public runbook intentionally omits vehicle and device identifiers.
 - **2026-03-29:** Added 12 GPS/IMU columns (gps_lat, gps_lon, gps_speed_kmh, gps_altitude_m, gps_satellites, gps_fix, heading_deg, altitude_m, baro_altitude_m, imu_pitch_deg, imu_roll_deg, imu_yaw_rate_dps). RPi now publishes IMU at 2–5 Hz with 100-sample averaging, GPS rounded to 2 decimals for privacy, IMU reset via MQTT command.
 - **2026-03-28:** Added sensor columns (co2_ppm, temperature_c, humidity_pct, pressure_hpa) and 14 Starlink columns. Starlink watcher service + WiFi auto-reconnect on RPi.
 - **2026-03-25:** Initial pipeline — Bluetti power fields, ingest script, hypertable, PostgREST exposure.
