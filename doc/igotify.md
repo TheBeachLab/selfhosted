@@ -19,7 +19,8 @@ Create or edit `/srv/gotify/docker-compose.yml` with the following content:
 ```yaml
 services:
   gotify:
-    image: gotify/server:latest
+    # Keep this pinned until iGotify supports Gotify 3.x.
+    image: gotify/server:2.9.1
     container_name: gotify
     restart: unless-stopped
     volumes:
@@ -210,9 +211,28 @@ notify "Backup failed ❌" "Disk full" 10
 
 ## Operations
 
+### iGotify compatibility
+
+Keep Gotify pinned to `2.9.1` while the installed iGotify app does not support
+Gotify 3.x. With Gotify `3.0.0`, APNs notifications can still arrive while the
+Notifications view remains stuck loading because the app cannot complete the
+new authenticated message-list workflow.
+
+Upstream references:
+
+- iGotify incompatibility report and `2.9.1` workaround:
+  <https://github.com/androidseb25/iGotify-Notification-Assistent/issues/250>
+- Gotify `3.0.0` breaking changes:
+  <https://github.com/gotify/server/releases/tag/v3.0.0>
+
+Before upgrading beyond `2.9.1`, confirm compatibility in the upstream iGotify
+project and take a consistent backup of `/srv/gotify/gotify-data` while the
+Gotify container is stopped.
+
 ### Manual update
 
-The stack does **not** auto-update just because it uses `:latest`. Pull and recreate it manually:
+The stack does **not** move to another Gotify version while the image is pinned.
+Pulling and recreating only installs a refreshed image for the configured tag:
 
 ```bash
 cd /srv/gotify
@@ -221,7 +241,7 @@ sudo docker compose up -d --remove-orphans
 sudo docker compose ps
 ```
 
-### Weekly automatic update
+### Weekly automatic refresh
 
 Install updater script:
 
@@ -243,4 +263,5 @@ Root cron:
 40 4 * * 0 /usr/local/bin/update-gotify-stack.sh >> /var/log/gotify-stack-update.log 2>&1
 ```
 
-This host uses that exact weekly cron as of `2026-07-02`.
+This host uses that exact weekly cron as of `2026-07-02`. The pinned Gotify tag
+prevents this job from crossing into an incompatible major version.
