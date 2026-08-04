@@ -179,9 +179,20 @@ diskutil unmount force ~/mnt/ml
 **Author:** Mr. Watson 🦄
 **Date:** 2026-03-03
 
-### Problem: recurring GPU firmware crash (Xid 62/119/154)
+### Historical Xid notes, not a confirmed root cause
 
-RTX 2070 Super via Thunderbolt 3 (Razer Core X) is bandwidth-limited to 8 Gb/s vs 32+ Gb/s native PCIe. Under heavy inference load the GPU System Processor (GSP) firmware can timeout on RPC calls, leaving the GPU in an unrecoverable ERR! state until reboot.
+Older internal notes attribute the runtime failure to a GSP firmware crash. That
+attribution is not externally verified and must not be treated as a diagnosis:
+Xid values are diagnostic starting points, not root-cause identifiers. NVIDIA
+documents Xid 154 as a report of the recovery action required by another Xid,
+and recommends preserving an `nvidia-bug-report` for driver investigation.
+Sources: [NVIDIA Xid error guide](https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html) and
+[NVIDIA GPU debug guidelines](https://docs.nvidia.com/deploy/gpu-debug-guidelines/index.html).
+
+The known operational symptom is narrower: the RTX 2070 Super in the Razer Core
+X enumerates and works after boot, then may hang or disappear after minutes or
+hours of GPU workload. The enclosure being powered off currently is expected;
+`boltctl: disconnected` in that state is not failure evidence.
 
 Signature in `dmesg`/`journalctl -k`:
 
@@ -199,9 +210,11 @@ nvidia-smi
 sudo journalctl -k | grep -i "NVRM\|Xid"
 ```
 
-### Fix 1: keep GPU awake (nvidia-persistenced)
+### Existing setting 1: keep GPU awake (`nvidia-persistenced`)
 
-Prevents GPU from entering low-power sleep between jobs (avoids a separate cold-start crash):
+The host has this setting. It keeps the driver state initialized between jobs,
+but it has not been proven to prevent the runtime failure and cannot repair a
+lost PCIe/Thunderbolt link:
 
 ```bash
 sudo mkdir -p /etc/systemd/system/nvidia-persistenced.service.d
@@ -223,9 +236,12 @@ sudo systemctl restart nvidia-persistenced
 nvidia-smi -q | grep "Persistence Mode"   # should show: Enabled
 ```
 
-### Fix 2: disable GSP firmware (eliminates Xid 119)
+### Existing setting 2: disable GSP firmware
 
-Moves GPU management from the GSP chip to the CPU driver. Eliminates RPC timeouts entirely. No performance impact on CUDA workloads.
+The host already has this setting in `/etc/modprobe.d/nvidia-no-gsp.conf`. It
+must be verified with the Core X online after each driver change. Do not claim
+that it eliminates a particular Xid or that it fixes a bus-loss event without a
+reproduced before/after test:
 
 ```bash
 echo 'options nvidia NVreg_EnableGpuFirmware=0' | sudo tee /etc/modprobe.d/nvidia-no-gsp.conf
@@ -233,16 +249,17 @@ sudo update-initramfs -u
 sudo reboot
 ```
 
-Verify after reboot — no Xid 119 entries should appear in `journalctl -k`.
+Verify the module setting after reboot while the Core X is online. The absence of
+a particular Xid is not proof that the setting fixed the runtime failure.
 
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `ERR!` in `nvidia-smi` | GPU in Xid 154 state | Reboot |
-| `nvidia-smi` returns `[N/A]` / `[GPU requires reset]` | Same — GPU stuck | Reboot |
-| Xid 119 recurring every few days | GSP firmware bug on Thunderbolt | Apply Fix 2 |
-| GPU goes to sleep between jobs, won't wake | Persistence mode off | Apply Fix 1 |
+| `ERR!` in `nvidia-smi` | Driver reports an unhealthy GPU | Preserve the first Xid/AER evidence, then reset or reboot as required |
+| `nvidia-smi` returns `[N/A]` / `[GPU requires reset]` | GPU recovery is required | Preserve the first Xid/AER evidence, then reset or reboot as required |
+| Xid 119 recurring | Driver/GSP event; root cause unproven here | Preserve `nvidia-bug-report` and correlate with kernel/PCIe logs |
+| GPU goes to sleep between jobs, won't wake | Persistence mode off | Enable `nvidia-persistenced` and retest |
 | `boltctl` reports the enclosure as disconnected and `lspci` has no NVIDIA device | Thunderbolt/PCIe link is not established; NVIDIA cannot initialize a device that PCIe does not expose | Check firmware, BIOS Thunderbolt settings, cable and enclosure power before changing NVIDIA drivers |
 
 ### Thunderbolt link diagnosis
@@ -341,7 +358,21 @@ lspci -nn | grep -i nvidia
 ```bash
 nvidia-smi
 journalctl -k -b --since "$start" --no-pager | grep -Ei 'NVRM|Xid|fallen off|thunderbolt|pciehp|Link Down'
+sudo nvidia-bug-report.sh --safe-mode --extra-system-data
 ```
+
+`nvidia-bug-report.sh` can take up to an hour; it is the NVIDIA-recommended
+collection for a driver issue. The current journal keeps only recent boots, so
+copy the resulting archive off the host before rebooting. A historical telemetry
+cut between 2026-06-14 21:35 and 21:53 UTC is insufficient to identify the
+cause: it has no retained Xid/AER record, and the Core X may have been powered
+off or disconnected during that interval.
+
+The current telemetry publisher calls `/usr/local/bin/nvidia-smi-safe.sh`. That
+wrapper times out `nvidia-smi` after five seconds and emits `gpu: null` both
+when the enclosure is intentionally off and when the driver query fails. Treat
+`gpu: null` as a prompt to inspect `lspci`, `boltctl`, and the kernel log; it is
+not by itself evidence of a runtime eGPU fault.
 
 3. Reboot once into `Advanced options for Ubuntu` ->
    `Ubuntu, with Linux 6.8.0-134-generic`; this keeps NVIDIA `595.84` fixed

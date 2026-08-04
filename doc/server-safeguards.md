@@ -142,6 +142,14 @@ Behavior:
 - does not send repeating reminders while the device stays missing
 - a separate heartbeat log records regular samples plus explicit transition events
 
+Scope limit, verified on 2026-08-04: this watchdog treats a PCI-visible NVIDIA
+device as healthy. It does not execute `nvidia-smi`, inspect Xid events, or
+detect a driver hang where the GPU stays visible in `lspci`. It also deliberately
+skips automatic recovery while `boltctl` says `disconnected`, which avoids
+rescan/restart attempts when the Core X is intentionally powered off. Use the
+runtime capture sequence in [GPU setup](gpu.md#current-research-and-runtime-stability-test-2026-08-04)
+for a workload-induced hang.
+
 Current env:
 
 ```bash

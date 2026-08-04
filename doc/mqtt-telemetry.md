@@ -116,6 +116,14 @@ LIVE_TOPIC='alpha/stats'
 
 ### `scripts/publish_telemetry.sh`
 
+Deployment note (verified on `thebeachlab`, 2026-08-04): the live publisher uses
+`/usr/local/bin/nvidia-smi-safe.sh`, rather than invoking `nvidia-smi` directly.
+The wrapper returns no GPU payload when `/dev/nvidiactl` or the NVIDIA PCI device
+is absent, and applies a five-second timeout to a driver query. Consequently a
+stored `gpu: null` represents either an intentionally off/disconnected enclosure
+or a failed/slow driver query; it must be correlated with `lspci`, `boltctl`, and
+kernel Xid/AER logs.
+
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
