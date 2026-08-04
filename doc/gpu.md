@@ -264,3 +264,122 @@ Follow the vendor's current guidance instead:
 ASUS advises against BIOS downgrades and recommends checking that the
 Thunderbolt controller is enabled, using current firmware and drivers, and
 testing with a certified short Thunderbolt cable.
+
+### Current research and next physical test (2026-08-04)
+
+**Externally verified:** ASUS still lists BIOS Full Package Update `0078`
+(2024-10-28) as the newest BIOS package for `NUC11TNKi3`; do not search for or
+install a newer BIOS as an eGPU remedy. The newer `NUC Firmware Integrator
+Tool` shown on the same support page is a tool for building custom firmware
+images, not a newer system or Thunderbolt controller firmware release.
+Source: [ASUS NUC11TNKi3 BIOS and firmware support](https://www.asus.com/us/supportonly/nuc11tnki3/helpdesk_bios/).
+
+**Verified on the host (2026-08-04; internal operational observation):**
+
+- BIOS is `TNTGL357.0078.2024.0930.2018`.
+- The running kernel command line includes both `pcie_port_pm=off` and
+  `pcie_aspm=off`.
+- Both Thunderbolt domains report `security=none`; the Linux kernel defines
+  this as automatic device connection, so authorization is not currently
+  blocking PCIe tunneling. At the time of this observation the Core X was
+  deliberately powered off, so its absence from the live Thunderbolt topology,
+  `boltctl` reporting it as `disconnected`, and the lack of an NVIDIA PCIe
+  device are expected and are **not diagnostic evidence of a current fault**.
+
+The Linux meaning of `security=none` is documented in
+[USB4 and Thunderbolt](https://docs.kernel.org/admin-guide/thunderbolt.html).
+Do not change the BIOS security level to `DP++ only`: the Visual BIOS glossary
+states that it disables PCIe tunneling, which an eGPU requires. Source:
+[Intel NUC Visual BIOS Glossary](https://kmpic.asus.com/images/nuc/NUC-Visual-BIOS-Glossary.pdf).
+
+The next test must be done only after first checking the kernel/NVIDIA version
+timeline, because the eGPU reportedly ran reliably for an extended period and
+a later kernel or NVIDIA driver regression is a plausible but unverified
+explanation. Do not infer a current Thunderbolt-link failure while the Core X
+is powered off.
+
+#### Kernel/NVIDIA regression test
+
+**Internal package-history evidence (not externally verified as a root
+cause):**
+
+| Date | Change | What it proves |
+|---|---|---|
+| 2026-06-10 | NVIDIA `595.71.05` installed | A local restore record from the same day says `595.71.05`, the Core X, and `nvidia-smi` worked. This is a useful baseline, not proof that every later failure is a driver regression. |
+| 2026-06-12 | HWE kernel `6.8.0-124` installed | The host moved from the 5.15 GA series to HWE 6.8. |
+| 2026-07-10 | HWE kernel `6.8.0-134` installed | This kernel and its matching NVIDIA 595 module remain installed. |
+| 2026-07-24 | NVIDIA `595.71.05` -> `595.84` and HWE `6.8.0-134` -> `6.8.0-136` | Two variables changed together, so the history cannot identify a culprit. |
+
+Ubuntu describes `595.84` only as a new upstream NVIDIA release; no official
+release note found in this research ties it to a Core X, Tiger Lake, or
+Thunderbolt regression. Source:
+[Ubuntu Jammy change notice for 595.84](https://lists.ubuntu.com/archives/jammy-changes/2026-July/047368.html).
+This absence is not proof that the package is sound on this host.
+
+Test the still-installed `6.8.0-134-generic` before downgrading NVIDIA:
+
+1. With the Core X powered and attached before boot, establish a baseline on
+   the default `6.8.0-136-generic` boot:
+
+```bash
+uname -r
+nvidia-smi
+lspci -nn | grep -i nvidia
+journalctl -k -b --no-pager | grep -Ei 'NVRM|Xid|thunderbolt|pciehp'
+```
+
+2. Reboot once into `Advanced options for Ubuntu` ->
+   `Ubuntu, with Linux 6.8.0-134-generic`; this keeps NVIDIA `595.84` fixed
+   and changes only the kernel. The normal default remains `6.8.0-136`, so a
+   later ordinary reboot returns to the current kernel.
+3. Run the same commands and compare the results.
+
+Interpretation:
+
+- `6.8.0-134` works and `6.8.0-136` fails: a 6.8.136 regression or its
+  interaction with this host is plausible. Keep 6.8.134 only after confirming
+  the repeatable A/B result, then report it to Ubuntu with both boot logs.
+- both fail: kernel 6.8.136 alone is not implicated; test the known-good
+  physical boot sequence and only then plan a controlled NVIDIA 595.71.05
+  rollback.
+- both work: no persistent regression is demonstrated; retain the current
+  packages and treat any future failure as an event that needs its boot logs.
+
+Do not downgrade NVIDIA before this A/B test: the current APT sources offer
+only `595.84`, so rolling back to `595.71.05` would require deliberately
+obtaining and pinning a matched package set. That is a larger, separate change
+and should be done only if the kernel test does not explain the issue.
+
+If the version timeline does not identify a likely regression, reset and test
+the physical Thunderbolt chain:
+
+1. Shut down the NUC completely. Do not hot-unplug/hot-replug while Linux is
+   running.
+2. Switch off the Razer Core X, unplug its mains cable, and leave both systems
+   off for at least 30 seconds. Razer specifies this power cycle to refresh
+   detection after Thunderbolt problems. Source:
+   [Razer Core power-cycle instructions](https://mysupport.razer.com/app/answers/detail/a_id/1924/).
+3. Reconnect power to the Core X, connect it to the NUC before boot, wait a few
+   seconds, then power on the NUC. Use a certified Thunderbolt 3 cable no
+   longer than 60 cm; the supplied Core X cable is 500 mm. Sources:
+   [ASUS NUC Thunderbolt troubleshooting](https://www.asus.com/ca-en/support/faq/1052760/) and
+   [Razer Core X specifications](https://mysupport.razer.com/app/answers/detail/a_id/3778/).
+4. In Visual BIOS, confirm `Advanced > Devices > Onboard Devices > Thunderbolt
+   Controller` is enabled. Do not alter the security level if Linux continues
+   to show `security=none`; it is already the auto-connect setting.
+5. After boot, verify in this order:
+
+```bash
+boltctl list
+lspci -nn | grep -i nvidia
+nvidia-smi
+```
+
+If step 3 still leaves the Core X `disconnected`, repeat the same cold-boot
+test with the other Thunderbolt port and a known-good certified short cable.
+That port/cable recommendation is an inference from the verified fact that no
+live Thunderbolt device is detected; it is not an ASUS model-specific repair
+procedure. If the Core X still works with macOS but neither NUC port sees it
+after this controlled test, the remaining likely fault domain is the NUC
+Thunderbolt hardware/firmware path and ASUS support is the appropriate
+escalation.
