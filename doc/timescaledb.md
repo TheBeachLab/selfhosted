@@ -555,8 +555,8 @@ sudo journalctl -u telegraf -n 50 --no-pager
 ```bash
 sudo -u postgres psql sensors
 \dt
-SELECT time, host, util AS gpu_util, temperature_gpu AS gpu_temp FROM telegraf_nvidia_smi ORDER BY time DESC LIMIT 5;
-SELECT time, host, feature, temp_input FROM telegraf_sensors ORDER BY time DESC LIMIT 5;
+SELECT timestamp, host, utilization_gpu AS gpu_util, temperature_gpu AS gpu_temp FROM nvidia_smi ORDER BY timestamp DESC LIMIT 5;
+SELECT timestamp, device, health_ok, temp_c, available_spare FROM smart_device ORDER BY timestamp DESC LIMIT 5;
 ```
 
 Convert tables to hypertables:
@@ -572,3 +572,95 @@ END$$;
 ```
 
 Telegraf now continuously inserts CPU, GPU, temperature, and disk metrics into TimescaleDB.
+
+### Schema compatibility after Telegraf upgrades
+
+The SQL output creates a table for a new measurement, but it does not add new
+columns to an existing table when an input plugin starts emitting additional
+fields. Telegraf 1.38.0 changed `inputs.smart` to include NVMe SMART data in the
+`smart_device` measurement ([Telegraf 1.38.0 release notes, bugfix
+#18387](https://github.com/influxdata/telegraf/releases/tag/v1.38.0)). On
+`thebeachlab`, the upgrade from 1.37.2 to 1.39.0 exposed this schema drift on
+2026-06-10: the existing SATA rows continued, but NVMe inserts stopped. The
+2026-08-04 audit found the same class of missing-column failure independently
+in `nvidia_smi`.
+
+Before changing the schema, take a custom-format backup and verify that
+`pg_restore` can read its catalog:
+
+```bash
+sudo install -d -o postgres -g postgres -m 0700 /var/backups/postgresql/codex
+sudo -u postgres pg_dump -Fc -d sensors \
+  -t public.smart_device -t public.nvidia_smi -t public.nvidia_smi_process \
+  -f /var/backups/postgresql/codex/sensors-telegraf-pre-schema.dump
+sudo chmod 0600 /var/backups/postgresql/codex/sensors-telegraf-pre-schema.dump
+sudo -u postgres pg_restore --list \
+  /var/backups/postgresql/codex/sensors-telegraf-pre-schema.dump >/dev/null
+```
+
+The live migration used additive, nullable columns without defaults, bounded
+the lock wait, and ran atomically:
+
+```sql
+SET lock_timeout = '5s';
+SET statement_timeout = '30s';
+BEGIN;
+
+ALTER TABLE public.smart_device
+  ADD COLUMN IF NOT EXISTS available_spare BIGINT,
+  ADD COLUMN IF NOT EXISTS available_spare_threshold BIGINT,
+  ADD COLUMN IF NOT EXISTS critical_temperature_time BIGINT,
+  ADD COLUMN IF NOT EXISTS critical_warning BIGINT,
+  ADD COLUMN IF NOT EXISTS error_log_entries BIGINT,
+  ADD COLUMN IF NOT EXISTS media_errors BIGINT,
+  ADD COLUMN IF NOT EXISTS percentage_used BIGINT,
+  ADD COLUMN IF NOT EXISTS power_cycle_count BIGINT,
+  ADD COLUMN IF NOT EXISTS power_on_hours BIGINT,
+  ADD COLUMN IF NOT EXISTS unsafe_shutdowns BIGINT,
+  ADD COLUMN IF NOT EXISTS warning_temperature_time BIGINT;
+
+ALTER TABLE public.nvidia_smi
+  ADD COLUMN IF NOT EXISTS clocks_current_graphics BIGINT,
+  ADD COLUMN IF NOT EXISTS clocks_current_memory BIGINT,
+  ADD COLUMN IF NOT EXISTS clocks_current_sm BIGINT,
+  ADD COLUMN IF NOT EXISTS clocks_current_video BIGINT,
+  ADD COLUMN IF NOT EXISTS display_active TEXT,
+  ADD COLUMN IF NOT EXISTS encoder_stats_average_fps BIGINT,
+  ADD COLUMN IF NOT EXISTS encoder_stats_average_latency BIGINT,
+  ADD COLUMN IF NOT EXISTS encoder_stats_session_count BIGINT,
+  ADD COLUMN IF NOT EXISTS fan_speed BIGINT,
+  ADD COLUMN IF NOT EXISTS fbc_stats_average_fps BIGINT,
+  ADD COLUMN IF NOT EXISTS fbc_stats_average_latency BIGINT,
+  ADD COLUMN IF NOT EXISTS fbc_stats_session_count BIGINT,
+  ADD COLUMN IF NOT EXISTS pcie_link_gen_current BIGINT,
+  ADD COLUMN IF NOT EXISTS pcie_link_width_current BIGINT,
+  ADD COLUMN IF NOT EXISTS power_draw DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS power_limit DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS temperature_gpu BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_decoder BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_encoder BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_gpu BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_jpeg BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_memory BIGINT,
+  ADD COLUMN IF NOT EXISTS utilization_ofa BIGINT;
+
+COMMIT;
+```
+
+Telegraf does not need a restart after this migration. Verify that timestamps
+advance across two collection cycles and that no SQL errors recur:
+
+```bash
+sudo -u postgres psql -d sensors -c \
+  "SELECT timestamp, available_spare, health_ok, media_errors FROM smart_device WHERE device='nvme0' ORDER BY timestamp DESC LIMIT 3;"
+sudo -u postgres psql -d sensors -c \
+  "SELECT timestamp, temperature_gpu, utilization_gpu, power_draw FROM nvidia_smi ORDER BY timestamp DESC LIMIT 3;"
+sudo journalctl -u telegraf --since '5 minutes ago' --no-pager | grep ' E! ' || true
+```
+
+The 2026-08-04 live backups are retained on the host as
+`sensors-smart_device-pre-nvme-schema-20260804T075503Z.dump` (SHA-256
+`48dba50ff8ec4a3ed2b9cc808792e67f340a35a994f3a5106aaa14853ca7e705`) and
+`sensors-nvidia-telegraf-pre-schema-20260804T075610Z.dump` (SHA-256
+`d55a4c22c970e4b33b011d7fa5832e62d5f5050e286ec32fa3f62b261eb1db91`), both
+owned by `postgres` with mode `0600`.
