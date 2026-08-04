@@ -265,7 +265,7 @@ ASUS advises against BIOS downgrades and recommends checking that the
 Thunderbolt controller is enabled, using current firmware and drivers, and
 testing with a certified short Thunderbolt cable.
 
-### Current research and next physical test (2026-08-04)
+### Current research and runtime stability test (2026-08-04)
 
 **Externally verified:** ASUS still lists BIOS Full Package Update `0078`
 (2024-10-28) as the newest BIOS package for `NUC11TNKi3`; do not search for or
@@ -292,11 +292,16 @@ Do not change the BIOS security level to `DP++ only`: the Visual BIOS glossary
 states that it disables PCIe tunneling, which an eGPU requires. Source:
 [Intel NUC Visual BIOS Glossary](https://kmpic.asus.com/images/nuc/NUC-Visual-BIOS-Glossary.pdf).
 
-The next test must be done only after first checking the kernel/NVIDIA version
-timeline, because the eGPU reportedly ran reliably for an extended period and
-a later kernel or NVIDIA driver regression is a plausible but unverified
-explanation. Do not infer a current Thunderbolt-link failure while the Core X
-is powered off.
+**Operator correction (2026-08-04; internal operational observation):** the
+eGPU reliably enumerates and starts working after boot. The failure occurs only
+after minutes or hours of GPU use, when the GPU hangs or disappears. This is a
+runtime stability problem, not an initial-detection problem. A `disconnected`
+result while the Core X is powered off must not be used as failure evidence.
+
+The next test must therefore reproduce the normal GPU workload and preserve
+the first kernel evidence of the failure. The eGPU reportedly ran reliably for
+an extended period, so a later kernel or NVIDIA driver regression is plausible
+but unverified.
 
 #### Kernel/NVIDIA regression test
 
@@ -319,38 +324,51 @@ This absence is not proof that the package is sound on this host.
 Test the still-installed `6.8.0-134-generic` before downgrading NVIDIA:
 
 1. With the Core X powered and attached before boot, establish a baseline on
-   the default `6.8.0-136-generic` boot:
+   the default `6.8.0-136-generic` boot. Record the start time, confirm that
+   the GPU is initially healthy, then run the same ComfyUI, Whisper, RAG, or
+   TTS workload that normally triggers the failure:
 
 ```bash
+start=$(date --iso-8601=seconds)
 uname -r
 nvidia-smi
 lspci -nn | grep -i nvidia
-journalctl -k -b --no-pager | grep -Ei 'NVRM|Xid|thunderbolt|pciehp'
 ```
 
-2. Reboot once into `Advanced options for Ubuntu` ->
+2. At the first hang or loss of GPU access, preserve the evidence before
+   rebooting:
+
+```bash
+nvidia-smi
+journalctl -k -b --since "$start" --no-pager | grep -Ei 'NVRM|Xid|fallen off|thunderbolt|pciehp|Link Down'
+```
+
+3. Reboot once into `Advanced options for Ubuntu` ->
    `Ubuntu, with Linux 6.8.0-134-generic`; this keeps NVIDIA `595.84` fixed
    and changes only the kernel. The normal default remains `6.8.0-136`, so a
    later ordinary reboot returns to the current kernel.
-3. Run the same commands and compare the results.
+4. Repeat the same workload and capture sequence, not merely the initial
+   `nvidia-smi` check.
 
 Interpretation:
 
-- `6.8.0-134` works and `6.8.0-136` fails: a 6.8.136 regression or its
-  interaction with this host is plausible. Keep 6.8.134 only after confirming
-  the repeatable A/B result, then report it to Ubuntu with both boot logs.
-- both fail: kernel 6.8.136 alone is not implicated; test the known-good
-  physical boot sequence and only then plan a controlled NVIDIA 595.71.05
-  rollback.
-- both work: no persistent regression is demonstrated; retain the current
-  packages and treat any future failure as an event that needs its boot logs.
+- `6.8.0-134` survives a workload that reproducibly hangs `6.8.0-136`: a
+  6.8.136 regression or its interaction with this host is plausible. Keep
+  6.8.134 only after confirming the A/B result, then report it to Ubuntu with
+  both boot logs.
+- both initially work but both hang with the same kernel evidence: kernel
+  6.8.136 alone is not implicated. Plan a controlled NVIDIA `595.71.05`
+  rollback next, using a matched package set and preserving the failure logs.
+- neither hangs during equivalent workload: no persistent regression is
+  demonstrated. Retain the current packages and capture the first future
+  failure before rebooting.
 
 Do not downgrade NVIDIA before this A/B test: the current APT sources offer
 only `595.84`, so rolling back to `595.71.05` would require deliberately
 obtaining and pinning a matched package set. That is a larger, separate change
 and should be done only if the kernel test does not explain the issue.
 
-If the version timeline does not identify a likely regression, reset and test
+Only if a future cold boot fails to enumerate the eGPU at all, reset and test
 the physical Thunderbolt chain:
 
 1. Shut down the NUC completely. Do not hot-unplug/hot-replug while Linux is
