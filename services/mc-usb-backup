@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+
+readonly PLAYER="Fran90908"
+readonly PLAYER_UUID="b850aac4-fd8d-4bb8-ab7c-be7df1ab9876"
+readonly WORLD_DIR="/opt/minecraft/server/Hariburi-World"
+readonly SERVER_PROPERTIES="/opt/minecraft/server/server.properties"
+readonly MCRCON="/opt/minecraft/tools/mcrcon/mcrcon"
+readonly LOCAL_DIR="/opt/minecraft/backups/daily"
+readonly USB_MOUNT="/mnt/minecraft-backups"
+readonly USB_DIR="${USB_MOUNT}/minecraft"
+readonly USB_UUID="FEF9-F572"
+readonly STATE_DIR="/var/lib/minecraft-usb-backup"
+readonly CHECKPOINT="${STATE_DIR}/last-check.epoch"
+readonly LOCK_FILE="/run/lock/minecraft-usb-backup.lock"
+
+force=0
+case "${1:-}" in
+  "") ;;
+  --force) force=1 ;;
+  *) echo "Usage: $0 [--force]" >&2; exit 2 ;;
+esac
+
+install -d -m 0700 "${STATE_DIR}" "${LOCAL_DIR}"
+exec 9>"${LOCK_FILE}"
+flock -n 9 || { echo "Another Minecraft backup is already running."; exit 0; }
+
+notify_failure() {
+  /usr/local/bin/notify.sh "Minecraft USB backup failed" "Check mc-usb-backup.service" || true
+}
+
+save_disabled=0
+local_tmp=""
+usb_tmp=""
+
+property() {
+  sed -n "s/^${1}=//p" "${SERVER_PROPERTIES}" | tail -n 1
+}
+
+rcon() {
+  "${MCRCON}" -H 127.0.0.1 -P "${rcon_port}" -p "${rcon_password}" "$1"
+}
+
+cleanup() {
+  status=$?
+  trap - EXIT
+  if (( save_disabled )); then
+    rcon "save-on" >/dev/null 2>&1 || true
+  fi
+  [[ -z "${local_tmp}" ]] || rm -f -- "${local_tmp}"
+  [[ -z "${usb_tmp}" ]] || rm -f -- "${usb_tmp}"
+  if (( status != 0 )); then
+    notify_failure
+  fi
+  exit "${status}"
+}
+trap cleanup EXIT
+
+[[ -d "${WORLD_DIR}" ]] || { echo "World not found: ${WORLD_DIR}" >&2; exit 1; }
+[[ -x "${MCRCON}" ]] || { echo "mcrcon not found: ${MCRCON}" >&2; exit 1; }
+
+now=$(date +%s)
+if (( ! force )); then
+  if [[ -s "${CHECKPOINT}" ]]; then
+    since=$(<"${CHECKPOINT}")
+  else
+    since=$((now - 86400))
+  fi
+  [[ "${since}" =~ ^[0-9]+$ ]] || { echo "Invalid checkpoint." >&2; exit 1; }
+
+  activity_log="${STATE_DIR}/activity.log"
+  journalctl -u minecraft-java.service \
+    --since "@${since}" --until "@${now}" --no-pager -o cat >"${activity_log}"
+
+  active=0
+  grep -Fq "${PLAYER} joined the game" "${activity_log}" && active=1
+  player_data="${WORLD_DIR}/players/data/${PLAYER_UUID}.dat"
+  if [[ -f "${player_data}" ]] && (( $(stat -c %Y "${player_data}") > since )); then
+    active=1
+  fi
+
+  if (( ! active )); then
+    printf '%s\n' "${now}" >"${CHECKPOINT}.tmp"
+    mv "${CHECKPOINT}.tmp" "${CHECKPOINT}"
+    echo "No ${PLAYER} activity since the last check; skipping backup."
+    exit 0
+  fi
+fi
+
+# Trigger the systemd automount, then refuse to write unless it is the expected USB.
+timeout 15 ls -A "${USB_MOUNT}" >/dev/null
+mountpoint -q "${USB_MOUNT}" || { echo "USB mount is unavailable." >&2; exit 1; }
+usb_source=$(findmnt -M "${USB_MOUNT}" -n -t exfat -o SOURCE)
+usb_fstype=$(findmnt -M "${USB_MOUNT}" -n -t exfat -o FSTYPE)
+[[ "${usb_fstype}" == "exfat" ]] || { echo "Unexpected USB filesystem: ${usb_fstype}" >&2; exit 1; }
+[[ "$(blkid -s UUID -o value "${usb_source}")" == "${USB_UUID}" ]] || {
+  echo "Unexpected device mounted at ${USB_MOUNT}." >&2
+  exit 1
+}
+
+mkdir -p "${USB_DIR}"
+
+rcon_port=$(property rcon.port)
+rcon_password=$(property rcon.password)
+[[ "${rcon_port}" =~ ^[0-9]+$ && -n "${rcon_password}" ]] || {
+  echo "Invalid RCON configuration." >&2
+  exit 1
+}
+
+stamp=$(date -u +%Y-%m-%d_%H%M%SZ)
+archive="world-${stamp}.tar.zst"
+local_tmp="${LOCAL_DIR}/.${archive}.partial"
+local_final="${LOCAL_DIR}/${archive}"
+usb_tmp="${USB_DIR}/.${archive}.partial"
+usb_final="${USB_DIR}/${archive}"
+
+rcon "save-off" >/dev/null
+save_disabled=1
+rcon "save-all flush" >/dev/null
+tar --zstd -cf "${local_tmp}" -C "$(dirname "${WORLD_DIR}")" "$(basename "${WORLD_DIR}")"
+rcon "save-on" >/dev/null
+save_disabled=0
+
+zstd -q -t "${local_tmp}"
+tar --zstd -tf "${local_tmp}" >/dev/null
+mv "${local_tmp}" "${local_final}"
+local_tmp=""
+
+local_hash=$(sha256sum "${local_final}" | awk '{print $1}')
+printf '%s  %s\n' "${local_hash}" "${archive}" >"${local_final}.sha256"
+
+cp --reflink=never "${local_final}" "${usb_tmp}"
+usb_hash=$(sha256sum "${usb_tmp}" | awk '{print $1}')
+[[ "${usb_hash}" == "${local_hash}" ]] || { echo "USB checksum mismatch." >&2; exit 1; }
+mv "${usb_tmp}" "${usb_final}"
+usb_tmp=""
+printf '%s  %s\n' "${usb_hash}" "${archive}" >"${usb_final}.sha256"
+sync -f "${USB_DIR}"
+
+rotate() {
+  directory=$1
+  keep=$2
+  mapfile -t files < <(
+    find "${directory}" -maxdepth 1 -type f -name 'world-*.tar.zst' -printf '%f\n' | sort -r
+  )
+  for ((i=keep; i<${#files[@]}; i++)); do
+    [[ "${files[i]}" =~ ^world-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}Z\.tar\.zst$ ]] || continue
+    rm -f -- "${directory}/${files[i]}" "${directory}/${files[i]}.sha256"
+  done
+}
+
+rotate "${USB_DIR}" 2
+rotate "${LOCAL_DIR}" 1
+
+printf '%s\n' "${now}" >"${CHECKPOINT}.tmp"
+mv "${CHECKPOINT}.tmp" "${CHECKPOINT}"
+
+echo "Backup complete: ${usb_final}"
+ls -lh "${usb_final}"

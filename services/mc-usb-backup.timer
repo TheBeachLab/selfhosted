@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily activity-aware Minecraft USB backup
+
+[Timer]
+OnCalendar=*-*-* 02:45:00 UTC
+RandomizedDelaySec=5m
+Persistent=true
+Unit=mc-usb-backup.service
+
+[Install]
+WantedBy=timers.target

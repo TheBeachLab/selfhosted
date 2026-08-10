@@ -1,0 +1,5 @@
+# The left-front port formats removable media for the 2usb transfer workflow.
+# Never pass the dedicated Minecraft backup drive to that destructive service.
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd*", ENV{DEVTYPE}=="disk", ENV{ID_BUS}=="usb", \
+  ENV{ID_PATH}=="*usb-0:2:*", ENV{ID_SERIAL_SHORT}!="60A44C413AC0BFB03991011C", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}+="leftusb@%k.service"

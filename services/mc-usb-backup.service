@@ -1,0 +1,18 @@
+[Unit]
+Description=Activity-aware Minecraft backup to USB
+After=minecraft-java.service mnt-minecraft\x2dbackups.automount
+Wants=minecraft-java.service mnt-minecraft\x2dbackups.automount
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mc-usb-backup
+StateDirectory=minecraft-usb-backup
+StateDirectoryMode=0700
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
