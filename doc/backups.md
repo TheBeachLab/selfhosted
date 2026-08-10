@@ -192,6 +192,17 @@ joined since the previous check. Activity is read from the systemd journal and
 confirmed with the premium player-data modification time. A skipped run advances
 the activity checkpoint; a failed run does not, so it retries later.
 
+Discord notifications use the dedicated world server channels:
+
+```text
+Status:   1536372549653635192
+Backups:  1536373187259011134
+```
+
+The backup channel receives completed and failed runs, not no-activity skips.
+The existing one-minute Minecraft watchdog reports actual service state changes
+to the status channel.
+
 Backup sequence:
 
 1. Verify that the expected USB UUID is mounted, never the root filesystem.

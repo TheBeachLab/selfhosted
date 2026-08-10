@@ -15,6 +15,7 @@ readonly USB_UUID="FEF9-F572"
 readonly STATE_DIR="/var/lib/minecraft-usb-backup"
 readonly CHECKPOINT="${STATE_DIR}/last-check.epoch"
 readonly LOCK_FILE="/run/lock/minecraft-usb-backup.lock"
+readonly DISCORD_ENV="/home/pink/.openclaw/credentials/minecraft-discord-watchdog.env"
 
 force=0
 case "${1:-}" in
@@ -29,6 +30,21 @@ flock -n 9 || { echo "Another Minecraft backup is already running."; exit 0; }
 
 notify_failure() {
   /usr/local/bin/notify.sh "Minecraft USB backup failed" "Check mc-usb-backup.service" || true
+}
+
+send_discord() {
+  content=$1
+  [[ -f "${DISCORD_ENV}" ]] || return 0
+  # shellcheck disable=SC1090
+  source "${DISCORD_ENV}"
+  channel_id="${BACKUP_DISCORD_CHANNEL_ID:-}"
+  [[ -n "${channel_id}" && -n "${DISCORD_BOT_TOKEN:-}" ]] || return 0
+  curl -fsS \
+    -H "Authorization: Bot ${DISCORD_BOT_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -A "MrWatson-Minecraft-Backup" \
+    -d "$(printf '{\"content\":\"%s\"}' "$(printf '%s' "${content}" | sed 's/\\/\\\\/g; s/\"/\\\"/g')")" \
+    "https://discord.com/api/v10/channels/${channel_id}/messages" >/dev/null
 }
 
 save_disabled=0
@@ -53,6 +69,7 @@ cleanup() {
   [[ -z "${usb_tmp}" ]] || rm -f -- "${usb_tmp}"
   if (( status != 0 )); then
     notify_failure
+    send_discord "Minecraft backup: Failed ❌" || true
   fi
   exit "${status}"
 }
@@ -159,3 +176,7 @@ mv "${CHECKPOINT}.tmp" "${CHECKPOINT}"
 
 echo "Backup complete: ${usb_final}"
 ls -lh "${usb_final}"
+archive_size=$(numfmt --to=iec-i --suffix=B "$(stat -c %s "${usb_final}")")
+send_discord "Minecraft backup: Completed ✅ (${archive}, ${archive_size}, keeping latest 2)" || {
+  echo "Warning: could not send the Discord backup notification." >&2
+}
