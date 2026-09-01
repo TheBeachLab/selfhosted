@@ -83,7 +83,9 @@ nothing when the installed version is current. For a real update it stops
 installs an exact package version, runs
 `openclaw doctor --fix --non-interactive --yes`, validates the config and
 databases, and requires the new Gateway version and RPC probe before recreating
-the TUI. Any failure leaves the Gateway stopped for inspection.
+the TUI. SQLite is never checked concurrently with a running Gateway; the two
+integrity passes happen while all writers are stopped, before and after
+`doctor`. Any failure leaves the Gateway stopped for inspection.
 
 Check current vs latest:
 

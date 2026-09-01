@@ -111,6 +111,10 @@ esac'
 echo "sqlite3 $*" >>"${TEST_COMMAND_LOG}"
 last="${*: -1}"
 if [[ "${last}" == *quick_check* ]]; then
+  if [[ "$(<"${TEST_SYSTEMD_STATE}")" == active ]]; then
+    echo "database is locked" >&2
+    exit 5
+  fi
   echo ok
 elif [[ "${last}" == .backup* ]]; then
   destination=${last#*.backup }

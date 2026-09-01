@@ -227,7 +227,6 @@ fi
 log "Gateway RPC is ready on OpenClaw ${target}."
 
 "${OPENCLAW_BIN}" channels status --probe
-check_all_databases
 
 if (( watson_was_running == 1 )); then
   "${TMUX_BIN}" new-session -d -s "${WATSON_SESSION}" \
