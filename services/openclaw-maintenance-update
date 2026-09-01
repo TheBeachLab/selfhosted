@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+
+readonly EXPECTED_USER="${OPENCLAW_MAINTENANCE_EXPECTED_USER:-pink}"
+readonly STATE_DIR="${OPENCLAW_MAINTENANCE_STATE_DIR:-${HOME}/.openclaw}"
+readonly BACKUP_ROOT="${OPENCLAW_MAINTENANCE_BACKUP_ROOT:-${HOME}/.openclaw-backups/updates}"
+readonly LOCK_FILE="${OPENCLAW_MAINTENANCE_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/openclaw-maintenance-update.lock}"
+readonly GATEWAY_UNIT="${OPENCLAW_MAINTENANCE_GATEWAY_UNIT:-openclaw-gateway.service}"
+readonly WATSON_SESSION="${OPENCLAW_MAINTENANCE_TMUX_SESSION:-watson}"
+readonly WATSON_SESSION_KEY="${OPENCLAW_MAINTENANCE_SESSION_KEY:-agent:main:main}"
+readonly RPC_ATTEMPTS="${OPENCLAW_MAINTENANCE_RPC_ATTEMPTS:-30}"
+readonly RPC_INTERVAL_SECONDS="${OPENCLAW_MAINTENANCE_RPC_INTERVAL_SECONDS:-2}"
+
+readonly OPENCLAW_BIN="${OPENCLAW_MAINTENANCE_OPENCLAW_BIN:-/usr/bin/openclaw}"
+readonly NPM_BIN="${OPENCLAW_MAINTENANCE_NPM_BIN:-/usr/bin/npm}"
+readonly SUDO_BIN="${OPENCLAW_MAINTENANCE_SUDO_BIN:-/usr/bin/sudo}"
+readonly SYSTEMCTL_BIN="${OPENCLAW_MAINTENANCE_SYSTEMCTL_BIN:-/usr/bin/systemctl}"
+readonly TMUX_BIN="${OPENCLAW_MAINTENANCE_TMUX_BIN:-/usr/bin/tmux}"
+readonly SQLITE3_BIN="${OPENCLAW_MAINTENANCE_SQLITE3_BIN:-/usr/bin/sqlite3}"
+readonly LSOF_BIN="${OPENCLAW_MAINTENANCE_LSOF_BIN:-/usr/bin/lsof}"
+readonly FLOCK_BIN="${OPENCLAW_MAINTENANCE_FLOCK_BIN:-/usr/bin/flock}"
+readonly SHA256SUM_BIN="${OPENCLAW_MAINTENANCE_SHA256SUM_BIN:-/usr/bin/sha256sum}"
+readonly TIMEOUT_BIN="${OPENCLAW_MAINTENANCE_TIMEOUT_BIN:-/usr/bin/timeout}"
+readonly SLEEP_BIN="${OPENCLAW_MAINTENANCE_SLEEP_BIN:-/usr/bin/sleep}"
+
+writers_stopped=0
+maintenance_complete=0
+backup_dir=""
+
+log() {
+  printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
+}
+
+fail() {
+  log "ERROR: $*" >&2
+  return 1
+}
+
+systemctl_user() {
+  "${SYSTEMCTL_BIN}" --user "$@"
+}
+
+stop_gateway() {
+  systemctl_user stop "${GATEWAY_UNIT}" || true
+}
+
+on_exit() {
+  status=$?
+  trap - EXIT
+  if (( status != 0 && writers_stopped == 1 && maintenance_complete == 0 )); then
+    log "Maintenance failed; keeping the Gateway stopped. Backups: ${backup_dir:-not-created}" >&2
+    stop_gateway
+  fi
+  exit "${status}"
+}
+trap on_exit EXIT
+
+require_command() {
+  [[ -x "$1" ]] || fail "Required executable is unavailable: $1"
+}
+
+installed_version() {
+  "${OPENCLAW_BIN}" --version | awk '{print $2; exit}'
+}
+
+latest_version() {
+  "${NPM_BIN}" view openclaw version --silent | awk 'NF {print; exit}'
+}
+
+open_state_descriptors() {
+  "${LSOF_BIN}" -nP +D "${STATE_DIR}" 2>/dev/null |
+    awk '/\.sqlite($|-wal$|-shm$)|\/sessions\.json$|\/openclaw\.json$|\.jsonl$/ {print}' || true
+}
+
+wait_for_no_writers() {
+  for _ in $(seq 1 30); do
+    gateway_state=$(systemctl_user is-active "${GATEWAY_UNIT}" 2>/dev/null || true)
+    open_files=$(open_state_descriptors)
+    if [[ "${gateway_state}" == "inactive" || "${gateway_state}" == "failed" ]] && [[ -z "${open_files}" ]]; then
+      return 0
+    fi
+    "${SLEEP_BIN}" 1
+  done
+  open_state_descriptors >&2
+  fail "OpenClaw state still has active writers after shutdown."
+}
+
+quick_check() {
+  db=$1
+  result=$("${SQLITE3_BIN}" -readonly -batch "${db}" 'PRAGMA query_only=ON; PRAGMA quick_check;')
+  [[ "${result}" == "ok" ]] || fail "SQLite quick_check failed: ${db}: ${result}"
+}
+
+check_all_databases() {
+  while IFS= read -r -d '' db; do
+    quick_check "${db}"
+  done < <(find "${STATE_DIR}" -xdev -type f \( -name '*.sqlite' -o -name '*.db' \) -print0 | sort -z)
+}
+
+copy_sqlite_databases() {
+  while IFS= read -r -d '' db; do
+    relative=${db#"${STATE_DIR}/"}
+    destination="${backup_dir}/sqlite/${relative}"
+    install -d -m 0700 "$(dirname "${destination}")"
+    "${SQLITE3_BIN}" -readonly -batch "${db}" ".backup '${destination}'"
+    chmod 0600 "${destination}"
+    quick_check "${destination}"
+  done < <(find "${STATE_DIR}" -xdev -type f \( -name '*.sqlite' -o -name '*.db' \) -print0 | sort -z)
+}
+
+copy_non_database_state() {
+  [[ ! -f "${STATE_DIR}/openclaw.json" ]] || cp -a "${STATE_DIR}/openclaw.json" "${backup_dir}/openclaw.json"
+  [[ ! -f "${STATE_DIR}/exec-approvals.json" ]] || cp -a "${STATE_DIR}/exec-approvals.json" "${backup_dir}/exec-approvals.json"
+
+  if [[ -d "${STATE_DIR}/agents" ]]; then
+    install -d -m 0700 "${backup_dir}/agents"
+    while IFS= read -r -d '' sessions_dir; do
+      relative=${sessions_dir#"${STATE_DIR}/agents/"}
+      destination="${backup_dir}/agents/${relative}"
+      install -d -m 0700 "$(dirname "${destination}")"
+      cp -a "${sessions_dir}" "${destination}"
+    done < <(find "${STATE_DIR}/agents" -mindepth 2 -maxdepth 2 -type d -name sessions -print0)
+  fi
+
+  if [[ -d "${STATE_DIR}/state" ]]; then
+    install -d -m 0700 "${backup_dir}/state-files"
+    while IFS= read -r -d '' state_file; do
+      cp -a "${state_file}" "${backup_dir}/state-files/"
+    done < <(find "${STATE_DIR}/state" -maxdepth 1 -type f \
+      ! -name '*.sqlite' ! -name '*.sqlite-wal' ! -name '*.sqlite-shm' -print0)
+  fi
+}
+
+write_backup_manifest() {
+  (
+    cd "${backup_dir}"
+    find . -type f ! -name SHA256SUMS -print0 |
+      sort -z |
+      xargs -0 "${SHA256SUM_BIN}"
+  ) >"${backup_dir}/SHA256SUMS"
+  chmod 0600 "${backup_dir}/SHA256SUMS"
+}
+
+wait_for_rpc() {
+  expected=$1
+  for _ in $(seq 1 "${RPC_ATTEMPTS}"); do
+    status_output=$("${TIMEOUT_BIN}" 15 "${OPENCLAW_BIN}" gateway status 2>&1 || true)
+    gateway_state=$(systemctl_user is-active "${GATEWAY_UNIT}" 2>/dev/null || true)
+    if [[ "${gateway_state}" == "active" ]] &&
+      grep -Fq 'Connectivity probe: ok' <<<"${status_output}" &&
+      grep -Fq "Gateway version: ${expected}" <<<"${status_output}"; then
+      return 0
+    fi
+    "${SLEEP_BIN}" "${RPC_INTERVAL_SECONDS}"
+  done
+  printf '%s\n' "${status_output:-Gateway status unavailable}" >&2
+  fail "Gateway RPC did not become ready with version ${expected}."
+}
+
+[[ "$(id -un)" == "${EXPECTED_USER}" ]] || fail "Run as ${EXPECTED_USER}, not $(id -un)."
+[[ "${HOME}" != "/root" && -d "${HOME}" && -x "${HOME}" ]] || fail "HOME must be an accessible non-root directory."
+[[ -d "${STATE_DIR}" ]] || fail "OpenClaw state directory is unavailable: ${STATE_DIR}"
+
+for executable in \
+  "${OPENCLAW_BIN}" "${NPM_BIN}" "${SUDO_BIN}" "${SYSTEMCTL_BIN}" \
+  "${TMUX_BIN}" "${SQLITE3_BIN}" "${LSOF_BIN}" "${FLOCK_BIN}" \
+  "${SHA256SUM_BIN}" "${TIMEOUT_BIN}" "${SLEEP_BIN}"; do
+  require_command "${executable}"
+done
+
+cd "${HOME}"
+install -d -m 0700 "$(dirname "${LOCK_FILE}")" "${BACKUP_ROOT}"
+exec 9>"${LOCK_FILE}"
+"${FLOCK_BIN}" -n 9 || { log "Another OpenClaw maintenance run is active; skipping."; exit 0; }
+
+current=$(installed_version)
+target=$(latest_version)
+[[ -n "${current}" && -n "${target}" ]] || fail "Could not resolve installed/latest OpenClaw versions."
+if [[ "${current}" == "${target}" ]]; then
+  log "OpenClaw ${current} is current; no maintenance required."
+  maintenance_complete=1
+  exit 0
+fi
+
+log "Preparing OpenClaw update ${current} -> ${target}."
+watson_was_running=0
+if "${TMUX_BIN}" has-session -t "${WATSON_SESSION}" 2>/dev/null; then
+  watson_was_running=1
+  "${TMUX_BIN}" kill-session -t "${WATSON_SESSION}"
+fi
+stop_gateway
+writers_stopped=1
+wait_for_no_writers
+
+log "All OpenClaw writers are stopped; checking SQLite integrity."
+check_all_databases
+
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+backup_dir="${BACKUP_ROOT}/${stamp}-pre-${current}-to-${target}"
+install -d -m 0700 "${backup_dir}" "${backup_dir}/sqlite"
+copy_non_database_state
+copy_sqlite_databases
+write_backup_manifest
+log "Protected backup complete: ${backup_dir}"
+
+log "Installing exact OpenClaw package version ${target}."
+"${SUDO_BIN}" -n "${NPM_BIN}" install -g "openclaw@${target}" --silent
+[[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
+
+log "Applying non-interactive OpenClaw migrations."
+"${OPENCLAW_BIN}" doctor --fix --non-interactive --yes
+"${OPENCLAW_BIN}" config validate
+check_all_databases
+
+log "Regenerating the managed Gateway unit from OpenClaw ${target}."
+"${OPENCLAW_BIN}" gateway install --force
+systemctl_user daemon-reload
+systemctl_user reset-failed "${GATEWAY_UNIT}" || true
+systemctl_user restart "${GATEWAY_UNIT}"
+
+if ! wait_for_rpc "${target}"; then
+  stop_gateway
+  exit 1
+fi
+log "Gateway RPC is ready on OpenClaw ${target}."
+
+"${OPENCLAW_BIN}" channels status --probe
+check_all_databases
+
+if (( watson_was_running == 1 )); then
+  "${TMUX_BIN}" new-session -d -s "${WATSON_SESSION}" \
+    "${OPENCLAW_BIN} tui --session ${WATSON_SESSION_KEY} --deliver"
+  "${SLEEP_BIN}" 3
+  "${TMUX_BIN}" has-session -t "${WATSON_SESSION}" || fail "Gateway is ready but tmux ${WATSON_SESSION} did not stay running."
+fi
+
+maintenance_complete=1
+log "OpenClaw maintenance completed successfully."

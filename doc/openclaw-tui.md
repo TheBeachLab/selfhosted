@@ -40,7 +40,7 @@ watson_k
 
 # Start/attach OpenClaw TUI in tmux session "watson"
 watson() {
-  tmux new-session -A -s watson 'openclaw tui --session main --deliver'
+  tmux new-session -A -s watson 'openclaw tui --session agent:main:main --deliver'
 }
 
 # Attach to existing watson session only
@@ -60,26 +60,30 @@ watson_k() {
 
 ```bash
 # direct
-openclaw tui --session main --deliver
+openclaw tui --session agent:main:main --deliver
 
 # with tmux directly
-tmux new-session -A -s watson 'openclaw tui --session main --deliver'
+tmux new-session -A -s watson 'openclaw tui --session agent:main:main --deliver'
 ```
 
 ## Updating OpenClaw
 
-Installed via npm global. `openclaw update --yes` does **not** work (not a git checkout) — use npm directly:
+Installed via npm global. Do not replace the package while the Gateway or TUI
+is running: both processes hold OpenClaw state and may keep loading modules
+from the replaced installation.
 
 ```bash
-sudo npm install -g openclaw@latest
-openclaw gateway restart
+systemctl --user start openclaw-maintenance-update.service
+journalctl --user -u openclaw-maintenance-update.service -n 200 --no-pager
 ```
 
-A daily cron runs this automatically at 04:15 UTC:
-
-```
-15 4 * * * sudo npm install -g openclaw@latest --silent >> /tmp/openclaw-update.log 2>&1 && openclaw gateway restart >> /tmp/openclaw-update.log 2>&1
-```
+The `openclaw-maintenance-update.timer` checks daily at 04:15 UTC. It does
+nothing when the installed version is current. For a real update it stops
+`watson` and the Gateway, verifies and backs up SQLite/config/session state,
+installs an exact package version, runs
+`openclaw doctor --fix --non-interactive --yes`, validates the config and
+databases, and requires the new Gateway version and RPC probe before recreating
+the TUI. Any failure leaves the Gateway stopped for inspection.
 
 Check current vs latest:
 
@@ -109,6 +113,9 @@ If the gateway is healthy but the tmux session is absent, recreate only the TUI
 session:
 
 ```bash
-tmux new-session -d -s watson 'openclaw tui --session main --deliver'
+tmux new-session -d -s watson 'openclaw tui --session agent:main:main --deliver'
 tmux ls
 ```
+
+The agent-scoped session key is required on multi-agent installations. A bare
+`--session main` is ambiguous and the TUI exits immediately.

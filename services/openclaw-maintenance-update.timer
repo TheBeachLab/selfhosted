@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily safe OpenClaw update check
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 UTC
+RandomizedDelaySec=10m
+Persistent=true
+Unit=openclaw-maintenance-update.service
+
+[Install]
+WantedBy=timers.target
