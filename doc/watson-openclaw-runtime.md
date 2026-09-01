@@ -39,6 +39,9 @@ npm replacement followed by an unchecked restart. It does not touch unrelated
 cron jobs or services. It also replaces the obsolete, ambiguous
 `openclaw tui --session main --deliver` command in `~/.bash_aliases` with the
 agent-scoped session key required by the migrated multi-agent configuration.
+The updater version-locks the configured official WhatsApp channel plugin to
+the core OpenClaw release. It intentionally does not update `llama-cpp` or any
+local-model/GPU component.
 
 Run and inspect maintenance manually:
 

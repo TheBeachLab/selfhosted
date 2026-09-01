@@ -81,11 +81,13 @@ The `openclaw-maintenance-update.timer` checks daily at 04:15 UTC. It does
 nothing when the installed version is current. For a real update it stops
 `watson` and the Gateway, verifies and backs up SQLite/config/session state,
 installs an exact package version, runs
-`openclaw doctor --fix --non-interactive --yes`, validates the config and
+aligns the configured official WhatsApp channel plugin to that exact version,
+runs `openclaw doctor --fix --non-interactive --yes`, validates the config and
 databases, and requires the new Gateway version and RPC probe before recreating
 the TUI. SQLite is never checked concurrently with a running Gateway; the two
 integrity passes happen while all writers are stopped, before and after
-`doctor`. Any failure leaves the Gateway stopped for inspection.
+`doctor`. The local-model `llama-cpp` plugin is deliberately outside this
+maintenance job. Any failure leaves the Gateway stopped for inspection.
 
 Check current vs latest:
 

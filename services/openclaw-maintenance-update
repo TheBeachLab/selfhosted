@@ -12,6 +12,7 @@ readonly WATSON_SESSION="${OPENCLAW_MAINTENANCE_TMUX_SESSION:-watson}"
 readonly WATSON_SESSION_KEY="${OPENCLAW_MAINTENANCE_SESSION_KEY:-agent:main:main}"
 readonly RPC_ATTEMPTS="${OPENCLAW_MAINTENANCE_RPC_ATTEMPTS:-30}"
 readonly RPC_INTERVAL_SECONDS="${OPENCLAW_MAINTENANCE_RPC_INTERVAL_SECONDS:-2}"
+readonly -a VERSION_LOCKED_CHANNEL_PLUGINS=("@openclaw/whatsapp")
 
 readonly OPENCLAW_BIN="${OPENCLAW_MAINTENANCE_OPENCLAW_BIN:-/usr/bin/openclaw}"
 readonly NPM_BIN="${OPENCLAW_MAINTENANCE_NPM_BIN:-/usr/bin/npm}"
@@ -208,6 +209,13 @@ log "Protected backup complete: ${backup_dir}"
 log "Installing exact OpenClaw package version ${target}."
 "${SUDO_BIN}" -n "${NPM_BIN}" install -g "openclaw@${target}" --silent
 [[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
+
+for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do
+  plugin_target=$("${NPM_BIN}" view "${plugin_package}@${target}" version --silent | awk 'NF {print; exit}')
+  [[ "${plugin_target}" == "${target}" ]] || fail "No matching ${plugin_package} package exists for OpenClaw ${target}."
+  log "Aligning ${plugin_package} with OpenClaw ${target}."
+  "${OPENCLAW_BIN}" plugins install "${plugin_package}@${target}" --pin --accept-capabilities
+done
 
 log "Applying non-interactive OpenClaw migrations."
 "${OPENCLAW_BIN}" doctor --fix --non-interactive --yes
