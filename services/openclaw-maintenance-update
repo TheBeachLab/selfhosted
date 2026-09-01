@@ -214,7 +214,7 @@ for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do
   plugin_target=$("${NPM_BIN}" view "${plugin_package}@${target}" version --silent | awk 'NF {print; exit}')
   [[ "${plugin_target}" == "${target}" ]] || fail "No matching ${plugin_package} package exists for OpenClaw ${target}."
   log "Aligning ${plugin_package} with OpenClaw ${target}."
-  "${OPENCLAW_BIN}" plugins install "${plugin_package}@${target}" --pin --accept-capabilities
+  "${OPENCLAW_BIN}" plugins install "${plugin_package}@${target}" --force --pin --accept-capabilities
 done
 
 log "Applying non-interactive OpenClaw migrations."
