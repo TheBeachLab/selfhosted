@@ -140,3 +140,34 @@ snapshot first. Use `organize.py scan`, review proposals, and `organize.py apply
 as www-data with the same environment as the service. Only after successful review
 and end-to-end checks, enable `music-inbox.timer`. All subsequent user interaction
 is through the Nextcloud inbox and status document.
+
+## Amperfy artwork compatibility — 2026-09-10
+
+Amperfy 2.1.1 build 22 was observed requesting
+`/apps/music/ampache/image.php?auth=…&object_id=…&object_type=album`.
+Music 3.2.1's installed `lib/Controller/AmpacheImageController.php::image`
+accepts an image-specific `token`, not session `auth`. Without `token` it
+returns a 2,330-byte generic PNG with a one-year client cache lifetime.
+This explains why an ordinary library sync did not repair the artwork.
+The authenticated `AmpacheController::get_art` returned the real image for
+the same album and session. These are observations of the installed source
+and HTTPS responses, not assumptions about the client cache.
+
+Deploy `services/music-inbox/ampache-images.nginx.conf` to
+`/etc/nginx/snippets/music-ampache-images.conf` and include it inside the
+Nextcloud TLS server block **before** the PHP regex location. It routes only
+session-auth image requests to the existing authenticated `get_art` action.
+Image-specific tokens and anonymous placeholder requests retain their original
+route. `REQUEST_URI` and `QUERY_STRING` must both identify the authenticated
+action; rewriting the path alone does not change Nextcloud's route selection.
+This avoids editing the signed Music application or bypassing authentication.
+Run `nginx -t` before reloading. Remove the include and reload to roll back.
+
+Live checks in `/var/lib/music-inbox/ampache-cover-verification.json` verified
+three album images byte-for-byte against `get_art`, token-based URLs, the
+`index.php` URL variant, invalid-session rejection (Ampache XML error), and
+anonymous placeholders. Nginx configuration validation passed. The Mac Amperfy
+cache was refreshed via Settings > Artwork, then Account > Resync Library;
+album covers were visibly displayed in the app after the correction.
+Clients that cached the old generic image may need their downloaded artwork
+cache cleared; this does not require deleting downloaded songs.
