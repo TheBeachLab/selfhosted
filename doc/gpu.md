@@ -315,6 +315,15 @@ after minutes or hours of GPU use, when the GPU hangs or disappears. This is a
 runtime stability problem, not an initial-detection problem. A `disconnected`
 result while the Core X is powered off must not be used as failure evidence.
 
+**Recovered host hang notes (2026-08-04 / 2026-08-05; internal note, not externally verified):**
+two unclean reboots occurred after continuous Core X attach with
+`bolt=authorized` and healthy load/RAM in the last heartbeat samples (~12 h and
+~22 h). Journals stopped without a shutdown sequence; `auth.log` had no reboot
+command. **Inference:** multi-hour always-on attach is unsafe on this host even
+at idle. Operational mitigation is the session model in
+[gpu-services.md](gpu-services.md#egpu-session-model-required-for-host-stability)
+(`egpu-session`, max-age iGotify at 6 h / 10 h). That is not a root-cause fix.
+
 The next test must therefore reproduce the normal GPU workload and preserve
 the first kernel evidence of the failure. The eGPU reportedly ran reliably for
 an extended period, so a later kernel or NVIDIA driver regression is plausible

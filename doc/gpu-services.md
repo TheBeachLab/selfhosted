@@ -228,7 +228,65 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 - ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
 - ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
 
-## Thunderbolt Hot-Unplug Caveat
+## eGPU session model (required for host stability)
+
+**Recovered internal notes from 2026-08-04/05; not externally verified.**
+The original logs supporting the historical rows below were not recovered in
+this review; these rows must not be treated as a newly verified root cause.
+
+| Evidence | What it shows |
+|---|---|
+| Heartbeat gaps with `bolt=authorized` ending in unclean reboot | Hard hang / forced restart, not `systemctl reboot` |
+| 2026-08-04 ~19:00 UTC → boot ~20:13 | ~12 h continuous attach, then silence (~73 min journal gap) |
+| 2026-08-05 ~19:33 UTC → boot ~20:30 | ~22 h continuous attach, then silence (~57 min journal gap); load/RAM healthy minutes before |
+| Weekly ~05:00 reboots with Core X off | Clean multi-day uptime without eGPU |
+| No `systemctl reboot` in `auth.log` on those hang days | Not intentional software reboot |
+
+**Inference (not externally verified as root cause):** long-lived Thunderbolt/PCIe
+attachment of the Core X on this NUC+Linux stack is unsafe. Failures are not
+limited to heavy CUDA jobs; idle attach for half a day has been enough. Full
+“always-on eGPU” on this host is not a reliable goal with the current
+NUC11TNKi3 + Razer Core X + Ubuntu 22.04 HWE 6.8 path. Industry reports of
+similar TB3 eGPU `Xid 79` / bus-loss failures on Linux are common; see
+[NVIDIA forum Core X Xid 79](https://forums.developer.nvidia.com/t/driver-crash-xid-79-gpu-has-fallen-off-the-bus-with-egpu-razer-core-x/347658).
+
+### How to use the eGPU for jobs (stable pattern)
+
+1. **Cold start with Core X on** (preferred): power off NUC → power Core X →
+   TB cable seated → wait a few seconds → power on NUC.
+2. Confirm GPU: `egpu-session status` or `nvidia-smi`.
+3. Open a session: `egpu-session start "whisper batch"`.
+4. Run jobs (Whisper / TTS / ComfyUI / RAG). Prefer finishing within **~6 hours**.
+5. End cleanly:
+   ```bash
+   egpu-session end
+   # power OFF Core X (do not hot-unplug TB while NUC is up)
+   sudo systemctl reboot
+   ```
+   Or: `egpu-session end --reboot` after powering the enclosure off first if you
+   accept an immediate reboot.
+
+### Tools (deployment checked 2026-09-10)
+
+| Path | Role |
+|---|---|
+| `/usr/local/bin/egpu-session` | status / start / end / doctor |
+| `/usr/local/bin/egpu-watchdog.sh` | loss recovery + **max-age iGotify** (warn 6 h, critical 10 h) |
+| `/etc/egpu-watchdog.env` | `EGPU_WARN_S=21600`, `EGPU_CRITICAL_S=36000` |
+| Repo copies | `scripts/egpu/egpu-session.sh`, `scripts/egpu/egpu-watchdog.sh` |
+
+On 2026-09-10, SHA-256 comparison over SSH confirmed both repository scripts
+match those paths on `pink-sudo`; `/etc/egpu-watchdog.env` contains the thresholds
+above. This checks installed content, not runtime recovery behavior.
+The recovered `egpu-session` script sources its state as shell code and does not
+quote notes containing spaces when saving them; treat this as a known limitation
+of the deployed snapshot, not a validated state-file interface.
+
+Watchdog still skips auto-recovery when `boltctl` says `disconnected` (Core X
+intentionally off). It cannot prevent a hard freeze once the kernel stops
+scheduling; max-age alerts exist so you tear down **before** that window.
+
+### Thunderbolt hot-unplug caveat
 
 **Observed on `thebeachlab` (NUC11TNKi3 + Razer Core X + RTX 2070 SUPER, June 2026):**
 
@@ -241,8 +299,9 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 
 - Unplugging the Thunderbolt cable while the eGPU is live
 - Reconnecting the cable in the same runtime session
+- Leaving the Core X authorized for many hours (including idle)
 
-**What Linux reports when it breaks:**
+**What Linux reports when it breaks (when logs flush):**
 
 ```text
 thunderbolt 0-3: device disconnected
@@ -250,6 +309,8 @@ pcieport 0000:00:07.0: pciehp: Slot(0): Link Down
 NVRM: Xid (PCI:0000:04:00): 79, GPU has fallen off the bus.
 NVRM: Xid (PCI:0000:04:00): 154, GPU recovery action changed ... GPU Reset Required
 ```
+
+Hard freezes often leave **no** final Xid line because the journal never flushes.
 
 **Typical broken-state symptoms after reconnect:**
 
@@ -259,24 +320,27 @@ NVRM: Xid (PCI:0000:04:00): 154, GPU recovery action changed ... GPU Reset Requi
 - `nvidia-smi` fails with `No devices were found`
 - Server fan can ramp hard during the failure window
 
-**Operational rule:**
+**Operational rules:**
 
-- Do **not** hot-unplug or hot-replug the Thunderbolt cable while GPU workloads are active
-- Treat the eGPU cable as effectively non-hot-swappable for production use on this host
+- Do **not** hot-unplug or hot-replug the Thunderbolt cable while the NUC is up
+- Treat the eGPU cable as effectively non-hot-swappable for production use
+- Do **not** leave Core X powered for multi-day always-on; use sessions
 
 **Recovery:**
 
 1. Stop touching the Thunderbolt cable
-2. Reboot the host
+2. Reboot the host (hard power if frozen)
 3. Re-check:
 
 ```bash
 boltctl list
 lspci | grep -i nvidia
 nvidia-smi
+egpu-session status
 ```
 
-If the reboot path does not recover cleanly, escalate to full power-off / power-on.
+If the reboot path does not recover cleanly, escalate to full power-off / power-on
+of NUC **and** Core X (see Razer power-cycle notes in [gpu.md](gpu.md)).
 
 **Notes from local testing:**
 
@@ -287,7 +351,19 @@ If the reboot path does not recover cleanly, escalate to full power-off / power-
   and validated; a cold boot with the Core X connected is required to activate
   and verify the change
 - Pre-change GRUB backup: `/etc/default/grub.pre-aspm-20260718`
+- GSP firmware disabled via `/etc/modprobe.d/nvidia-no-gsp.conf` (`NVreg_EnableGpuFirmware=0`)
 - The issue matches known Linux/NVIDIA/Thunderbolt reports around `Xid 79` and "fallen off the bus"
+
+### Still-open experiments (when you next need a long GPU day)
+
+These are planned A/B tests from [gpu.md](gpu.md#current-research-and-runtime-stability-test-2026-08-04), not done yet:
+
+1. Same workload on kernel `6.8.0-134-generic` vs default `6.8.0-136` (NVIDIA held at 595.84).
+2. Only if kernels both hang: controlled NVIDIA `595.71.05` rollback with matched packages.
+3. Physical: alternate TB port + known-good short certified cable (≤60 cm).
+
+Do not expect a pure software patch to make always-on Core X safe until an A/B
+test proves a regression and a rollback holds under continuous attach.
 
 ## Recovery after dead PSU/GPU
 

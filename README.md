@@ -12,7 +12,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 ## Current infrastructure
 
-**Server:** Intel NUC 11, 16 GB RAM, 1 TB NVMe. Ubuntu Server. Connected via 1 Gbps symmetric FTTH (dynamic IP). The external GPU is currently powered off. When it is used, Linux enumerates it and starts GPU workloads, but there is an unresolved runtime-stability failure after minutes or hours of use. This is not an initial Thunderbolt/PCIe detection issue; see [GPU setup](doc/gpu.md).
+**Server:** Intel NUC 11, 16 GB RAM, 1 TB NVMe. Ubuntu Server. Connected via 1 Gbps symmetric FTTH (dynamic IP). The Razer Core X eGPU is used as a **job session**, not always-on: long continuous attach (including idle) has hard-hung the host. Power it for Whisper/TTS/ComfyUI work, then power it off and reboot; see [GPU services / eGPU sessions](doc/gpu-services.md#egpu-session-model-required-for-host-stability) and [GPU setup](doc/gpu.md).
 
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
 

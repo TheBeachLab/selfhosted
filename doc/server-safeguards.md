@@ -140,20 +140,28 @@ Behavior:
 - if still missing, sends one iGotify alert on the `ok -> missing` transition
 - sends one recovery notification on the `missing -> ok` transition
 - does not send repeating reminders while the device stays missing
+- **session max-age (2026-08-05):** while NVIDIA is continuously present, one
+  warn at 6 h and one critical at 10 h via iGotify so the enclosure is powered
+  down before the multi-hour hang window. Does **not** auto-reboot.
 - a separate heartbeat log records regular samples plus explicit transition events
+- companion CLI: `/usr/local/bin/egpu-session` (see [gpu-services.md](gpu-services.md#egpu-session-model-required-for-host-stability))
 
 Scope limit, verified on 2026-08-04: this watchdog treats a PCI-visible NVIDIA
 device as healthy. It does not execute `nvidia-smi`, inspect Xid events, or
 detect a driver hang where the GPU stays visible in `lspci`. It also deliberately
 skips automatic recovery while `boltctl` says `disconnected`, which avoids
-rescan/restart attempts when the Core X is intentionally powered off. Use the
-runtime capture sequence in [GPU setup](gpu.md#current-research-and-runtime-stability-test-2026-08-04)
-for a workload-induced hang.
+rescan/restart attempts when the Core X is intentionally powered off. Hard freezes
+with no journal flush cannot be recovered by the watchdog. Use the runtime capture
+sequence in [GPU setup](gpu.md#current-research-and-runtime-stability-test-2026-08-04)
+when a hang is still reachable over SSH.
 
 Current env:
 
 ```bash
 EGPU_NAME=Razer Core X
+COOLDOWN_S=1800
+EGPU_WARN_S=21600
+EGPU_CRITICAL_S=36000
 ```
 
 Current timer cadence:
