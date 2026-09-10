@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Music/imported for completed uploads every five minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

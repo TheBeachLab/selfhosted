@@ -1,0 +1,18 @@
+[Unit]
+Description=Recognize and organize the Nextcloud Music inbox
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+Environment=HOME=/var/lib/music-inbox
+Environment=BEETSDIR=/var/lib/music-inbox/beets
+ExecStart=/opt/music-inbox/venv/bin/python /opt/music-inbox/organize.py run
+TimeoutStartSec=2h
+Nice=15
+IOSchedulingClass=idle
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
