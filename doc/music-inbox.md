@@ -171,3 +171,38 @@ cache was refreshed via Settings > Artwork, then Account > Resync Library;
 album covers were visibly displayed in the app after the correction.
 Clients that cached the old generic image may need their downloaded artwork
 cache cleared; this does not require deleting downloaded songs.
+
+## Mac drop folder
+
+On this Mac, drop audio files or album folders into
+`/Users/Papi/Music/Para Nextcloud`. The login LaunchAgent
+`org.beachlab.music-drop` runs every minute while the user is logged in. Files
+must remain unchanged for two minutes before upload. The existing server worker
+then recognizes and organizes them from `Music/imported` on its normal schedule.
+
+The agent runs `mac-drop.py` from `~/Library/Application Support/Music Drop`
+using `/opt/homebrew/bin/python3`. Its plist is installed under
+`~/Library/LaunchAgents`. It uses the existing `pink-sudo` SSH configuration in
+batch mode; no extra passwords are saved. Server receiver
+`/opt/music-inbox/receive-drop.php` runs as www-data through sudo and writes
+through Nextcloud's file API. It verifies the uploaded size and SHA-256 before
+moving a temporary `.upload` file to its final inbox name. Different contents
+with the same name receive a hash suffix, never overwrite an existing file.
+
+Only supported audio extensions are transferred; non-audio files, hidden files,
+symlinks, and empty files remain untouched. Offline or failed uploads stay on
+the Mac for retry. This is a one-way transfer inbox, not a bidirectional mirror.
+The local audio is removed only after a verified server receipt and a second
+local hash/stability check. Receipts in `/var/lib/music-inbox/drop-receipts`
+prevent duplicate retry uploads and account for subsequent verified tag changes.
+The Mac records original paths and destinations in `transfers.jsonl`, with
+`status.json`, `transfer.log`, and `errors.log` in its support directory.
+
+Validation on 2026-09-10: three local tests cover successful removal, failed or
+mismatched receipts, and edits during upload. A real SSH upload and retry kept
+one Nextcloud file ID. A separate WAV dropped into the actual Mac folder was
+transferred by launchd, verified remotely, and removed locally; both test files
+were then deleted through Nextcloud's API. PHP and plist syntax checks passed.
+Run `python3 -m unittest discover -s services/music-inbox -p test_mac_drop.py`
+for the local tests. Pause with `launchctl bootout gui/$(id -u)/org.beachlab.music-drop`;
+resume by bootstrapping the installed plist. This does not stop the server worker.
