@@ -467,3 +467,59 @@ When new sensors are added to pibot1:
 - **2026-03-29:** Added 12 GPS/IMU columns (gps_lat, gps_lon, gps_speed_kmh, gps_altitude_m, gps_satellites, gps_fix, heading_deg, altitude_m, baro_altitude_m, imu_pitch_deg, imu_roll_deg, imu_yaw_rate_dps). RPi now publishes IMU at 2–5 Hz with 100-sample averaging, GPS rounded to 2 decimals for privacy, IMU reset via MQTT command.
 - **2026-03-28:** Added sensor columns (co2_ppm, temperature_c, humidity_pct, pressure_hpa) and 14 Starlink columns. Starlink watcher service + WiFi auto-reconnect on RPi.
 - **2026-03-25:** Initial pipeline — Bluetti power fields, ingest script, hypertable, PostgREST exposure.
+
+## Field freshness and website instruments (2026-09-12)
+
+The old ingestor wrote its in-memory state every 30 seconds with the current
+clock, even without new MQTT deliveries. On September 12, a 24-hour query had
+2,879 rows but just one distinct pitch value; the observed public snapshot
+combined `Unreachable` Starlink with cached throughput and repeated -31°/-26.7°
+attitude. An eight-second non-retained subscription received no message. These
+observations establish repeated stored state, not the vehicle's actual attitude.
+The Pi SSH endpoint also timed out; its physical power/connection state remains
+unverified.
+
+The versioned replacement is `scripts/mobile-lab/bluetti_ingest.py`, with pure
+state handling in `observation_state.py`. It ignores retained replay without a
+trusted source time, expires each field after five minutes, and timestamps each
+row with the last accepted delivery rather than the flush clock. Repeated
+snapshots use the same unique key, so they cannot manufacture new history. Empty
+state continues scheduling (the previous early return stopped the timer).
+`001-field-freshness.sql` adds nullable `field_received_at` JSONB and appends it
+to the existing view, preserving old rows and grants. Old rows with no metadata
+must never establish sensor freshness.
+
+Supported inputs are legacy `bluetti/state/<id>/<field>`, upstream
+`bluetti/<id>/state/<field>`, and whitelisted `gml/nav`, `gml/cabin`, and
+`gml/starlink` fields for this vehicle. These mappings were checked against
+`bluetti-starlink-mqtt/pibot-sensors/sensor_mqtt.py` on 2026-09-12. They are code
+compatibility, not evidence that the updated Pi publisher is running. Broker
+permissions are unchanged. Public coordinates remain rounded to two decimals;
+combined raw messages, private fields and command topics are not stored.
+
+A `gml/nav` source timestamp older than five minutes is rejected (including
+old outbox traffic). Untimestamped non-retained fields have receipt provenance,
+not a guaranteed sensor sampling time; the UI says "received" accordingly.
+Future producer work should timestamp every group before outbox enqueue.
+
+The website uses independently aged field values. It hides stale attitude,
+withholds Starlink throughput when the dish is disconnected, requires a recent
+GPS fix, uses GPS altitude rather than silently substituting barometric altitude,
+and marks suspect CO2 as "Check sensor". The CO2 250–10,000 ppm range is a UI
+sanity check, not an air-quality standard or a safety classification.
+
+The W463 drawings are based on the owner's supplied photographs. The vehicle
+and perpendicular needle rotate together against a stationary signed scale;
+roll has no horizontal reference line. Positive pitch raises the right-facing
+nose; positive roll lowers the vehicle's right side in the front view. These
+are display conventions. Vehicle mounting alignment has not been verified and
+no IMU zero/reset command was sent. Missing readings show no angle or needle.
+
+Deploy the additive migration first, then install `bluetti_ingest.py` and
+`observation_state.py` beside the existing runtime script and restart only
+`bluetti-ingest`. Keep a private backup of the previous script and view definition.
+Rollback the service by restoring the prior script; leave the additive metadata
+column intact. Validate imports in the runtime venv, run
+`python3 -m unittest discover -s scripts/mobile-lab -p 'test_*.py'`, and verify
+that retained replay alone produces no new rows. Never seed test telemetry on
+the production broker; instrument test readings belong in a local preview.
