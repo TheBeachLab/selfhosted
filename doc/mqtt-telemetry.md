@@ -580,3 +580,37 @@ FROM sensors
 ORDER BY time DESC
 LIMIT 10;
 ```
+
+## Website freshness metadata (2026-09-12)
+
+The versioned publisher is now `scripts/telemetry/publish_telemetry.sh`, captured
+from the running publisher before applying the following changes:
+
+- CPU utilization counts the first eight Linux `/proc/stat` counters, including
+  IRQ, softirq and steal, excluding guest counters already included in user/nice.
+  Idle includes iowait. See the kernel's
+  [proc/stat documentation](https://docs.kernel.org/filesystems/proc.html).
+- `env.source.timestamp` carries Open-Meteo's `current.time` converted to UTC
+  using `utc_offset_seconds`; `env.source.date` carries the forecast date.
+  See [Open-Meteo response documentation](https://open-meteo.com/en/docs).
+  The existing `building` keys remain for ingestion compatibility; their values
+  are weather-model output, not indoor sensor readings.
+- Weather cache replacement is atomic. On fetch failure the original timestamp
+  survives, allowing consumers to identify stale cached values.
+
+The ingestor already preserves the whole message in `telemetry_stats.payload`;
+no schema migration or historical rewrite is required. Older rows lack weather
+source timestamps and must not be treated as fresh weather observations.
+
+Read-only inspection on 2026-09-12: 299,328 rows from February 7 onward, 62 MB
+including compressed chunks, compression job 1002 scheduled every 12 hours,
+no retention job. Verified using `hypertable_size`, `timescaledb_information.jobs`
+and min/max/count queries against `sensors.telemetry_stats`. Preserve this
+history; the website requests bounded, host-filtered resource columns only.
+
+Deployment: back up the live publisher outside the web root, install this file
+as `/home/pink/.openclaw/workspace/scripts/publish_telemetry.sh` preserving owner
+and executable mode, and leave the existing env file and cron intact. First run
+with `DRY_RUN=true` from the runtime scripts directory, then verify the next cron
+sample's `payload.env.source` through the database and public API. Roll back by
+restoring the backed-up publisher. No service restart is needed.
