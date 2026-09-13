@@ -35,6 +35,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Troubleshooting](doc/troubleshooting.md)
 
 ### Services
+- [Taskwarrior and Nextcloud Tasks sync](doc/taskserver.md)
 - [Transmission Daemon (NordVPN)](doc/transmission.md)
 - [Mumble voice server](doc/mumble.md)
 - [iOS Push Notifications (iGotify)](doc/igotify.md)
@@ -74,7 +75,6 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 ### WIP / archived
 - [Understanding DNS](doc/dns.md) `[WIP]`
-- [Taskwarrior server](doc/taskserver.md)
 - [OBS ninja (WebRTC)](doc/obsninja.md) `[WIP]`
 - [STUN/TURN Server](doc/turn.md) `[WIP]`
 - [Minecraft server](doc/minecraft.md)

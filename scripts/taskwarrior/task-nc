@@ -1,0 +1,3 @@
+#!/bin/sh
+# Taskwarrior replica managed by nextcloud-taskwarrior.service.
+exec sudo -u taskmaster env TASKRC=/home/taskmaster/nextcloud-sync/taskrc /usr/bin/task "$@"

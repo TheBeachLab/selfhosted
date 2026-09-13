@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync Nextcloud Tasks with Taskwarrior every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+Unit=nextcloud-taskwarrior.service
+
+[Install]
+WantedBy=timers.target

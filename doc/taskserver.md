@@ -1,18 +1,143 @@
-# Task server (taskwarrior)
+# Taskwarrior and Nextcloud Tasks
 
 **Author:** Fran
 
-<!-- vim-markdown-toc GFM -->
+## Active Nextcloud bridge (2026-09-13)
 
-- [Task server (taskwarrior)](#task-server-taskwarrior)
-  - [Prerrequisites](#prerrequisites)
-  - [Install the server](#install-the-server)
-  - [Configure the server](#configure-the-server)
-  - [Generate certificate files for each client](#generate-certificate-files-for-each-client)
-  - [Copy the certificates to the client machine/device (taskwarrior)](#copy-the-certificates-to-the-client-machinedevice-taskwarrior)
-  - [Sync](#sync)
+The NUC (`ssh pink-sudo`, host `thebeachlab`) runs Taskwarrior **2.6.1** and
+**syncall 1.8.8** in an isolated Python 3.10 environment under
+`/home/taskmaster/nextcloud-sync`. The existing `taskd.service` remains running
+with its historical data and configuration. This new replica is separate from
+that legacy taskd dataset; it synchronizes directly with Nextcloud CalDAV.
 
-<!-- vim-markdown-toc -->
+```text
+server Taskwarrior <-> syncall adapter <-> Nextcloud Tasks <-> Apple Reminders
+```
+
+Apple Reminders must use the **Nextcloud account's lists**. This does not bridge
+iCloud lists. Apple lists CalDAV account support in its
+[Reminders guide](https://support.apple.com/en-ie/guide/iphone/iph8739025dd/ios),
+and [Nextcloud Tasks lists Apple Reminders as compatible](https://github.com/nextcloud/tasks/blob/main/README.md).
+Apple-device round trips were not tested during this server installation.
+
+### Use
+
+SSH to the NUC, then:
+
+```sh
+task-nc next
+task-nc projects
+task-nc add "My new task"
+task-nc 123 done
+sudo systemctl start nextcloud-taskwarrior.service
+sudo systemctl status nextcloud-taskwarrior.timer
+sudo journalctl -u nextcloud-taskwarrior.service -n 30 --no-pager
+```
+
+`task-nc` runs the replica as `taskmaster` with the right configuration. New tasks
+default to `NC.Quick_Reminder`. Each configured list maps to a separate `NC.*`
+project; `settings.json` records its display name, immutable collection URL, and
+project. Duplicate display names get distinct project names. No new network port
+or taskd client registration is required for this bridge.
+
+The system timer runs two minutes after each completed invocation. One process
+holds an exclusive file lock. A failed collection read or conversion fails the
+service; it is not treated as an empty task list. When both copies have changed,
+**Nextcloud wins**. Changes flow both ways otherwise.
+
+### Compatibility adapter and boundaries
+
+[Upstream syncall CalDAV documentation](https://github.com/bergercookie/syncall/blob/master/docs/readme-tw-caldav.md)
+describes bidirectional synchronization and excludes recurrence. Live testing of
+unmodified 1.8.8 reproduced an invalid `PRIORITY:` on a task without a priority:
+a subsequent read failed with `ValueError: Expected int, got:`. Do not use its
+plain `tw_caldav_sync` command against this replica.
+
+The versioned [adapter](../scripts/taskwarrior/sync_nextcloud.py) uses syncall's
+matching/state engine with URI-based collection selection and valid typed VTODO
+serialization. It preserves unsupported remote metadata (including alarms and
+Apple properties), keeps date-only deadlines, detects priority/tag changes (including explicit removal of old tags, which
+taskw-ng otherwise retains), and
+maps completion timestamps. Priority maps to Taskwarrior H/M/L; CalDAV values
+1-4 map to H, 5 to M, and 6-9 to L. A subsequent Taskwarrior edit normalizes these
+to 1/5/9. Nextcloud notes map to Taskwarrior annotations.
+
+- The initial inventory contains 1,462 tasks in 35 task-capable calendars.
+  One existing recurring UID in `NC.Lista_Con_Fran` is explicitly excluded;
+  it stays in Nextcloud. The remaining 1,461 are in scope, including completed tasks: 214 pending and 1,247 completed.
+  Initial import and a repeat sync succeeded; all 1,462 remote VTODO contents
+  matched the pre-import backup (zero modifications or new resources).
+- New recurrence in a configured collection stops that collection's sync for
+  review. Taskwarrior recurrence, waiting/scheduling semantics, dependency and
+  subtask hierarchy are not bridged. Use Nextcloud/Reminders for the excluded task.
+- Collection creation/deletion and task moves between projects are not validated
+  workflows. Add lists explicitly to the mapping after testing; do not rename
+  mapped projects to move tasks. Missing collections are not recreated.
+- Server-side tests establish CalDAV behavior, not notifications or UI behavior
+  on a particular Apple device.
+
+### Files, backup, and recovery
+
+| Path | Purpose |
+|---|---|
+| `/home/taskmaster/nextcloud-sync/venv` | Isolated, pinned dependencies |
+| `/home/taskmaster/nextcloud-sync/data` | Taskwarrior replica |
+| `/home/taskmaster/nextcloud-sync/config` | Syncall identity mapping and previous-state cache |
+| `/home/taskmaster/nextcloud-sync/settings.json` | Fixed list URLs, projects, recurrence exclusion |
+| `/home/taskmaster/nextcloud-sync/app-password` | Dedicated Nextcloud app credential, mode 0600 |
+| `/home/taskmaster/nextcloud-sync/initial-caldav-backup` | Original VTODO files before initial import |
+| `/var/backups/taskwarrior-nextcloud/before-sync-20260913.sql` | Pre-install calendar table dump, root-only |
+| `/home/taskmaster/nextcloud-sync/backups` | Once-daily pre-sync replica/config snapshots; latest 14 days with runs |
+
+Keep the data directory **and syncall state together**. Removing the state can
+cause duplicates or incorrect reconciliation. Snapshots are local recovery
+copies, not off-host backups. Stop the timer and wait for the service to finish
+before any restore. Restore only the intended records/resources after comparing
+current data; do not overwrite the entire live Nextcloud database with the
+partial table dump.
+
+```sh
+sudo systemctl disable --now nextcloud-taskwarrior.timer
+# Inspect any active service before repairing/restoring state.
+sudo systemctl status nextcloud-taskwarrior.service
+```
+
+### Reproduce and validate
+
+Source templates live in [scripts/taskwarrior](../scripts/taskwarrior/).
+The environment needed `typing_extensions` explicitly; old PyYAML requires
+Cython <3 for a source build, and wheel <0.46 avoids a packaging dependency conflict.
+The complete installed version set is in `requirements.lock`.
+
+```sh
+sudo apt-get install taskwarrior python3-venv
+sudo -u taskmaster python3 -m venv /home/taskmaster/nextcloud-sync/venv
+sudo -u taskmaster /home/taskmaster/nextcloud-sync/venv/bin/pip install 'Cython<3' 'wheel<0.46'
+# Copy requirements.lock from this repository first.
+sudo -u taskmaster /home/taskmaster/nextcloud-sync/venv/bin/pip install --no-build-isolation -r requirements.lock
+```
+
+Provision credentials with Nextcloud's `occ user:auth-tokens:add`, redirecting
+output to a protected file and retaining only the generated token line. Never
+commit or print the token. Inventory exact CalDAV URLs before writing settings;
+list names alone are ambiguous on this server. A temporary collection could not
+be created because Nextcloud returned `Calendar limit reached`; verification
+used temporary, subsequently deleted tasks in the otherwise empty `Work FF` list.
+
+`test_adapter.py` checks typed serialization, date conversion, and metadata
+preservation. `test_roundtrip.py` requires a separately prepared test replica
+and an otherwise empty test collection; it creates/edits/deletes test tasks.
+It must never be pointed at the production mapping.
+
+## Historical taskd installation reference
+
+The following is the original setup, retained for the already-running service.
+It is not the Nextcloud bridge installation procedure. Taskwarrior 3 uses a
+different sync implementation and cannot use taskd; see the
+[official upgrade guide](https://taskwarrior.org/docs/upgrade-3/).
+
+
+
 
 It is a bit tedious but worth it
 

@@ -1,0 +1,20 @@
+[Unit]
+Description=Taskwarrior and Nextcloud Tasks bidirectional sync (syncall)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=taskmaster
+Group=taskmaster
+Environment=HOME=/home/taskmaster
+WorkingDirectory=/home/taskmaster/nextcloud-sync
+UMask=0077
+ExecStart=/home/taskmaster/nextcloud-sync/venv/bin/python /home/taskmaster/nextcloud-sync/sync_nextcloud.py /home/taskmaster/nextcloud-sync/settings.json
+TimeoutStartSec=15min
+Nice=10
+MemoryMax=512M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/taskmaster/nextcloud-sync
