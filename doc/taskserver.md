@@ -63,13 +63,16 @@ maps completion timestamps. Priority maps to Taskwarrior H/M/L; CalDAV values
 to 1/5/9. Nextcloud notes map to Taskwarrior annotations.
 
 - The initial inventory contains 1,462 tasks in 35 task-capable calendars.
-  One existing recurring UID in `NC.Lista_Con_Fran` is explicitly excluded;
-  it stays in Nextcloud. The remaining 1,461 are in scope, including completed tasks: 214 pending and 1,247 completed.
+  Initially, one completed recurring UID in `NC.Lista_Con_Fran` was excluded.
+  On 2026-09-13 its expired daily recurrence was removed at the user's request,
+  preserving its title and completed status, and the exclusion was removed.
+  All 1,462 tasks are now in scope: 214 pending and 1,248 completed.
+  Its original VTODO is saved as `before-recurrence-removal.ics` in the bridge directory.
   Initial import and a repeat sync succeeded; all 1,462 remote VTODO contents
   matched the pre-import backup (zero modifications or new resources).
 - New recurrence in a configured collection stops that collection's sync for
   review. Taskwarrior recurrence, waiting/scheduling semantics, dependency and
-  subtask hierarchy are not bridged. Use Nextcloud/Reminders for the excluded task.
+  subtask hierarchy are not bridged.
 - Collection creation/deletion and task moves between projects are not validated
   workflows. Add lists explicitly to the mapping after testing; do not rename
   mapped projects to move tasks. Missing collections are not recreated.
