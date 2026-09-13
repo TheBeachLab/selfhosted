@@ -11,6 +11,7 @@
 - [Optional. Accessing NFS drives](#optional-accessing-nfs-drives)
 - [Install and setup rsnapshot](#install-and-setup-rsnapshot)
 - [Current production setup: Restic](#current-production-setup-restic)
+- [Minecraft USB backups](#minecraft-usb-backups)
 
 <!-- vim-markdown-toc -->
 
@@ -148,3 +149,96 @@ sudo rm -rf /var/tmp/restic-restore-test
 
 The script refuses to run if `/mnt/nas-downloads` is not an NFS mount, so a
 NAS outage cannot silently fill the local root filesystem.
+
+## Minecraft USB backups
+
+The Minecraft Java world also has a fast restore copy on a dedicated Kingston
+DataTraveler. This complements Restic; it does not replace the NAS history.
+
+Drive and mount:
+
+```text
+UUID:        FEF9-F572
+Filesystem:  exFAT
+Mount:       /mnt/minecraft-backups
+```
+
+`/etc/fstab` uses `x-systemd.automount`, a 60-second idle timeout, and `nofail`,
+so the server still boots when the drive is absent. Keep the drive in the safe
+USB port. The udev rule in `services/99-left-front-usb.rules` explicitly excludes
+this drive's serial number from the destructive left-front `2usb` formatter.
+
+Production files:
+
+```text
+/usr/local/sbin/mc-usb-backup
+/etc/systemd/system/mc-usb-backup.service
+/etc/systemd/system/mc-usb-backup.timer
+/etc/udev/rules.d/99-left-front-usb.rules
+```
+
+Repository sources:
+
+```text
+services/mc-usb-backup
+services/mc-usb-backup.service
+services/mc-usb-backup.timer
+services/99-left-front-usb.rules
+```
+
+The timer runs daily at `02:45 UTC` with up to five minutes of jitter, before
+the Restic timer at `03:10 UTC`. It only creates a backup when `Fran90908` has
+joined since the previous check. Activity is read from the systemd journal and
+confirmed with the premium player-data modification time. A skipped run advances
+the activity checkpoint; a failed run does not, so it retries later.
+
+Discord notifications use the dedicated world server channels:
+
+```text
+Status:   1536372549653635192
+Backups:  1536373187259011134
+```
+
+The backup channel receives completed and failed runs, not no-activity skips.
+The existing one-minute Minecraft watchdog reports actual service state changes
+to the status channel.
+
+Backup sequence:
+
+1. Verify that the expected USB UUID is mounted, never the root filesystem.
+2. Run `save-off` and `save-all flush` over local RCON.
+3. Create and test a Zstandard tar archive, then immediately run `save-on`.
+4. Hash the local archive, copy it to the USB, and hash the USB copy again.
+5. Keep two archives on the USB and one local archive in
+   `/opt/minecraft/backups/daily`.
+
+The local archive is included by the regular Restic job, which provides the
+longer 7-daily/4-weekly/6-monthly history. The USB remains intentionally short:
+two known-good, directly restorable copies.
+
+Inspect or trigger:
+
+```bash
+systemctl list-timers mc-usb-backup.timer
+sudo systemctl start mc-usb-backup.service
+sudo journalctl -u mc-usb-backup.service -n 100 --no-pager
+
+# Ignore the activity check and create a backup now
+sudo /usr/local/sbin/mc-usb-backup --force
+```
+
+Validate an archive without restoring it:
+
+```bash
+sha256sum -c world-YYYY-MM-DD_HHMMSSZ.tar.zst.sha256
+tar --zstd -tf world-YYYY-MM-DD_HHMMSSZ.tar.zst >/dev/null
+```
+
+Restore only while Minecraft is stopped:
+
+```bash
+sudo systemctl stop minecraft-java.service
+sudo tar --zstd -xf world-YYYY-MM-DD_HHMMSSZ.tar.zst -C /opt/minecraft/server
+sudo chown -R minecraft:minecraft /opt/minecraft/server/Hariburi-World
+sudo systemctl start minecraft-java.service
+```

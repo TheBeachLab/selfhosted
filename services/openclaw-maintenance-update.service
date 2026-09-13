@@ -1,0 +1,14 @@
+[Unit]
+Description=Transactional OpenClaw update and migration
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/pink
+Environment=HOME=/home/pink
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/pink/.local/bin/openclaw-maintenance-update
+UMask=0077
+Nice=10
+TimeoutStartSec=30min

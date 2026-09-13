@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+
+readonly EXPECTED_USER="pink"
+readonly SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly USER_BIN="${HOME}/.local/bin"
+readonly USER_SYSTEMD="${HOME}/.config/systemd/user"
+readonly GATEWAY_DROPIN="${USER_SYSTEMD}/openclaw-gateway.service.d"
+readonly BASH_ALIASES="${HOME}/.bash_aliases"
+
+[[ "$(id -un)" == "${EXPECTED_USER}" ]] || {
+  echo "Run this installer as ${EXPECTED_USER}." >&2
+  exit 1
+}
+[[ "${HOME}" == "/home/${EXPECTED_USER}" ]] || {
+  echo "Unexpected HOME: ${HOME}" >&2
+  exit 1
+}
+
+install -d -m 0700 "${USER_BIN}"
+install -d -m 0755 "${USER_SYSTEMD}" "${GATEWAY_DROPIN}"
+install -m 0755 "${SOURCE_DIR}/openclaw-maintenance-update" "${USER_BIN}/openclaw-maintenance-update"
+install -m 0644 "${SOURCE_DIR}/openclaw-maintenance-update.service" "${USER_SYSTEMD}/openclaw-maintenance-update.service"
+install -m 0644 "${SOURCE_DIR}/openclaw-maintenance-update.timer" "${USER_SYSTEMD}/openclaw-maintenance-update.timer"
+install -m 0644 "${SOURCE_DIR}/openclaw-gateway-restart-policy.conf" "${GATEWAY_DROPIN}/restart-policy.conf"
+
+cron_before=$(mktemp)
+cron_after=$(mktemp)
+trap 'rm -f -- "${cron_before}" "${cron_after}" "${aliases_after:-}"' EXIT
+crontab -l >"${cron_before}" 2>/dev/null || true
+match_count=$(grep -Ec '(^# Update OpenClaw daily at 04:15$|sudo npm install -g openclaw@latest)' "${cron_before}" || true)
+(( match_count <= 2 )) || {
+  echo "Unexpected number of legacy OpenClaw cron lines: ${match_count}" >&2
+  exit 1
+}
+awk '!/^# Update OpenClaw daily at 04:15$/ && !/sudo npm install -g openclaw@latest/' "${cron_before}" >"${cron_after}"
+if ! cmp -s "${cron_before}" "${cron_after}"; then
+  crontab "${cron_after}"
+fi
+
+if [[ -f "${BASH_ALIASES}" ]] && grep -Fq -- \
+  'openclaw tui --session main --deliver' "${BASH_ALIASES}"; then
+  aliases_after=$(mktemp)
+  sed 's/openclaw tui --session main --deliver/openclaw tui --session agent:main:main --deliver/g' \
+    "${BASH_ALIASES}" >"${aliases_after}"
+  install -m "$(stat -c '%a' "${BASH_ALIASES}")" "${aliases_after}" "${BASH_ALIASES}"
+fi
+
+systemctl --user daemon-reload
+systemctl --user enable --now openclaw-maintenance-update.timer
+
+echo "Installed OpenClaw maintenance timer and bounded Gateway restart policy."
