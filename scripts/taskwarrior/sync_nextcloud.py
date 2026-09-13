@@ -11,11 +11,15 @@ import json
 import os
 from pathlib import Path
 import sys
+import subprocess
 import tarfile
+import sqlite3
+import tempfile
 import uuid
 
 import caldav
-from bubop import logger
+from bubop import logger, PrefsManager
+import syncall.aggregator as aggregator_module
 from syncall.aggregator import Aggregator
 from syncall.app_utils import get_resolution_strategy
 from syncall.caldav.caldav_side import CaldavSide
@@ -178,8 +182,15 @@ class TaskSide(TaskWarriorSide):
 def run(config_path, only=None):
     config = json.loads(Path(config_path).read_text())
     base = Path(config['base'])
+    task_binary = config.get('task_binary', '/opt/taskwarrior-3.5.0/bin/task')
+    os.environ['PATH'] = str(Path(task_binary).parent) + os.pathsep + os.environ.get('PATH', '')
     os.environ['TASKRC'] = str(base / 'taskrc')
     os.environ['XDG_CONFIG_HOME'] = str(base / 'config')
+    # bubop 0.1.12 ignores XDG_CONFIG_HOME. Scope the factory explicitly so
+    # mappings and caches live in the same protected/backup boundary as data.
+    def scoped_prefs(app_name, config_fname='cfg.yaml'):
+        return PrefsManager(app_name=str(base / 'config' / app_name), config_fname=config_fname)
+    aggregator_module.PrefsManager = scoped_prefs
     logger.remove()
     logger.add(sys.stderr, level='ERROR')
     with (base / 'sync.lock').open('w') as lock:
@@ -188,13 +199,27 @@ def run(config_path, only=None):
         backups.mkdir(mode=0o700, exist_ok=True)
         snapshot = backups / (dt.date.today().isoformat() + '.tar.gz')
         if not snapshot.exists():
-            with tarfile.open(str(snapshot) + '.tmp', 'w:gz') as archive:
-                for name in ('data', 'config', 'taskrc', 'settings.json'):
-                    if (base / name).exists():
-                        archive.add(base / name, arcname=name)
+            with tempfile.TemporaryDirectory(dir=backups) as staging:
+                with tarfile.open(str(snapshot) + '.tmp', 'w:gz') as archive:
+                    for name in ('data', 'config', 'taskrc', 'settings.json'):
+                        if (base / name).exists():
+                            def exclude_sqlite(info):
+                                return None if 'taskchampion.sqlite3' in info.name else info
+                            archive.add(base / name, arcname=name, filter=exclude_sqlite)
+                    db = base / 'data/taskchampion.sqlite3'
+                    if db.exists():
+                        saved = Path(staging) / 'taskchampion.sqlite3'
+                        with sqlite3.connect('file:' + str(db) + '?mode=ro', uri=True) as source:
+                            with sqlite3.connect(saved) as target:
+                                source.backup(target)
+                        archive.add(saved, arcname='data/taskchampion.sqlite3')
             Path(str(snapshot) + '.tmp').replace(snapshot)
             for old in sorted(backups.glob('*.tar.gz'))[:-14]:
                 old.unlink()
+        if config.get('sync_taskchampion'):
+            subprocess.run([task_binary, 'rc.verbose=nothing', 'sync'], check=True)
+        exported = json.loads(subprocess.check_output([task_binary, 'export'], stderr=subprocess.DEVNULL))
+        known_uuids = {item['uuid'] for item in exported}
         client = caldav.DAVClient(url=config['dav_url'], username=config['username'],
                                  password=Path(config['password_file']).read_text().strip(), timeout=60)
         for entry in config['calendars']:
@@ -203,12 +228,17 @@ def run(config_path, only=None):
             remote = NextcloudSide(client, entry)
             local = TaskSide(project=entry['project'], tw_filter='project.is:' + entry['project'], config_file_override=base / 'taskrc')
             # If both sides changed, prefer Nextcloud; do not guess from TW import times.
-            with Aggregator(side_A=remote, side_B=local, converter_A_to_B=to_tw,
+            agg = Aggregator(side_A=remote, side_B=local, converter_A_to_B=to_tw,
                             converter_B_to_A=to_dav,
                             resolution_strategy=get_resolution_strategy('AlwaysFirstRS', side_A_type=type(remote), side_B_type=type(local)),
-                            config_fname=entry['key'], catch_exceptions=False) as agg:
+                            config_fname=entry['key'], catch_exceptions=False)
+            if set(agg._B_to_A_map) - known_uuids:
+                raise RuntimeError('Replica is missing mapped UUIDs; finish migration or restore data before syncing')
+            with agg:
                 agg.sync()
             print('Synced', entry['project'], flush=True)
+        if config.get('sync_taskchampion'):
+            subprocess.run([task_binary, 'rc.verbose=nothing', 'sync'], check=True)
 
 
 if __name__ == '__main__':

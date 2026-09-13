@@ -67,3 +67,15 @@ x=next(x for x in items() if x['status']=='pending')
 assert not x.get('due') and not x.get('priority') and not x.get('tags')
 r.delete();sync()
 print('PASS remote clearing deadline, priority and tags; fixture cleaned')
+# A fresh/incorrect replica must not be interpreted as mass deletion.
+task('add','Temporary missing replica guard 4d39898e','project:Probe');sync()
+uid=next(x['uuid'] for x in items() if x['status']=='pending')
+(base/'data').rename(base/'data-guard-preserved')
+(base/'data').mkdir()
+failed=subprocess.run([sys.executable,str(base.parent/'sync_nextcloud.py'),str(base/'settings.json')],capture_output=True,text=True)
+assert failed.returncode != 0 and 'missing mapped UUIDs' in failed.stderr
+assert str(remote().icalendar_component['SUMMARY'])=='Temporary missing replica guard 4d39898e'
+(base/'data').rename(base/'data-guard-empty')
+(base/'data-guard-preserved').rename(base/'data')
+task(uid,'delete');sync();assert len(cal.todos(include_completed=True))==0
+print('PASS empty-replica guard preserves Nextcloud task; fixture cleaned')

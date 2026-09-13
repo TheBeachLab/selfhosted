@@ -1,0 +1,24 @@
+services:
+  taskchampion:
+    image: ghcr.io/gothenburgbitfactory/taskchampion-sync-server:0.7.1@sha256:7903477ff4857cc7c702377d1c93a3f6703eed2f89e1733400b8599a4d0bb1bc
+    container_name: taskchampion-nextcloud
+    restart: unless-stopped
+    user: "1001:1001"
+    entrypoint: ["/bin/taskchampion-sync-server"]
+    command: []
+    ports:
+      - "127.0.0.1:53590:8080"
+    environment:
+      LISTEN: "0.0.0.0:8080"
+      DATA_DIR: /var/lib/taskchampion-sync-server/data
+      RUST_LOG: warn
+    env_file:
+      - /home/taskmaster/taskchampion/server.env
+    volumes:
+      - /home/taskmaster/taskchampion/data:/var/lib/taskchampion-sync-server/data
+    mem_limit: 256m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
