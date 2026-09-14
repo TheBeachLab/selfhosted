@@ -13,6 +13,7 @@ import secrets
 import shutil
 import socket
 import socketserver
+import stat
 import threading
 import time
 import urllib.error
@@ -285,35 +286,112 @@ def bootstrap_files() -> None:
             }
 
 
+def file_parent(name: str):
+    """Walk using directory descriptors, never following symlinks."""
+    if not isinstance(name, str) or not name or "\x00" in name:
+        raise ValueError("Ruta inválida")
+    parts = name.split("/")
+    if any(not x or x.startswith(".") or x.endswith((".part", ".crdownload")) for x in parts):
+        raise ValueError("Ruta no disponible")
+    fd = os.open(FILES_DIR, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            nxt = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = nxt
+        return fd, parts[-1]
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def listing(name: str):
+    if name:
+        parent, leaf = file_parent(name)
+        try:
+            fd = os.open(leaf, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+        finally:
+            os.close(parent)
+    else:
+        fd = os.open(FILES_DIR, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        items = []
+        for leaf in os.listdir(fd):
+            if leaf.startswith(".") or leaf.endswith((".part", ".crdownload")):
+                continue
+            try:
+                info = os.stat(leaf, dir_fd=fd, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+                continue
+            items.append(dict(name=leaf, directory=stat.S_ISDIR(info.st_mode),
+                              bytes=info.st_size, modified=int(info.st_mtime)))
+        return sorted(items, key=lambda x: (not x["directory"], x["name"].casefold()))
+    finally:
+        os.close(fd)
+
+
+def remove_tree(parent: int, leaf: str):
+    # Python 3.10 compatible descriptor-relative recursion; links are unlinked,
+    # never traversed. O_NOFOLLOW rejects a directory swapped for a symlink.
+    fd = os.open(leaf, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+    try:
+        for child in os.listdir(fd):
+            info = os.stat(child, dir_fd=fd, follow_symlinks=False)
+            if stat.S_ISDIR(info.st_mode):
+                remove_tree(fd, child)
+            else:
+                os.unlink(child, dir_fd=fd)
+    finally:
+        os.close(fd)
+    os.rmdir(leaf, dir_fd=parent)
+
+
+def delete_file(name: str):
+    parent, leaf = file_parent(name)
+    try:
+        info = os.stat(leaf, dir_fd=parent, follow_symlinks=False)
+        if stat.S_ISDIR(info.st_mode):
+            remove_tree(parent, leaf)
+        elif stat.S_ISREG(info.st_mode):
+            os.unlink(leaf, dir_fd=parent)
+        else:
+            raise ValueError("No se permiten enlaces ni archivos especiales")
+    finally:
+        os.close(parent)
+
+
 HTML = r"""<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Drop</title>
+  <title>Descargas · Beachlab</title>
   <style>
     :root{color-scheme:dark;--bg:#0a0c10;--panel:#12161d;--line:#29313d;--text:#edf2f7;--muted:#929dad;--accent:#77e0ad;--danger:#ff7f8a}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 25% 0,#15231f 0,transparent 34%),var(--bg);color:var(--text);font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
-    main{width:min(760px,calc(100% - 32px));margin:9vh auto}h1{margin:0 0 8px;font-size:clamp(32px,7vw,54px);letter-spacing:-.06em}p{color:var(--muted)}
+    main{width:min(960px,calc(100% - 32px));margin:9vh auto}h1{margin:0 0 8px;font-size:clamp(32px,7vw,54px);letter-spacing:-.06em}p{color:var(--muted)}
     form,.job{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 18px 60px #0006}
     form{display:flex;gap:10px;margin:28px 0}input{min-width:0;flex:1;background:#090c10;border:1px solid #354152;border-radius:10px;color:var(--text);padding:13px;font:inherit;outline:none}input:focus{border-color:var(--accent)}
     button,.link{border:0;border-radius:10px;background:var(--accent);color:#07120d;padding:12px 15px;font:700 14px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
-    button:disabled{opacity:.5;cursor:wait}.jobs{display:grid;gap:12px}.job{padding:14px 16px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:6px}.actions{display:flex;gap:8px;margin-top:12px}.actions button,.actions .link{padding:8px 11px;font-size:12px}.delete{background:#301a20;color:var(--danger);border:1px solid #6b2a35}
+    button:disabled{opacity:.5;cursor:wait}.jobs{display:grid;gap:12px}.job{padding:14px 16px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.name{overflow-wrap:anywhere;text-overflow:ellipsis;white-space:normal;font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:6px}.actions{display:flex;gap:8px;margin-top:12px}.actions button,.actions .link{padding:8px 11px;font-size:12px}.delete{background:#301a20;color:var(--danger);border:1px solid #6b2a35}
     progress{width:100%;height:7px;margin-top:12px;accent-color:var(--accent)}.error{color:var(--danger)}.empty{text-align:center;padding:32px;color:var(--muted)}
     @media(max-width:600px){form{flex-direction:column}.row{align-items:flex-start;flex-direction:column}}
   </style>
 </head>
 <body>
 <main>
-  <h1>Drop.</h1>
-  <p>Pega una URL pública. El archivo se guarda con un nombre aleatorio y conserva su extensión.</p>
+  <h1>Descargas.</h1>
+  <p>Transmission, Drop y Chromium, en un solo lugar. Pega una URL pública para descargarla aquí.</p>
   <form id="form">
     <input id="url" type="url" placeholder="https://…" required autocomplete="off">
     <button id="submit">Descargar</button>
   </form>
-  <section class="jobs" id="jobs"><div class="empty">Sin archivos.</div></section>
+  <nav id="path"></nav><section class="jobs" id="files"></section><h2>Descargas por URL</h2><section class="jobs" id="jobs"><div class="empty">Sin archivos.</div></section>
 </main>
 <script>
+let folder="", lastListing="";
 const $=s=>document.querySelector(s), jobs=$("#jobs"), form=$("#form"), submit=$("#submit");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const size=n=>{if(n==null)return "—";let i=0,u=["B","KB","MB","GB","TB"];while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`};
@@ -335,12 +413,12 @@ function draw(items){
   }).join("");
 }
 async function refresh(){
-  try{const r=await fetch("api/jobs",{cache:"no-store"});draw((await r.json()).jobs)}catch{}
+  try{const r=await fetch("api/jobs",{cache:"no-store"});if(!r.ok)throw new Error("Sesión caducada. Recarga para identificarte.");draw((await r.json()).jobs.filter(j=>j.status!=="complete"))}catch(e){jobs.textContent=e.message}
 }
 form.addEventListener("submit",async e=>{
   e.preventDefault();submit.disabled=true;
   try{
-    const r=await fetch("api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:$("#url").value})});
+    const r=await fetch("api/download",{method:"POST",headers:{"Content-Type":"application/json","X-Drop-Request":"1"},body:JSON.stringify({url:$("#url").value})});
     const data=await r.json();if(!r.ok)throw new Error(data.error||"No se pudo iniciar");
     $("#url").value="";await refresh();
   }catch(e){alert(e.message)}finally{submit.disabled=false}
@@ -348,9 +426,31 @@ form.addEventListener("submit",async e=>{
 jobs.addEventListener("click",async e=>{
   const del=e.target.dataset.delete, copy=e.target.dataset.copy;
   if(copy){await navigator.clipboard.writeText(new URL(copy,location.href).href);e.target.textContent="Copiado";setTimeout(()=>e.target.textContent="Copiar enlace",1200)}
-  if(del&&confirm("¿Borrar este archivo?")){await fetch("api/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:del})});await refresh()}
+  if(del&&confirm("¿Borrar este archivo?")){await fetch("api/delete",{method:"POST",headers:{"Content-Type":"application/json","X-Drop-Request":"1"},body:JSON.stringify({name:del})});await refresh()}
 });
-refresh();setInterval(refresh,1500);
+async function browse(){
+  const r=await fetch("api/files?path="+encodeURIComponent(folder),{cache:"no-store"});
+  if(!r.ok)throw new Error("No se pudo abrir la carpeta. Recarga si tu sesión ha caducado.");
+  const data=await r.json();
+  const signature=folder+JSON.stringify(data.files);if(signature===lastListing)return;lastListing=signature;
+  $("#path").textContent="Descargas / "+folder;
+  $("#files").innerHTML=(folder?'<button id="up">← Subir</button>':'')+data.files.map(f=>{
+    const path=folder?folder+"/"+f.name:f.name;
+    return `<article class="job"><div class="row"><span class="name">${f.directory?'📁 ':''}${esc(f.name)}</span><span class="meta">${f.directory?'Carpeta':size(f.bytes)}</span></div><div class="actions">${f.directory?`<button data-open="${esc(path)}">Abrir</button>`:`<a class="link" href="files/${path.split('/').map(encodeURIComponent).join('/')}">Descargar</a>`}<button class="delete" data-remove="${esc(path)}" data-dir="${f.directory}">Borrar</button></div></article>`;
+  }).join('')+(data.files.length?'':'<p>Esta carpeta está vacía.</p>');
+}
+$("#files").addEventListener("click",async e=>{
+ try{
+  if(e.target.id==='up'){folder=folder.split('/').slice(0,-1).join('/');await browse()}
+  if(e.target.dataset.open){folder=e.target.dataset.open;await browse()}
+  const name=e.target.dataset.remove;
+  if(name&&confirm(`¿Borrar definitivamente ${name}${e.target.dataset.dir==='true'?' y todo su contenido':''}?`)){
+   const r=await fetch('api/delete',{method:'POST',headers:{'Content-Type':'application/json','X-Drop-Request':'1'},body:JSON.stringify({name})});
+   const d=await r.json();if(!r.ok)throw new Error(d.error);await browse();
+  }
+ }catch(e){alert(e.message)}
+});
+browse().catch(e=>$("#files").textContent=e.message);refresh();setInterval(()=>{refresh();browse().catch(()=>{})},5000);
 </script>
 </body>
 </html>"""
@@ -428,21 +528,31 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/jobs":
             self.send_json(200, {"jobs": serialized_jobs()})
             return
+        if path == "/api/files":
+            try:
+                name = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("path", [""])[0]
+                self.send_json(200, {"files": listing(name)})
+            except (ValueError, OSError):
+                self.send_json(404, {"error": "Carpeta no disponible"})
+            return
         if path.startswith("/files/"):
             name = urllib.parse.unquote(path.removeprefix("/files/"))
-            if not FILE_RE.fullmatch(name):
-                self.send_json(404, {"error": "Archivo no encontrado"})
+            try:
+                parent, leaf = file_parent(name)
+                try:
+                    info = os.stat(leaf, dir_fd=parent, follow_symlinks=False)
+                    if not stat.S_ISREG(info.st_mode):
+                        raise ValueError("Archivo no disponible")
+                finally:
+                    os.close(parent)
+            except (ValueError, OSError):
+                self.send_json(404, {"error": "Archivo no disponible"})
                 return
-            file_path = FILES_DIR / name
-            if not file_path.is_file():
-                self.send_json(404, {"error": "Archivo no encontrado"})
-                return
-            content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
             self.send_response(200)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + urllib.parse.quote(leaf, safe=""))
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("X-Accel-Redirect", f"/drop-internal/{name}")
+            self.send_header("X-Accel-Redirect", "/drop-internal/" + urllib.parse.quote(name, safe="/"))
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
@@ -450,6 +560,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urllib.parse.urlsplit(self.path).path
+        if (self.headers.get("X-Drop-Request") != "1" or
+                self.headers.get("Sec-Fetch-Site") == "cross-site" or
+                self.headers.get("Origin", "https://beachlab.org") != "https://beachlab.org"):
+            self.send_json(403, {"error": "Petición no permitida"})
+            return
         try:
             payload = self.read_json()
             if path == "/api/download":
@@ -478,13 +593,7 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == "/api/delete":
                 name = payload.get("name")
-                if not isinstance(name, str) or not FILE_RE.fullmatch(name):
-                    raise ValueError("Nombre de archivo inválido")
-                file_path = FILES_DIR / name
-                try:
-                    file_path.unlink()
-                except FileNotFoundError:
-                    pass
+                delete_file(name)
                 with LOCK:
                     for job_id in [
                         key for key, value in JOBS.items() if value.get("name") == name
@@ -494,7 +603,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             self.send_json(404, {"error": "Ruta no encontrada"})
-        except ValueError as exc:
+        except (ValueError, OSError) as exc:
             self.send_json(400, {"error": str(exc)})
 
 

@@ -27,7 +27,8 @@ publica su puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
 ```
 
 El perfil y las cookies persisten bajo `/srv/remote-browser/config/`. Las
-descargas quedan en `/srv/remote-browser/config/Downloads`. El panel lateral
+descargas quedan en `/home/pink/downloads`, montada como `/config/Downloads`.
+Se pueden gestionar con passkey en https://beachlab.org/downloads/ . El panel lateral
 permite subir y bajar archivos mediante la sección **Archivos**.
 La unidad systemd prepara `Downloads` con modo `0755` y deja `/config` en `0711`
 para que el Nginx interno pueda servir esa ruta sin poder listar el perfil.

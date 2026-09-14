@@ -32,6 +32,7 @@ services:
       SELKIES_SECOND_SCREEN: "false|locked"
     volumes:
       - /srv/remote-browser/config:/config
+      - /home/pink/downloads:/config/Downloads
     devices:
       - /dev/dri:/dev/dri
     ports:

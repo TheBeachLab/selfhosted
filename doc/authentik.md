@@ -10,7 +10,7 @@ mediante passkey, sustituyendo el HTTP Basic de Nginx:
 | Deutsch Sprint | https://beachlab.org/deutsch/ |
 | Whisper | https://beachlab.org/whisper/ |
 | Qwen3-TTS | https://beachlab.org/tts/ |
-| Drop | https://beachlab.org/drop/ |
+| Descargas / Drop | https://beachlab.org/downloads/ (también `/drop/`) |
 | Navegador remoto | https://beachlab.org/browser/ |
 | ComfyUI | https://comfyui.beachlab.org/ |
 | Barrakuda Designer | https://designer.daswerklab.de/ |

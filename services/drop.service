@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=www-data
+User=pink
 Group=www-data
 ExecStart=/usr/bin/python3 /opt/url-drop/drop.py
 Environment=PYTHONUNBUFFERED=1
@@ -17,7 +17,7 @@ RuntimeDirectory=url-drop
 RuntimeDirectoryMode=0750
 StateDirectory=url-drop
 StateDirectoryMode=0750
-UMask=0077
+UMask=0022
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
@@ -25,6 +25,7 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
 ProtectHome=true
+BindPaths=/home/pink/downloads:/var/lib/url-drop/files
 ProtectClock=true
 ProtectHostname=true
 ProtectKernelTunables=true
