@@ -57,7 +57,9 @@ mantiene disponible el apagado. Activo no equivale a una prueba funcional comple
 - API Python sin dependencias externas, usuario `beachlab-admin`, socket Unix
   `/run/beachlab-admin/http.sock` con permisos 0660, grupo `www-data`; sin puerto TCP.
 - Frontend React/Vite con datos consultados cada 5 s. Pérdida de conexión desactiva
-  controles. CPU es carga media de un minuto, no porcentaje de utilización.
+  controles. Si Authentik devuelve 401, la API conserva ese estado en el mismo
+  origen y la página renueva la sesión mediante la navegación normal de SSO,
+  sin reenviar automáticamente ninguna operación pendiente. CPU es carga media de un minuto, no porcentaje de utilización.
 - POST exige origen exacto, JSON, cookie Secure/HttpOnly/SameSite=Strict y token
   HMAC vinculado al usuario. GET no cambia servicios.
 - El helper root `/usr/local/sbin/beachlab-admin-control` acepta solo IDs y
