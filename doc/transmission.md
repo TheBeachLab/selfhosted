@@ -2,6 +2,11 @@
 
 **Author:** Fran
 
+Actualización 2026-09-14: la web usa Authentik/passkey y el arranque se controla
+desde [el panel](admin-panel.md). El login RPC se conserva internamente. El resto
+de esta página documenta la instalación original; no sustituir el location actual
+por el ejemplo histórico sin los includes de Authentik.
+
 - [Transmission Daemon with NordVPN](#transmission-daemon-with-nordvpn)
 
 

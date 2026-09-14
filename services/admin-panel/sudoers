@@ -1,0 +1,26 @@
+# Root-owned helper validates action and service ID; never accepts a command/path.
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control status
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start comfyui
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start qwen
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start whisper
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start rag
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start transmission
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start browser
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start drop
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start minecraft
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start grafana
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start gotify
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start igotify
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start titiler
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop comfyui
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop qwen
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop whisper
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop rag
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop transmission
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop browser
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop drop
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop minecraft
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop grafana
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop gotify
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop igotify
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control stop titiler

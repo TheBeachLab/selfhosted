@@ -14,12 +14,15 @@ mediante passkey, sustituyendo el HTTP Basic de Nginx:
 | Navegador remoto | https://beachlab.org/browser/ |
 | ComfyUI | https://comfyui.beachlab.org/ |
 | Barrakuda Designer | https://designer.daswerklab.de/ |
+| Transmission | https://beachlab.org/transmission/web/ |
+| Administración | https://admin.beachlab.org/ |
 
 Portal: https://auth.beachlab.org/ . La cuenta `fran` tiene una passkey
 registrada en Apple Passwords para el RP `auth.beachlab.org`. No es administrador.
-Tres proveedores `forward_single` cubren los tres hosts; las cinco rutas de
+Cuatro proveedores `forward_single` cubren los cuatro hosts; las seis rutas de
 Beachlab comparten proveedor y permisos. Las aplicaciones están restringidas
-explícitamente a `fran`. La web pública y las demás aplicaciones no se migraron.
+explícitamente a `fran` y `fran-jr` mediante bindings personales en modo OR.
+El panel de administración tiene proveedor y permiso independiente. La web pública y las demás aplicaciones no se migraron.
 El alias `www.beachlab.org` se redirige al host canónico solo en las rutas protegidas.
 
 El flujo `beachlab-passkey` exige WebAuthn con verificación del usuario y
@@ -54,7 +57,7 @@ recursivo ni del NAT de retorno. El CNAME público `auth` apunta a `beachlab.org
 El certificado usa Certbot webroot `/var/www/letsencrypt`; conservar el bloque
 ACME de HTTP para renovaciones. `certbot.timer` está activo y el hook
 `/etc/letsencrypt/renewal-hooks/deploy/50-authentik-nginx` valida y recarga Nginx
-solo al renovar este certificado. El hook se ejecutó correctamente en la instalación.
+al renovar los certificados de `auth` o `admin`. El hook se ejecutó correctamente en la instalación.
 
 ```bash
 sudo docker compose --project-directory /opt/authentik -f /opt/authentik/compose.yaml ps
@@ -111,3 +114,7 @@ prueba funcional completa de las siete aplicaciones: al comprobar los upstreams,
 Whisper, TTS, ComfyUI y el navegador remoto estaban apagados (conexión rechazada).
 Su arranque sigue sus procedimientos propios; la migración de autenticación no
 arranca servicios GPU ni cambia su ciclo de trabajo.
+
+Fran Jr tiene acceso a todas estas aplicaciones, incluido el panel. Su passkey
+debe registrarla él mismo con el enlace de incorporación privado. Ver
+[administración](admin-panel.md) para el catálogo, permisos y pruebas posteriores.

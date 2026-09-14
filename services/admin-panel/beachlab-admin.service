@@ -1,0 +1,29 @@
+[Unit]
+Description=Beachlab service control panel
+After=network.target
+
+[Service]
+Type=simple
+User=beachlab-admin
+Group=www-data
+WorkingDirectory=/opt/beachlab-admin
+ExecStart=/usr/bin/python3 /opt/beachlab-admin/server.py
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=beachlab-admin
+RuntimeDirectoryMode=0750
+StateDirectory=beachlab-admin
+StateDirectoryMode=0700
+UMask=0007
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=full
+ReadWritePaths=/run /var/lib/beachlab-admin /var/log
+# sudo runs only the root-owned allowlisted controller. No general shell privileges.
+MemoryMax=256M
+CPUQuota=100%
+TasksMax=64
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
