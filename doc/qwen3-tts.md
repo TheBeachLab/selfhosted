@@ -1,5 +1,8 @@
 # Qwen3-TTS Voice Cloning Service
 
+> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
+> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
+
 **Author:** Mr. Watson 🦄
 **Date:** 2026-02-19
 

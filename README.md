@@ -27,6 +27,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Securing SSH access](doc/security.md)
 - [Backups](doc/backups.md)
 - [Web server (Nginx)](doc/web.md)
+- [Acceso web con passkey (Authentik)](doc/authentik.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
 - [VPN Server (OpenVPN)](doc/vpn.md)

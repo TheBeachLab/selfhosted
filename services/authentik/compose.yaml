@@ -1,0 +1,83 @@
+# Based on https://docs.goauthentik.io/compose.yml, retrieved 2026-09-14.
+# Embedded outpost; no Docker socket access. Secrets live in root-only .env.
+services:
+  postgresql:
+    mem_limit: 512m
+    memswap_limit: 1g
+    cpus: 1
+    pids_limit: 256
+    env_file:
+    - .env
+    environment:
+      POSTGRES_DB: ${PG_DB:-authentik}
+      POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+      POSTGRES_USER: ${PG_USER:-authentik}
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test:
+      - CMD-SHELL
+      - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      timeout: 5s
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+    - database:/var/lib/postgresql/data
+  server:
+    mem_limit: 2g
+    memswap_limit: 3g
+    extra_hosts:
+    - auth.beachlab.org:host-gateway
+    cpus: 2
+    pids_limit: 1024
+    command: server
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    env_file:
+    - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}
+    ports:
+    - 127.0.0.1:19000:9000
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+    - ./data:/data
+    - ./custom-templates:/templates
+  worker:
+    mem_limit: 2g
+    memswap_limit: 3g
+    extra_hosts:
+    - auth.beachlab.org:host-gateway
+    cpus: 2
+    pids_limit: 1024
+    command: worker
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    env_file:
+    - .env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}
+    restart: unless-stopped
+    shm_size: 512mb
+    user: root
+    volumes:
+    - ./data:/data
+    - ./certs:/certs
+    - ./custom-templates:/templates
+volumes:
+  database:
+    driver: local

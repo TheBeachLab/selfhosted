@@ -1,5 +1,8 @@
 # ComfyUI
 
+> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
+> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
+
 **Author:** Watson
 
 ComfyUI node-based Stable Diffusion GUI, served at `https://comfyui.beachlab.org` with basic auth.
