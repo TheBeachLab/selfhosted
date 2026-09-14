@@ -7,6 +7,55 @@ desde [el panel](admin-panel.md). El login RPC se conserva internamente. El rest
 de esta página documenta la instalación original; no sustituir el location actual
 por el ejemplo histórico sin los includes de Authentik.
 
+## VPN health and route protection (2026-09-14)
+
+Verified on the live `transmission-vpn` container: the bundled healthcheck
+(`/etc/scripts/healthcheck.sh`) queried `google.com`; NordVPN DNS returned an A
+record but NXDOMAIN for AAAA, making `nslookup` fail. Other tested domains and
+HTTPS worked. This does not establish a subscription-related cause.
+
+The deployed Compose file `/home/pink/docker/transmission-vpn/docker-compose.yml`
+now adds the following to its existing service (preserve credentials and volumes):
+
+```yaml
+environment:
+  # Merge with the existing environment; list syntax is also supported.
+  HEALTH_CHECK_HOST: cloudflare.com
+  DROP_DEFAULT_ROUTE: "true"
+sysctls:
+  net.ipv6.conf.all.disable_ipv6: "1"
+volumes:
+  # Append to existing mounts.
+  - /home/pink/docker/transmission-vpn/healthcheck.sh:/etc/scripts/vpn-healthcheck.sh:ro
+healthcheck:
+  test: [CMD-SHELL, /etc/scripts/vpn-healthcheck.sh]
+  interval: 30s
+  timeout: 15s
+  retries: 3
+  start_period: 30s
+```
+
+Install [healthcheck.sh](../services/transmission/healthcheck.sh) at that host
+path before recreating the container. Validate Compose with `config --quiet`
+and use `up -d --pull never transmission-vpn` to apply without upgrading the image.
+A timestamped `.before-vpn-health-*` copy of the original Compose file is retained
+beside it on the host.
+
+Implementation evidence: the installed image's `/etc/transmission/start.sh`
+removes the Docker default route when `DROP_DEFAULT_ROUTE=true`, before starting
+Transmission. The wrapper checks that no IPv4 default route exists and Internet
+routes via `tun0`, then runs the image's DNS, ping and process checks. IPv6 is
+disabled for this IPv4 VPN. This is route-based protection, not an enabled UFW
+firewall; the explicit VPN-server and local-network routes remain available.
+
+Live validation: VPN connected, wrapper passed, HTTPS through the tunnel worked,
+and local RPC responded with its expected unauthenticated HTTP 401. Temporarily
+removing both VPN Internet routes made `ip route get 1.1.1.1` report unreachable,
+HTTPS fail and the healthcheck return 1. Routes were restored in a `finally`
+block and the healthcheck passed again. This tests loss of tunnel routes, not
+every possible VPN failure or tracker. Docker health status alone does not
+restart an unhealthy container.
+
 - [Transmission Daemon with NordVPN](#transmission-daemon-with-nordvpn)
 
 
