@@ -109,6 +109,8 @@ error. No se considera validado el funcionamiento de todos los trackers ni la
 resolución general DNS. No se desactivó el healthcheck ni se reinició el contenedor
 para ocultar esta advertencia.
 
+**Histórico, revertido el 2026-09-14:** Transmission usa ahora autenticación RPC
+propia para Remote GUI; no reejecutar este script sin autorización específica.
 `protect-transmission.py` añadió Authentik al location existente, manteniendo
 la autenticación RPC del upstream. Genera un include root 0600 con la credencial
 existente de `rpc_creds`, nunca incorporada al repositorio. Reejecutar al rotar esa

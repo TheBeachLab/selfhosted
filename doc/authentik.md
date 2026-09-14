@@ -14,8 +14,10 @@ mediante passkey, sustituyendo el HTTP Basic de Nginx:
 | Navegador remoto | https://beachlab.org/browser/ |
 | ComfyUI | https://comfyui.beachlab.org/ |
 | Barrakuda Designer | https://designer.daswerklab.de/ |
-| Transmission | https://beachlab.org/transmission/web/ |
 | Administración | https://admin.beachlab.org/ |
+
+Transmission quedó fuera de Authentik el 14 de septiembre para compatibilidad
+con Remote GUI; web y RPC exigen sus credenciales propias sobre HTTPS.
 
 Portal: https://auth.beachlab.org/ . La cuenta `fran` tiene una passkey
 registrada en Apple Passwords para el RP `auth.beachlab.org`. No es administrador.

@@ -2,10 +2,22 @@
 
 **Author:** Fran
 
-Actualización 2026-09-14: la web usa Authentik/passkey y el arranque se controla
-desde [el panel](admin-panel.md). El login RPC se conserva internamente. El resto
-de esta página documenta la instalación original; no sustituir el location actual
-por el ejemplo histórico sin los includes de Authentik.
+Actualización 2026-09-14: la web y RPC usan las credenciales propias de
+Transmission sobre HTTPS, para permitir Transmission Remote GUI. Se retiraron
+solo de `location ^~ /transmission/` los includes `authentik-check.conf` y
+`transmission-rpc-secret.conf`: Nginx pasa la autenticación del cliente al daemon.
+No volver a ejecutar `services/admin-panel/protect-transmission.py` sin una
+petición explícita de cambiar este modelo de acceso. El arranque sigue disponible
+[en el panel](admin-panel.md); Descargas y las demás webs conservan la passkey.
+
+Configuración de Remote GUI: host `beachlab.org`, puerto `443`, SSL activado,
+ruta RPC `/transmission/rpc`, usuario `transmission` y contraseña RPC existente.
+No se abre el puerto 9091 al exterior. Verificación real: HTTPS RPC sin credenciales
+y con contraseña incorrecta devuelve 401; con credenciales existentes y el
+intercambio de sesión 409 devuelve 200 `success` en `session-get`. La web sin
+credenciales también devuelve 401; Descargas sigue redirigiendo al login.
+La VPN permaneció `healthy` y no se modificaron contenedor ni rutas.
+Backup Nginx: `/opt/authentik/nginx-before-transmission-rpc-20260914T161905`.
 
 ## VPN health and route protection (2026-09-14)
 
