@@ -58,6 +58,9 @@ regenerated with the same Node executable. The system Node remains available
 for Node-RED. Obtain the runtime from an official
 [Node.js release archive](https://nodejs.org/en/download/archive/v24.21.0)
 and verify its tarball against that release's `SHASUMS256.txt` before use.
+The updater fixes npm's global prefix to `/usr`: without this, running npm
+under the private Node installs OpenClaw into that Node tree while the managed
+`/usr/bin/openclaw` and Gateway package stay at the older version.
 
 Run and inspect maintenance manually:
 
@@ -102,6 +105,15 @@ usernames, account handles, tokens and provider configuration.
 
 ## Model failover when primary is out of usage
 
+On 2026-09-28, a live readback of `~/.openclaw/openclaw.json` on the Watson host
+confirmed `openai/gpt-6-sol` as the primary, `high` as `thinkingDefault`, the
+Codex agent runtime for that model, and `openai/gpt-5.3-codex-spark` as the
+fallback. The model allowlist also retains `openai/gpt-5.6-sol`. An isolated
+Gateway agent turn returned `OK.` with `agentMeta.model=gpt-6-sol` after the
+OpenClaw 2026.9.6 upgrade. Check the live config and account catalog again
+before treating these dated values as current. The selected model and effort
+follow [OpenClaw's OpenAI model guidance](https://docs.openclaw.ai/providers/openai/models).
+
 Recovered August notes: historical success claims and provider behavior below
 are internal notes, not independently revalidated here. On 2026-09-10, read-only
 checks of `pink-sudo` confirmed `~/.openclaw/openclaw.json` still selects
@@ -131,7 +143,7 @@ are treated as rate-limit class and advance failover. Prefer a **different
 provider** as the first fallback when the primary is quota-exhausted (same-
 provider siblings may share the same quota).
 
-### Watson host (thebeachlab) — automatic Sol → Spark fallback
+### Historical Watson Sol → Spark fallback setup (August 2026)
 
 The recovered note records configuration on 2026-08-07 and a Sol rate-limit → Spark
 `candidate_succeeded` observation; the original success log was not recovered.

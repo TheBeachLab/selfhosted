@@ -236,7 +236,7 @@ write_backup_manifest
 log "Protected backup complete: ${backup_dir}"
 
 log "Installing exact OpenClaw package version ${target}."
-"${SUDO_BIN}" -n env "PATH=${NODE_PATH}" "${NPM_BIN}" install -g "openclaw@${target}" --silent
+"${SUDO_BIN}" -n env "PATH=${NODE_PATH}" "${NPM_BIN}" install -g --prefix /usr "openclaw@${target}" --silent
 [[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
 
 for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do

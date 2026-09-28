@@ -38,9 +38,13 @@ watson_k
 # Personal shortcuts
 # Added by Mr. Watson 🦄 on 2026-02-07
 
+openclaw() {
+  PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw "$@"
+}
+
 # Start/attach OpenClaw TUI in tmux session "watson"
 watson() {
-  tmux new-session -A -s watson 'openclaw tui --session agent:main:main --deliver'
+  tmux new-session -A -s watson 'PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw tui --session agent:main:main --deliver'
 }
 
 # Attach to existing watson session only
@@ -60,10 +64,10 @@ watson_k() {
 
 ```bash
 # direct
-openclaw tui --session agent:main:main --deliver
+PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw tui --session agent:main:main --deliver
 
 # with tmux directly
-tmux new-session -A -s watson 'openclaw tui --session agent:main:main --deliver'
+tmux new-session -A -s watson 'PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw tui --session agent:main:main --deliver'
 ```
 
 ## Updating OpenClaw
@@ -117,7 +121,7 @@ If the gateway is healthy but the tmux session is absent, recreate only the TUI
 session:
 
 ```bash
-tmux new-session -d -s watson 'openclaw tui --session agent:main:main --deliver'
+tmux new-session -d -s watson 'PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw tui --session agent:main:main --deliver'
 tmux ls
 ```
 
