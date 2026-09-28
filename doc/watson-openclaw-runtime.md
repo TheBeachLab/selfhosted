@@ -51,6 +51,13 @@ OpenClaw 2026.9.3 to `>=24.16.0 <25 || >=26.1.0`; see the
 [OpenClaw Node compatibility history](https://docs.openclaw.ai/install/node-compatibility).
 Upgrade the OpenClaw runtime deliberately before expecting a newer release to
 install; changing the host's default Node may affect unrelated services.
+For this host, the maintenance unit selects the verified Node 24 runtime under
+`~/.local/share/openclaw-node/current`; the updater also passes that runtime
+through `sudo` when npm installs the package. The managed Gateway unit is
+regenerated with the same Node executable. The system Node remains available
+for Node-RED. Obtain the runtime from an official
+[Node.js release archive](https://nodejs.org/en/download/archive/v24.21.0)
+and verify its tarball against that release's `SHASUMS256.txt` before use.
 
 Run and inspect maintenance manually:
 

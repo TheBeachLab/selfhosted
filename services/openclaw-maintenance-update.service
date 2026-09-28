@@ -8,6 +8,7 @@ Type=oneshot
 WorkingDirectory=/home/pink
 Environment=HOME=/home/pink
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=OPENCLAW_MAINTENANCE_NODE_BIN=/home/pink/.local/share/openclaw-node/current/bin/node
 ExecStart=/home/pink/.local/bin/openclaw-maintenance-update
 UMask=0077
 Nice=10

@@ -201,6 +201,7 @@ test_successful_update_orders_maintenance() {
   [[ "${case_rc}" -eq 0 ]] || fail "success case returned ${case_rc}: $(<"${case_dir}/stderr")"
   assert_contains "${command_log}" "tmux kill-session -t watson"
   assert_contains "${command_log}" "systemctl --user stop openclaw-gateway.service"
+  assert_contains "${command_log}" "sudo -n env PATH=${fake_bin}:"
   assert_contains "${command_log}" "openclaw plugins install @openclaw/whatsapp@2.0.0 --force --pin --accept-capabilities"
   assert_contains "${command_log}" "openclaw doctor --fix --non-interactive --yes"
   assert_contains "${command_log}" "openclaw gateway install --force"

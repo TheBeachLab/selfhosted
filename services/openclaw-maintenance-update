@@ -17,6 +17,7 @@ readonly -a VERSION_LOCKED_CHANNEL_PLUGINS=("@openclaw/whatsapp")
 readonly OPENCLAW_BIN="${OPENCLAW_MAINTENANCE_OPENCLAW_BIN:-/usr/bin/openclaw}"
 readonly NPM_BIN="${OPENCLAW_MAINTENANCE_NPM_BIN:-/usr/bin/npm}"
 readonly NODE_BIN="${OPENCLAW_MAINTENANCE_NODE_BIN:-/usr/bin/node}"
+readonly NODE_PATH="$(dirname "${NODE_BIN}"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 readonly SUDO_BIN="${OPENCLAW_MAINTENANCE_SUDO_BIN:-/usr/bin/sudo}"
 readonly SYSTEMCTL_BIN="${OPENCLAW_MAINTENANCE_SYSTEMCTL_BIN:-/usr/bin/systemctl}"
 readonly TMUX_BIN="${OPENCLAW_MAINTENANCE_TMUX_BIN:-/usr/bin/tmux}"
@@ -186,6 +187,10 @@ for executable in \
   require_command "${executable}"
 done
 
+# OpenClaw and npm use /usr/bin/env node. Keep their child processes on the
+# validated runtime; sudo's secure_path otherwise switches npm back to system Node.
+export PATH="${NODE_PATH}"
+
 cd "${HOME}"
 install -d -m 0700 "$(dirname "${LOCK_FILE}")" "${BACKUP_ROOT}"
 exec 9>"${LOCK_FILE}"
@@ -231,7 +236,7 @@ write_backup_manifest
 log "Protected backup complete: ${backup_dir}"
 
 log "Installing exact OpenClaw package version ${target}."
-"${SUDO_BIN}" -n "${NPM_BIN}" install -g "openclaw@${target}" --silent
+"${SUDO_BIN}" -n env "PATH=${NODE_PATH}" "${NPM_BIN}" install -g "openclaw@${target}" --silent
 [[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
 
 for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do
