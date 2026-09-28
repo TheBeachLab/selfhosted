@@ -40,6 +40,8 @@ setup_case() {
   command_log="${case_dir}/commands.log"
   installed_file="${case_dir}/installed-version"
   target_file="${case_dir}/target-version"
+  node_engine_file="${case_dir}/node-engine"
+  node_compatible_file="${case_dir}/node-compatible"
   systemd_state="${case_dir}/systemd-state"
   tmux_state="${case_dir}/tmux-state"
   doctor_rc_file="${case_dir}/doctor-rc"
@@ -50,6 +52,8 @@ setup_case() {
   printf '{}\n' >"${state_dir}/agents/main/sessions/sessions.json"
   printf '1.0.0\n' >"${installed_file}"
   printf '2.0.0\n' >"${target_file}"
+  printf '>=18\n' >"${node_engine_file}"
+  printf 'true\n' >"${node_compatible_file}"
   printf 'active\n' >"${systemd_state}"
   printf '0\n' >"${doctor_rc_file}"
   printf 'ready\n' >"${rpc_mode_file}"
@@ -80,9 +84,21 @@ esac'
   make_fake "${fake_bin}/npm" '
 echo "npm $*" >>"${TEST_COMMAND_LOG}"
 if [[ "${1:-}" == view ]]; then
-  cat "${TEST_TARGET_FILE}"
+  if [[ "${3:-}" == engines.node ]]; then
+    cat "${TEST_NODE_ENGINE_FILE}"
+  else
+    cat "${TEST_TARGET_FILE}"
+  fi
 elif [[ "${1:-}" == install ]]; then
   cat "${TEST_TARGET_FILE}" >"${TEST_INSTALLED_FILE}"
+fi'
+
+  make_fake "${fake_bin}/node" '
+echo "node $*" >>"${TEST_COMMAND_LOG}"
+if [[ "${1:-}" == --version ]]; then
+  echo v22.0.0
+else
+  cat "${TEST_NODE_COMPATIBLE_FILE}"
 fi'
 
   make_fake "${fake_bin}/sudo" '
@@ -139,6 +155,8 @@ run_case() {
   TEST_COMMAND_LOG="${command_log}" \
   TEST_INSTALLED_FILE="${installed_file}" \
   TEST_TARGET_FILE="${target_file}" \
+  TEST_NODE_ENGINE_FILE="${node_engine_file}" \
+  TEST_NODE_COMPATIBLE_FILE="${node_compatible_file}" \
   TEST_SYSTEMD_STATE="${systemd_state}" \
   TEST_TMUX_STATE="${tmux_state}" \
   TEST_DOCTOR_RC_FILE="${doctor_rc_file}" \
@@ -149,6 +167,7 @@ run_case() {
   OPENCLAW_MAINTENANCE_LOCK_FILE="${case_dir}/run/update.lock" \
   OPENCLAW_MAINTENANCE_OPENCLAW_BIN="${fake_bin}/openclaw" \
   OPENCLAW_MAINTENANCE_NPM_BIN="${fake_bin}/npm" \
+  OPENCLAW_MAINTENANCE_NODE_BIN="${fake_bin}/node" \
   OPENCLAW_MAINTENANCE_SUDO_BIN="${fake_bin}/sudo" \
   OPENCLAW_MAINTENANCE_SYSTEMCTL_BIN="${fake_bin}/systemctl" \
   OPENCLAW_MAINTENANCE_TMUX_BIN="${fake_bin}/tmux" \
@@ -191,6 +210,22 @@ test_successful_update_orders_maintenance() {
   rm -rf "${case_dir}"
 }
 
+test_incompatible_node_keeps_gateway_and_tui_running() {
+  setup_case
+  touch "${tmux_state}"
+  printf 'false\n' >"${node_compatible_file}"
+  run_case
+  [[ "${case_rc}" -eq 0 ]] || fail "incompatible Node case returned ${case_rc}"
+  assert_contains "${command_log}" "npm view openclaw@2.0.0 engines.node --silent"
+  assert_not_contains "${command_log}" "tmux kill-session"
+  assert_not_contains "${command_log}" "systemctl --user stop"
+  assert_not_contains "${command_log}" "sudo -n"
+  [[ "$(<"${systemd_state}")" == active ]] || fail "gateway was stopped for incompatible Node"
+  [[ -f "${tmux_state}" ]] || fail "TUI was stopped for incompatible Node"
+  assert_contains "${case_dir}/stdout" "Keeping OpenClaw 1.0.0 and the Gateway running."
+  rm -rf "${case_dir}"
+}
+
 test_doctor_failure_keeps_gateway_stopped() {
   setup_case
   touch "${tmux_state}"
@@ -218,6 +253,7 @@ test_rpc_failure_stops_gateway_and_skips_tui() {
 
 bash -n "${SCRIPT}"
 test_no_update_is_non_mutating
+test_incompatible_node_keeps_gateway_and_tui_running
 test_successful_update_orders_maintenance
 test_doctor_failure_keeps_gateway_stopped
 test_rpc_failure_stops_gateway_and_skips_tui

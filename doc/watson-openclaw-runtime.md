@@ -43,6 +43,15 @@ The updater version-locks the configured official WhatsApp channel plugin to
 the core OpenClaw release. It intentionally does not update `llama-cpp` or any
 local-model/GPU component.
 
+Before stopping the Gateway, the updater reads the target release's
+`engines.node` from npm and checks it against the installed Node using npm's
+bundled semver implementation. If Node is incompatible, the update is skipped
+and the Gateway and TUI keep running. The compatibility requirement changed in
+OpenClaw 2026.9.3 to `>=24.16.0 <25 || >=26.1.0`; see the
+[OpenClaw Node compatibility history](https://docs.openclaw.ai/install/node-compatibility).
+Upgrade the OpenClaw runtime deliberately before expecting a newer release to
+install; changing the host's default Node may affect unrelated services.
+
 Run and inspect maintenance manually:
 
 ```bash

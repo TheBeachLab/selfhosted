@@ -16,6 +16,7 @@ readonly -a VERSION_LOCKED_CHANNEL_PLUGINS=("@openclaw/whatsapp")
 
 readonly OPENCLAW_BIN="${OPENCLAW_MAINTENANCE_OPENCLAW_BIN:-/usr/bin/openclaw}"
 readonly NPM_BIN="${OPENCLAW_MAINTENANCE_NPM_BIN:-/usr/bin/npm}"
+readonly NODE_BIN="${OPENCLAW_MAINTENANCE_NODE_BIN:-/usr/bin/node}"
 readonly SUDO_BIN="${OPENCLAW_MAINTENANCE_SUDO_BIN:-/usr/bin/sudo}"
 readonly SYSTEMCTL_BIN="${OPENCLAW_MAINTENANCE_SYSTEMCTL_BIN:-/usr/bin/systemctl}"
 readonly TMUX_BIN="${OPENCLAW_MAINTENANCE_TMUX_BIN:-/usr/bin/tmux}"
@@ -68,6 +69,20 @@ installed_version() {
 
 latest_version() {
   "${NPM_BIN}" view openclaw version --silent | awk 'NF {print; exit}'
+}
+
+required_node_engine() {
+  "${NPM_BIN}" view "openclaw@${1}" engines.node --silent | awk 'NF {print; exit}'
+}
+
+node_satisfies_engine() {
+  "${NODE_BIN}" -e '
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const npmDirectory = path.dirname(fs.realpathSync(process.argv[1]));
+    const semver = require(require.resolve("semver", { paths: [npmDirectory] }));
+    process.stdout.write(String(semver.satisfies(process.version, process.argv[2])));
+  ' "${NPM_BIN}" "${1}"
 }
 
 open_state_descriptors() {
@@ -165,7 +180,7 @@ wait_for_rpc() {
 [[ -d "${STATE_DIR}" ]] || fail "OpenClaw state directory is unavailable: ${STATE_DIR}"
 
 for executable in \
-  "${OPENCLAW_BIN}" "${NPM_BIN}" "${SUDO_BIN}" "${SYSTEMCTL_BIN}" \
+  "${OPENCLAW_BIN}" "${NPM_BIN}" "${NODE_BIN}" "${SUDO_BIN}" "${SYSTEMCTL_BIN}" \
   "${TMUX_BIN}" "${SQLITE3_BIN}" "${LSOF_BIN}" "${FLOCK_BIN}" \
   "${SHA256SUM_BIN}" "${TIMEOUT_BIN}" "${SLEEP_BIN}"; do
   require_command "${executable}"
@@ -181,6 +196,15 @@ target=$(latest_version)
 [[ -n "${current}" && -n "${target}" ]] || fail "Could not resolve installed/latest OpenClaw versions."
 if [[ "${current}" == "${target}" ]]; then
   log "OpenClaw ${current} is current; no maintenance required."
+  maintenance_complete=1
+  exit 0
+fi
+
+required_engine=$(required_node_engine "${target}")
+[[ -n "${required_engine}" ]] || fail "Could not resolve Node requirement for OpenClaw ${target}."
+node_supported=$(node_satisfies_engine "${required_engine}") || fail "Could not check the Node requirement for OpenClaw ${target}."
+if [[ "${node_supported}" != true ]]; then
+  log "OpenClaw ${target} requires Node ${required_engine}; installed $("${NODE_BIN}" --version). Keeping OpenClaw ${current} and the Gateway running."
   maintenance_complete=1
   exit 0
 fi
