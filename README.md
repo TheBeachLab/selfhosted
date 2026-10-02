@@ -67,6 +67,12 @@ My name is Francisco, in french it means "free person" . Some people in life wan
   - [PostgREST JWT Gateway](doc/postgrest-jwt.md)
 
 ### AI and GPU
+- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) `[DOCUMENTED / NUC INSTALL PENDING]`
+  - [Obsidian (notes, links and Canvas)](doc/obsidian.md)
+  - [LangGraph (bounded loops and debugging)](doc/langgraph.md)
+  - [Graphiti (temporal memory)](doc/graphiti.md)
+  - [Neo4j Community and Browser](doc/neo4j.md)
+  - [Graph tools (Graphviz, NetworkX, PyVis and JupyterLab)](doc/graph-tools.md)
 - [GPU setup](doc/gpu.md)
 - [GPU Service Management (on-demand Whisper/RAG/TTS)](doc/gpu-services.md)
 - [Whisper Web (protected upload + diarization)](doc/whisper.md)
