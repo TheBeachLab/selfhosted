@@ -1,7 +1,5 @@
 # Getting started
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Installing Ubuntu Server](#installing-ubuntu-server)
@@ -91,7 +89,6 @@ network:
 
 Then `sudo netplan apply` you should be connected now.
 
-
 ## Get rid of snap
 
 ```bash
@@ -167,4 +164,3 @@ Test `sudo unattended-upgrades --dry-run --debug`
 Apply the changes `sudo dpkg-reconfigure --priority=low unattended-upgrades`
 
 ![](../img/unattended.png)
-

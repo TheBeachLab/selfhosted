@@ -1,7 +1,5 @@
 # Minecraft Servers
 
-**Author:** Fran / updated Mr. Watson (2026-07-02)
-
 This host currently runs:
 
 - Java server: Fabric `26.2`, world `Hariburi-World`, service-managed

@@ -1,9 +1,7 @@
 # Aviation data service
 
-This directory documents the deployment boundary for the public aviation-data
-API used by a separate client application. The service source code lives in its
-own repository; this repository does not duplicate that code or its private
-deployment configuration.
+The aviation API serves a separate client application. Its source and private
+deployment configuration live in the service's own repository.
 
 ## Public architecture
 
@@ -16,7 +14,7 @@ deployment configuration.
   outside Git.
 - The backend is stateless apart from optional cache storage.
 
-## Deployment invariants
+## Deployment
 
 1. Keep the application listener private to the host.
 2. Expose it only through the TLS reverse proxy.
@@ -26,6 +24,3 @@ deployment configuration.
 4. Apply request limits at the proxy and validate health before directing
    clients to a new deployment.
 5. Keep per-user upstream authorization separate from shared server caches.
-
-The public API hostname and complete deployment procedure belong with the
-service repository and deployment inventory, where they can be kept current.

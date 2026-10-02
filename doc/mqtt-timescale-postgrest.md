@@ -1,11 +1,7 @@
 # MQTT → TimescaleDB + PostgREST (Telemetry History)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-07
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Architecture](#architecture)
 - [Quick checks](#quick-checks)
 - [SQL setup (Timescale + table + retention + API roles)](#sql-setup-timescale--table--retention--api-roles)
@@ -17,8 +13,6 @@
 - [Ops checks](#ops-checks)
 
 <!-- vim-markdown-toc -->
-
-## Goal
 
 Store historical telemetry from MQTT in TimescaleDB and expose it safely via PostgREST for dashboard charts.
 
@@ -387,8 +381,6 @@ journalctl -u postgrest-telemetry -n 100 --no-pager
 # Row count
 sudo -u postgres psql -d sensors -c "SELECT count(*) FROM public.telemetry_stats;"
 ```
-
----
 
 ## Updates (2026-03-11)
 

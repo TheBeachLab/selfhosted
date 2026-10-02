@@ -1,6 +1,6 @@
 # Music inbox
 
-User workflow: upload songs or album folders to **Music/imported** in Nextcloud.
+Upload songs or album folders to **Music/imported** in Nextcloud.
 The server checks completed uploads five minutes after the previous run finishes. Confident matches move
 to **Music/Album artist/Album/Track - Title.ext**. Uncertain matches stay in the
 inbox. **Music/import-status.md** shows progress and pending files without SSH.
@@ -8,9 +8,10 @@ Amperfy consumes the Nextcloud Music index, which is refreshed after processing.
 
 ## Recognition and limits
 
-The runtime is pinned to beets 2.14.0. The Apple catalog supplies strict
+The runtime uses [beets](https://docs.beets.io/en/latest/guides/tagger.html) 2.14.0. The Apple catalog supplies strict
 artist/title/duration matches first. MusicBrainz provides additional recording/release
-metadata when reachable; AcoustID fingerprints supplement uncertain matches and
+metadata when reachable; [AcoustID fingerprints](https://docs.beets.io/en/latest/plugins/chroma.html)
+supplement uncertain matches and
 can supply recording identities even when MusicBrainz search is unavailable. Beets
 automatic acceptance requires a strong recommendation, distance <= 0.05, a margin
 of at least 0.02 over the next candidate, complete source mappings, and track
@@ -31,9 +32,8 @@ database. Recording matches never select an arbitrary release from the list.
 Partial album matches also produce separate, independently reviewable fingerprint
 proposals for the remaining tracks.
 
-At commissioning, MusicBrainz returned intermittent HTTP 503 responses from both
-the server and Mac; this is a live observation, not a permanent availability claim.
-The worker bounds lookups and falls back without inventing recording identities.
+MusicBrainz returned intermittent HTTP 503 responses during the initial import.
+The worker bounds lookups and falls back when the provider fails.
 The pinned beets HTTP client defaults to six retries (installed source:
 `beetsplug/_utils/requests.py`, `TimeoutAndRetrySession`). This worker disables
 those inline retries and stops MusicBrainz fallback for the remainder of a run
@@ -42,18 +42,14 @@ skip recognition and proceed to processing without repeating provider lookups.
 
 Albums are matched together. Loose songs are matched individually; without
 reliable album metadata they go to Singles. Existing cover art is retained;
-missing covers are fetched from the matched release's Cover Art Archive entry,
+missing covers come from the matched release's
+[Cover Art Archive](https://musicbrainz.org/doc/Cover_Art_Archive/API) entry,
 or the matching Apple album's supplied artwork URL, and embedded. Existing
 art is never replaced with the smaller Apple image. Files are never transcoded.
 FFprobe supplements beets' reads for nonstandard uppercase MP4 metadata, verified
 on this collection's ALAC files. CD suffixes are normalized for multidisc matching.
 
-Sources: [beets tagging](https://docs.beets.io/en/latest/guides/tagger.html),
-[fingerprinting](https://docs.beets.io/en/latest/plugins/chroma.html),
-[Cover Art Archive API](https://musicbrainz.org/doc/Cover_Art_Archive/API).
-The installed Nextcloud 32 Music service and filesystem APIs are the authority
-for integration; this implementation calls the file API rather than renaming
-files behind Nextcloud's cache.
+The Nextcloud 32 integration uses its file API to keep the cache in sync.
 
 ## Runtime and recovery
 
@@ -87,37 +83,11 @@ Stop the timer to pause ingestion. Restore content through the Nextcloud file
 API using the saved original, then refresh Music; do not restore a whole database
 or overwrite later user changes.
 
-The first batch is reviewed by the assistant against external matching evidence.
-Where fingerprints corroborate the source's artist/title but contain conflicting
-edition associations, supervised identity-only decisions retain the original
-version labels, co-credits, album, numbering and recording IDs. They do not apply
-the suggested fingerprint metadata or claim independent verification of the
-edition. These decisions and their evidence are distinguished in `review.json`,
-the per-file receipts and the Nextcloud status report.
-The ongoing service uses deterministic thresholds; it does not claim an LLM
-reviews every future upload or manufacture facts about unidentified recordings.
-
-## Commissioning evidence — 2026-09-10
-
-The live native service on `pink-sudo` completed successfully under systemd on
-2026-09-10 at 17:13 UTC, with the timer enabled and active. Read-back evidence:
-`/var/lib/music-inbox/commissioning-verification.json`, per-file `done` receipts,
-`review.json`, `bridge-checks.json`, the service journal and the Nextcloud database.
-
-- 475 audio files remain in Music: 422 organized, 53 pending in imported,
-  including one existing empty file.
-- All 422 final-file hashes and all 422 original-backup hashes matched their
-  receipts; all 422 file IDs were preserved. Verification reported zero errors.
-- 392 organized files have embedded artwork, including artwork already present.
-- 68 organized files used the supervised source-metadata-preserving decisions
-  described above; their exact editions were not independently verified.
-- Nextcloud Music still contains 475 distinct admin tracks and file IDs, with
-  the original track-ID range 1–475. Collection setting read back as `/Music/`.
-- Nine tests passed in the pinned server environment, alongside PHP syntax
-  validation and the live bridge collision/stale-hash rejection checks.
-
-These are commissioning observations, not permanent counts. The status document
-in Nextcloud is the current user-facing view.
+An identity-only review decision keeps the original version labels, co-credits,
+album, numbering and recording IDs when the fingerprint agrees on artist/title
+but gives conflicting editions. It does not apply the suggested edition metadata.
+These decisions are marked in `review.json` and the per-file receipts.
+Later uploads use the matching thresholds above.
 
 ## Deployment
 
@@ -149,9 +119,7 @@ Music 3.2.1's installed `lib/Controller/AmpacheImageController.php::image`
 accepts an image-specific `token`, not session `auth`. Without `token` it
 returns a 2,330-byte generic PNG with a one-year client cache lifetime.
 This explains why an ordinary library sync did not repair the artwork.
-The authenticated `AmpacheController::get_art` returned the real image for
-the same album and session. These are observations of the installed source
-and HTTPS responses, not assumptions about the client cache.
+`AmpacheController::get_art` returns the image through session authentication.
 
 Deploy `services/music-inbox/ampache-images.nginx.conf` to
 `/etc/nginx/snippets/music-ampache-images.conf` and include it inside the
@@ -163,14 +131,9 @@ action; rewriting the path alone does not change Nextcloud's route selection.
 This avoids editing the signed Music application or bypassing authentication.
 Run `nginx -t` before reloading. Remove the include and reload to roll back.
 
-Live checks in `/var/lib/music-inbox/ampache-cover-verification.json` verified
-three album images byte-for-byte against `get_art`, token-based URLs, the
-`index.php` URL variant, invalid-session rejection (Ampache XML error), and
-anonymous placeholders. Nginx configuration validation passed. The Mac Amperfy
-cache was refreshed via Settings > Artwork, then Account > Resync Library;
-album covers were visibly displayed in the app after the correction.
-Clients that cached the old generic image may need their downloaded artwork
-cache cleared; this does not require deleting downloaded songs.
+In Amperfy on the Mac, refresh the cache through Settings > Artwork, then
+Account > Resync Library. Clear downloaded artwork if the old generic image
+remains. Downloaded songs can stay.
 
 ## Mac drop folder
 

@@ -3,10 +3,6 @@
 Grafana OSS visualizes read-only TimescaleDB data behind the server's TLS reverse
 proxy.
 
-This public runbook intentionally omits internal ports, database usernames,
-dashboard identifiers, administrator accounts, certificate dates and filesystem
-paths.
-
 ## Architecture
 
 ```text

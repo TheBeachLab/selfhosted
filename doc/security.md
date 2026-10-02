@@ -1,7 +1,5 @@
 # Setup and secure remote ssh access
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)
@@ -83,5 +81,4 @@ Optionally drop pings `sudo nano /etc/ufw/before.rules` and add
 ```
 
 And again `sudo ufw reload`
-
 

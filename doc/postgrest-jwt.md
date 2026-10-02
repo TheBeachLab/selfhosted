@@ -1,12 +1,8 @@
 # PostgREST JWT Gateway (Nginx + auth_request)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-15
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
-- [What was configured](#what-was-configured)
+- [Configuration](#configuration)
 - [Architecture](#architecture)
 - [Files](#files)
 - [Routes](#routes)
@@ -19,11 +15,9 @@
 
 <!-- vim-markdown-toc -->
 
-## Goal
-
 Add a self-hosted JWT access layer in front of PostgREST for monetizable endpoints, without breaking existing routes.
 
-## What was configured
+## Configuration
 
 - New local auth service validates `X-API-Key` and signs short-lived JWTs
 - Nginx uses `auth_request` to call that service
@@ -173,6 +167,5 @@ sudo systemctl disable --now auth-jwt
 
 ## Notes
 
-- This design is fully self-hosted, no SaaS/free-tier dependency.
 - Keep PostgREST bound to localhost and expose only through Nginx.
 - Add rate limits in Nginx as next step if needed (`limit_req`).

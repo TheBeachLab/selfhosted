@@ -1,7 +1,5 @@
 # Raspberry Pi 5 — pibot1
 
-**Author:** Fran
-
 - [Overview](#overview)
 - [Hardware](#hardware)
 - [Network](#network)

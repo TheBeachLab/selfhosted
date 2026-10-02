@@ -1,25 +1,19 @@
 # MQTT Telemetry (alpha/stats)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-07
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick checks](#quick-checks)
-- [Final Topic Design](#final-topic-design)
+- [MQTT topics](#mqtt-topics)
 - [What is included in `alpha/stats`](#what-is-included-in-alphastats)
-- [Scripts created](#scripts-created)
+- [Scripts](#scripts)
 - [Scheduler (cron)](#scheduler-cron)
 - [Broker access model](#broker-access-model)
 - [Notes on speedtest reliability](#notes-on-speedtest-reliability)
 - [Minimal frontend subscription](#minimal-frontend-subscription)
-- [Code snippets (sanitized, self-contained)](#code-snippets-sanitized-self-contained)
+- [Scripts and configuration](#scripts-and-configuration)
 - [Security reminder](#security-reminder)
 
 <!-- vim-markdown-toc -->
-
-## Goal
 
 Publish server telemetry for dashboards using MQTT, with public read-only consumption and authenticated publishing.
 
@@ -31,7 +25,7 @@ crontab -l | grep -E 'publish_telemetry|publish_speedtest'
 tail -n 50 /tmp/telemetry.log
 ```
 
-## Final Topic Design
+## MQTT topics
 
 - `alpha/stats` → retained live payload (includes latest speedtest summary)
 - `alpha/stats/speedtest` → full speedtest payload (also retained)
@@ -49,7 +43,7 @@ For a website, subscribing to `alpha/stats` is enough.
 - uptime
 - `speedtest` summary block (latest known value)
 
-## Scripts created
+## Scripts
 
 - `scripts/publish_telemetry.sh`
 - `scripts/publish_speedtest.sh`
@@ -98,9 +92,9 @@ Subscribe to:
 
 Expect a retained JSON payload, so clients receive last known value immediately upon connect.
 
-## Code snippets (sanitized, self-contained)
+## Scripts and configuration
 
-### `scripts/telemetry.env` (sanitized)
+### `scripts/telemetry.env`
 
 ```bash
 BROKER_HOST=127.0.0.1
@@ -116,7 +110,7 @@ LIVE_TOPIC='alpha/stats'
 
 ### `scripts/publish_telemetry.sh`
 
-Deployment note (verified on `thebeachlab`, 2026-08-04): the live publisher uses
+The host publisher uses
 `/usr/local/bin/nvidia-smi-safe.sh`, rather than invoking `nvidia-smi` directly.
 The wrapper returns no GPU payload when `/dev/nvidiactl` or the NVIDIA PCI device
 is absent, and applies a five-second timeout to a driver query. Consequently a
@@ -287,7 +281,7 @@ else
 fi
 ```
 
-### Cron entries (final)
+### Cron entries
 
 ```cron
 * * * * * /home/pink/.openclaw/workspace/scripts/publish_telemetry.sh >/tmp/telemetry.log 2>&1
@@ -602,11 +596,8 @@ The ingestor already preserves the whole message in `telemetry_stats.payload`;
 no schema migration or historical rewrite is required. Older rows lack weather
 source timestamps and must not be treated as fresh weather observations.
 
-Read-only inspection on 2026-09-12: 299,328 rows from February 7 onward, 62 MB
-including compressed chunks, compression job 1002 scheduled every 12 hours,
-no retention job. Verified using `hypertable_size`, `timescaledb_information.jobs`
-and min/max/count queries against `sensors.telemetry_stats`. Preserve this
-history; the website requests bounded, host-filtered resource columns only.
+Keep the existing history. The website requests bounded, host-filtered
+resource columns only.
 
 Deployment: back up the live publisher outside the web root, install this file
 as `/home/pink/.openclaw/workspace/scripts/publish_telemetry.sh` preserving owner

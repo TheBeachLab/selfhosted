@@ -1,7 +1,5 @@
 # Knowledge graphs and agent loops
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [What I want](#what-i-want)

@@ -17,18 +17,20 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
 
 **Previous servers (non-operational):**
+
 - *Suitcase* — 2015 Skylake i3-6100, 8 GB RAM, 500 GB SSD
 - *Sister* — X79 Xeon E5-2670 v2 (10c/20t), 40 GB RAM, 1 TB NVMe
 
 ## TOC
 
 ### Server setup
+
 - [Getting started](doc/getstarted.md)
 - [Securing SSH access](doc/security.md)
 - [Backups](doc/backups.md)
 - [Web server (Nginx)](doc/web.md)
-- [Acceso web con passkey (Authentik)](doc/authentik.md)
-- [Panel de administración de servicios](doc/admin-panel.md)
+- [Passkey access (Authentik)](doc/authentik.md)
+- [Service administration](doc/admin-panel.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
 - [VPN Server (OpenVPN)](doc/vpn.md)
@@ -37,22 +39,25 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Troubleshooting](doc/troubleshooting.md)
 
 ### Services
+
 - [Taskwarrior and Nextcloud Tasks sync](doc/taskserver.md)
 - [Transmission Daemon (NordVPN)](doc/transmission.md)
 - [Mumble voice server](doc/mumble.md)
 - [iOS Push Notifications (iGotify)](doc/igotify.md)
 - [Drop (protected URL downloads)](doc/drop.md)
 - [Remote browser](doc/browser.md)
-- [n8n automation](doc/n8n.md) `[REMOVED]`
+- [n8n automation](doc/n8n.md) (removed)
 - [Auto USB copy](doc/transfer2usb.md)
 - [Node.js / PM2](doc/nodejs.md)
 - [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
 - [OpenClaw runtime maintenance](doc/watson-openclaw-runtime.md)
 
 ### Monitoring
+
 - [Grafana (TimescaleDB dashboards)](doc/grafana.md)
 
 ### IoT and telemetry
+
 - [IoT (Mosquitto MQTT)](doc/iot.md)
 - [MQTT Telemetry — server stats (alpha/stats)](doc/mqtt-telemetry.md)
 - [MQTT to TimescaleDB and PostgREST](doc/mqtt-timescale-postgrest.md)
@@ -60,6 +65,7 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [Raspberry Pi 5 (pibot1)](doc/rpi.md)
 
 ### Databases and APIs
+
 - [PostgreSQL](doc/postgres.md)
   - [TimescaleDB](doc/timescaledb.md)
   - [Strapi CMS](doc/strapi.md)
@@ -67,7 +73,8 @@ My name is Francisco, in french it means "free person" . Some people in life wan
   - [PostgREST JWT Gateway](doc/postgrest-jwt.md)
 
 ### AI and GPU
-- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) `[WIP]`
+
+- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) (WIP)
   - [Obsidian](doc/obsidian.md)
   - [LangGraph](doc/langgraph.md)
   - [Graphiti](doc/graphiti.md)
@@ -76,16 +83,17 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 - [GPU setup](doc/gpu.md)
 - [GPU Service Management (on-demand Whisper/RAG/TTS)](doc/gpu-services.md)
 - [Whisper Web (protected upload + diarization)](doc/whisper.md)
-- [High-Precision eBook RAG (SFTP Inbox)](doc/rag-library.md)
+- [eBook RAG (SFTP Inbox)](doc/rag-library.md)
 - [Qwen3-TTS Voice Cloning (multilingual)](doc/qwen3-tts.md)
 - [ComfyUI (Stable Diffusion node editor)](doc/comfyui.md)
 - [Hailo AI dataflow compiler](doc/ai.md)
 
 ### WIP / archived
-- [Understanding DNS](doc/dns.md) `[WIP]`
-- [OBS ninja (WebRTC)](doc/obsninja.md) `[WIP]`
-- [STUN/TURN Server](doc/turn.md) `[WIP]`
+
+- [Understanding DNS](doc/dns.md) (WIP)
+- [OBS ninja (WebRTC)](doc/obsninja.md) (WIP)
+- [STUN/TURN Server](doc/turn.md) (WIP)
 - [Minecraft server](doc/minecraft.md)
 - [Nextcloud](doc/cloud.md)
-- [Mail server (Postfix)](doc/mail.md) `[INCOMPLETE]`
+- [Mail server (Postfix)](doc/mail.md) (incomplete)
 - [openHAB (BTicino/OpenWebNet and Apple Home)](doc/openhab.md)

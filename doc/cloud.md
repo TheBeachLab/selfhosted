@@ -1,7 +1,5 @@
 # Nextcloud
 
-**Author:** Mr. Watson 🦄 (updated 2026-03-30, originally Fran)
-
 Nextcloud 31 running on Nginx + PHP 8.1 FPM + PostgreSQL.
 URL: `https://cloud.beachlab.org`
 

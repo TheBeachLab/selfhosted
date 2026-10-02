@@ -1,7 +1,5 @@
 # GPU server for machine learning
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Install necessary packages](#install-necessary-packages)
@@ -29,7 +27,6 @@ sudo apt -y install cmake pkg-config
 ## Allow SSH UDP
 
 Replace with your actual SSH port `sudo ufw allow 22/udp comment "ML"` and `sudo ufw reload`
-
 
 ## Nvidia and Cuda
 
@@ -173,21 +170,16 @@ umount ~/mnt/ml
 diskutil unmount force ~/mnt/ml
 ```
 
-
 ## eGPU stability (Thunderbolt / Razer Core X)
-
-**Author:** Mr. Watson 🦄
-**Date:** 2026-03-03
 
 ### Historical Xid notes, not a confirmed root cause
 
-Older internal notes attribute the runtime failure to a GSP firmware crash. That
-attribution is not externally verified and must not be treated as a diagnosis:
-Xid values are diagnostic starting points, not root-cause identifiers. NVIDIA
-documents Xid 154 as a report of the recovery action required by another Xid,
-and recommends preserving an `nvidia-bug-report` for driver investigation.
-Sources: [NVIDIA Xid error guide](https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html) and
-[NVIDIA GPU debug guidelines](https://docs.nvidia.com/deploy/gpu-debug-guidelines/index.html).
+Older notes blamed GSP firmware, but the cause has not been established.
+[NVIDIA's Xid guide](https://docs.nvidia.com/deploy/xid-errors/working-with-xid-errors.html)
+describes Xid 154 as the recovery action required by another error. Keep an
+`nvidia-bug-report` when investigating; the
+[debug guide](https://docs.nvidia.com/deploy/gpu-debug-guidelines/index.html)
+explains the collection.
 
 The known operational symptom is narrower: the RTX 2070 Super in the Razer Core
 X enumerates and works after boot, then may hang or disappear after minutes or
@@ -284,14 +276,12 @@ testing with a certified short Thunderbolt cable.
 
 ### Current research and runtime stability test (2026-08-04)
 
-**Externally verified:** ASUS still lists BIOS Full Package Update `0078`
-(2024-10-28) as the newest BIOS package for `NUC11TNKi3`; do not search for or
-install a newer BIOS as an eGPU remedy. The newer `NUC Firmware Integrator
-Tool` shown on the same support page is a tool for building custom firmware
-images, not a newer system or Thunderbolt controller firmware release.
-Source: [ASUS NUC11TNKi3 BIOS and firmware support](https://www.asus.com/us/supportonly/nuc11tnki3/helpdesk_bios/).
+These tests use the August 2026 kernel and driver versions. At that time,
+[ASUS listed BIOS package 0078](https://www.asus.com/us/supportonly/nuc11tnki3/helpdesk_bios/)
+(2024-10-28) for `NUC11TNKi3`. The Firmware Integrator Tool builds custom
+images; it is not a newer BIOS release.
 
-**Verified on the host (2026-08-04; internal operational observation):**
+Host setup on 2026-08-04:
 
 - BIOS is `TNTGL357.0078.2024.0930.2018`.
 - The running kernel command line includes both `pcie_port_pm=off` and
@@ -305,17 +295,16 @@ Source: [ASUS NUC11TNKi3 BIOS and firmware support](https://www.asus.com/us/supp
 
 The Linux meaning of `security=none` is documented in
 [USB4 and Thunderbolt](https://docs.kernel.org/admin-guide/thunderbolt.html).
-Do not change the BIOS security level to `DP++ only`: the Visual BIOS glossary
-states that it disables PCIe tunneling, which an eGPU requires. Source:
-[Intel NUC Visual BIOS Glossary](https://kmpic.asus.com/images/nuc/NUC-Visual-BIOS-Glossary.pdf).
+Do not use `DP++ only` for the eGPU: the
+[Visual BIOS glossary](https://kmpic.asus.com/images/nuc/NUC-Visual-BIOS-Glossary.pdf)
+says it disables PCIe tunneling.
 
-**Operator correction (2026-08-04; internal operational observation):** the
-eGPU reliably enumerates and starts working after boot. The failure occurs only
+The eGPU reliably enumerates and starts working after boot. The failure occurs only
 after minutes or hours of GPU use, when the GPU hangs or disappears. This is a
 runtime stability problem, not an initial-detection problem. A `disconnected`
 result while the Core X is powered off must not be used as failure evidence.
 
-**Recovered host hang notes (2026-08-04 / 2026-08-05; internal note, not externally verified):**
+Recovered notes from 2026-08-04/05 (the original logs are missing):
 two unclean reboots occurred after continuous Core X attach with
 `bolt=authorized` and healthy load/RAM in the last heartbeat samples (~12 h and
 ~22 h). Journals stopped without a shutdown sequence; `auth.log` had no reboot
@@ -331,8 +320,7 @@ but unverified.
 
 #### Kernel/NVIDIA regression test
 
-**Internal package-history evidence (not externally verified as a root
-cause):**
+Package history for those tests:
 
 | Date | Change | What it proves |
 |---|---|---|
@@ -342,10 +330,10 @@ cause):**
 | 2026-07-24 | NVIDIA `595.71.05` -> `595.84` and HWE `6.8.0-134` -> `6.8.0-136` | Two variables changed together, so the history cannot identify a culprit. |
 
 Ubuntu describes `595.84` only as a new upstream NVIDIA release; no official
-release note found in this research ties it to a Core X, Tiger Lake, or
-Thunderbolt regression. Source:
-[Ubuntu Jammy change notice for 595.84](https://lists.ubuntu.com/archives/jammy-changes/2026-July/047368.html).
-This absence is not proof that the package is sound on this host.
+release note found for those tests ties it to a Core X, Tiger Lake, or
+Thunderbolt regression. See the
+[Ubuntu change notice](https://lists.ubuntu.com/archives/jammy-changes/2026-July/047368.html).
+The cause remains unknown.
 
 Test the still-installed `6.8.0-134-generic` before downgrading NVIDIA:
 
@@ -414,14 +402,14 @@ the physical Thunderbolt chain:
 1. Shut down the NUC completely. Do not hot-unplug/hot-replug while Linux is
    running.
 2. Switch off the Razer Core X, unplug its mains cable, and leave both systems
-   off for at least 30 seconds. Razer specifies this power cycle to refresh
-   detection after Thunderbolt problems. Source:
-   [Razer Core power-cycle instructions](https://mysupport.razer.com/app/answers/detail/a_id/1924/).
+   off for at least 30 seconds, following
+   [Razer's power-cycle instructions](https://mysupport.razer.com/app/answers/detail/a_id/1924/).
 3. Reconnect power to the Core X, connect it to the NUC before boot, wait a few
    seconds, then power on the NUC. Use a certified Thunderbolt 3 cable no
-   longer than 60 cm; the supplied Core X cable is 500 mm. Sources:
-   [ASUS NUC Thunderbolt troubleshooting](https://www.asus.com/ca-en/support/faq/1052760/) and
-   [Razer Core X specifications](https://mysupport.razer.com/app/answers/detail/a_id/3778/).
+   longer than 60 cm, as in the
+   [ASUS troubleshooting guide](https://www.asus.com/ca-en/support/faq/1052760/).
+   The [supplied Core X cable](https://mysupport.razer.com/app/answers/detail/a_id/3778/)
+   is 500 mm.
 4. In Visual BIOS, confirm `Advanced > Devices > Onboard Devices > Thunderbolt
    Controller` is enabled. Do not alter the security level if Linux continues
    to show `security=none`; it is already the auto-connect setting.

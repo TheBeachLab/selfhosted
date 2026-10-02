@@ -1,7 +1,5 @@
 # Ongoing and past troubleshooting
 
-**Author:** Fran
-
 - [Computer shutdowns after exactly 20 minutes](#computer-shutdowns-after-exactly-20-minutes)
 - [Updates cannot be automatically installed](#updates-cannot-be-automatically-installed)
 - [Removing wrong PPAs](#removing-wrong-ppas)
@@ -90,7 +88,6 @@ Err:15 https://packagecloud.io/timescale/timescaledb/debian jammy Release
   E: The repository 'https://packagecloud.io/timescale/timescaledb/debian jammy Release' does not have a Release file.
 N: Updating from such a repository can't be done securely, and is therefore disabled by default.
 
-
 sudo apt-add-repository --remove 'deb https://packagecloud.io/timescale/timescaledb/debian/ jammy main'
 
 ## Old keyring
@@ -143,7 +140,6 @@ sub   rsa4096 2018-10-19 [SEA]
 ```
 
 sudo apt-key del '1637 8A33 A6EF 1676 2922  526E 561F 9B9C AC40 B2F7'
-
 
 W: https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/jammy/dists/pgadmin4/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
 

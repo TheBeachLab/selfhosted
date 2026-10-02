@@ -1,7 +1,5 @@
 # TimescaleDB
 
-**Author:** Fran
-
 IoT stores huge time series data. Relational databases can be used to store the data but processing can be slow. TimescaleDB is an NoSQL database optimized to store time-series data. It is implemented as an extension of PostgreSQL combining the ease of use of relational databases and the speed of NoSQL databases.
 
 - [Install](#install)
@@ -149,8 +147,6 @@ postgres=# ALTER SYSTEM SET timescaledb.telemetry_level=off
 postgres-# \q
 pink@thebeachlab:~$ sudo systemctl restart postgresql.service
 ```
-
-
 
 ```sql
 -- 1) Remove the old wide table
@@ -478,8 +474,6 @@ And update your website
   th, td { border-bottom: 1px solid #ddd; padding: 6px 8px; text-align: left; }
 </style>
 ```
-
-
 
 ## Add a Time series for the server internal sensors
 

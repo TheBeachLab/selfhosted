@@ -1,7 +1,5 @@
 # SFTP Server
 
-**Author:** Fran
-
 - [Why](#why)
 - [Install](#install)
 - [Configuration](#configuration)
@@ -36,4 +34,3 @@ Match group sftp
 ````
 
 In `sudo nano /etc/pam.d/sshd` add `auth [success=done default=ignore] pam_succeed_if.so user ingroup sftp`
-

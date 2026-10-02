@@ -3,13 +3,9 @@
 openHAB connects a BTicino MyHOME/SCS installation to Apple Home through the
 OpenWebNet binding and the HomeKit integration.
 
-This is a public operational overview. Network topology, device identifiers,
-pairing material, credentials, backup names and the complete accessory inventory
-are intentionally not documented here.
-
 ## Production baseline
 
-Verified on 2026-08-03:
+After the 2026-08-03 upgrade:
 
 - openHAB 5.2.1 from the official stable APT repository
 - Java 21

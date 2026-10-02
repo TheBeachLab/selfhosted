@@ -1,8 +1,5 @@
 # Bluetti Mobile Lab Telemetry Pipeline
 
-**Author:** Mr. Watson
-**Date:** 2026-03-29
-
 <!-- vim-markdown-toc GFM -->
 
 - [Overview](#overview)
@@ -463,7 +460,7 @@ When new sensors are added to pibot1:
 
 ## Changelog
 
-- **2026-04-02:** Added 15 OBD-II telemetry columns. A dedicated collector publishes scalar vehicle diagnostics through an ELM327-compatible adapter; the public runbook intentionally omits vehicle and device identifiers.
+- **2026-04-02:** Added 15 OBD-II telemetry columns. A dedicated collector publishes scalar vehicle diagnostics through an ELM327-compatible adapter.
 - **2026-03-29:** Added 12 GPS/IMU columns (gps_lat, gps_lon, gps_speed_kmh, gps_altitude_m, gps_satellites, gps_fix, heading_deg, altitude_m, baro_altitude_m, imu_pitch_deg, imu_roll_deg, imu_yaw_rate_dps). RPi now publishes IMU at 2–5 Hz with 100-sample averaging, GPS rounded to 2 decimals for privacy, IMU reset via MQTT command.
 - **2026-03-28:** Added sensor columns (co2_ppm, temperature_c, humidity_pct, pressure_hpa) and 14 Starlink columns. Starlink watcher service + WiFi auto-reconnect on RPi.
 - **2026-03-25:** Initial pipeline — Bluetti power fields, ingest script, hypertable, PostgREST exposure.

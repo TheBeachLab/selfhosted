@@ -1,7 +1,5 @@
 # Git server
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Gitlab? No, thanks](#gitlab-no-thanks)
@@ -214,5 +212,4 @@ In this case I can push to github `git push github master` or to the suitcase `g
 Notice that `origin` has multiple remotes. You can add a remote by using `git remote set-url --add --push origin git://another/repo.git`
 
 > TODO: Rename all my `master` branches to `main` in all repositories. And set default to `main`
-
 

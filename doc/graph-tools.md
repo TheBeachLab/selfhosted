@@ -1,7 +1,5 @@
 # Graph tools
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Install](#install)

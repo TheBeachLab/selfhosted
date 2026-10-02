@@ -1,7 +1,5 @@
 # PostgreSQL
 
-**Author:** Fran
-
 - [Current state](#current-state)
 - [Quick checks](#quick-checks)
 - [Install](#install)

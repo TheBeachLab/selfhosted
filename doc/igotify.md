@@ -1,7 +1,5 @@
 # Push Notifications with iGotify
 
-**Author:** Fran
-
 - [Overview](#overview)
 - [Deployment Steps](#deployment-steps)
 - [Notifier Script](#notifier-script)
@@ -187,7 +185,7 @@ sudo chmod +x /usr/local/bin/notify.sh
 You can now send a notification with:
 
 ```bash
-/usr/local/bin/notify.sh "Test ✅" "This is a test notification from the server"
+/usr/local/bin/notify.sh "Test" "This is a test notification from the server"
 ```
 
 Optionally, create an alias for convenience:
@@ -200,13 +198,13 @@ source ~/.bashrc
 Then use:
 
 ```bash
-notify "Test 🚀" "Alias works fine"
+notify "Test" "Alias works fine"
 ```
 
 To send notifications that bypass Do Not Disturb mode, use a higher priority (e.g., 10):
 
 ```bash
-notify "Backup failed ❌" "Disk full" 10
+notify "Backup failed" "Disk full" 10
 ```
 
 ## Operations
@@ -218,12 +216,8 @@ Gotify 3.x. With Gotify `3.0.0`, APNs notifications can still arrive while the
 Notifications view remains stuck loading because the app cannot complete the
 new authenticated message-list workflow.
 
-Upstream references:
-
-- iGotify incompatibility report and `2.9.1` workaround:
-  <https://github.com/androidseb25/iGotify-Notification-Assistent/issues/250>
-- Gotify `3.0.0` breaking changes:
-  <https://github.com/gotify/server/releases/tag/v3.0.0>
+See the [iGotify compatibility issue](https://github.com/androidseb25/iGotify-Notification-Assistent/issues/250)
+before moving to [Gotify 3](https://github.com/gotify/server/releases/tag/v3.0.0).
 
 Before upgrading beyond `2.9.1`, confirm compatibility in the upstream iGotify
 project and take a consistent backup of `/srv/gotify/gotify-data` while the

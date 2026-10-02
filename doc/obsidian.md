@@ -1,7 +1,5 @@
 # Obsidian
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Notes and Canvas](#notes-and-canvas)

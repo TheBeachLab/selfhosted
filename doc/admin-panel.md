@@ -1,77 +1,83 @@
-# Administración del servidor
+# Server administration
 
-Panel desplegado el 2026-09-14: https://admin.beachlab.org/ . Código en
-`services/admin-panel/`. Permite consultar estado, encender/apagar y abrir servicios.
-Los interruptores cambian el estado actual: no ejecutan `enable`/`disable` ni
-modifican las políticas de arranque existentes.
+Open [admin.beachlab.org](https://admin.beachlab.org/) to see, start, stop and
+open services. The code is in `services/admin-panel/`.
 
-## Acceso
+The switches change the running state. They do not enable or disable boot
+startup.
 
-Authentik protege el host con un proveedor independiente `beachlab-admin`.
-Fran (`fran`) y Fran Jr (`fran-jr`) tienen bindings personales en modo OR (`any`).
-Ambos pueden operar todos los servicios del catálogo. No son administradores de
-Authentik. El permiso del panel se puede retirar sin retirar el acceso a las webs.
+## Access
 
-Fran Jr se incorpora mediante un enlace temporal privado y registra su propia
-passkey en https://auth.beachlab.org/if/flow/default-authenticator-webauthn-setup/ .
-No se versionan enlaces de recuperación ni credenciales. El acceso Authentik no
-crea cuentas nativas en Grafana, Gotify u otros productos con login propio.
+Authentik protects the panel with its own `beachlab-admin` provider.
+`fran` and `fran-jr` have personal OR (`any`) bindings and can operate all
+services in the catalog. They are not Authentik administrators. Removing panel
+access does not remove access to the other websites.
 
-## Catálogo y dependencias
+Fran Jr uses his private onboarding link to register a passkey at
+`https://auth.beachlab.org/if/flow/default-authenticator-webauthn-setup/`.
+Keep recovery links and credentials out of Git. Grafana, Gotify and other
+applications with their own login still need native accounts.
 
-Inventario comprobado directamente con `systemctl show/cat`, `docker inspect` y
-los Compose existentes en el NUC el 2026-09-14. La lista ejecutable está en
-`control.py`; la lista sudo exacta está en `sudoers`.
+## Services and dependencies
 
-| Servicio | Control | Dependencia |
+`control.py` contains the executable catalog; `sudoers` lists the allowed
+root commands.
+
+| Service | Control | Dependency |
 | --- | --- | --- |
-| ComfyUI | comfyui.service | eGPU física |
-| Qwen3-TTS | qwen3-tts.service | eGPU física |
-| Whisper | whisper-web.service | eGPU física |
-| Biblioteca RAG | rag-library-ingest.service | eGPU física |
-| Transmission | transmission-vpn, Compose existente | Docker + VPN integrada |
-| Navegador remoto | remote-browser.service | Docker + remote-browser-firewall.service |
-| Drop | url-drop.service | ninguna declarada |
-| Minecraft Java | minecraft-java.service | ninguna declarada |
-| Grafana | contenedor grafana | Docker |
-| Gotify | contenedor gotify | Docker |
-| iGotify | contenedor igotify | Docker + Gotify |
-| TiTiler | contenedor titiler | Docker |
+| ComfyUI | comfyui.service | Physical eGPU |
+| Qwen3-TTS | qwen3-tts.service | Physical eGPU |
+| Whisper | whisper-web.service | Physical eGPU |
+| RAG library | rag-library-ingest.service | Physical eGPU |
+| Transmission | transmission-vpn, existing Compose | Docker + built-in VPN |
+| Remote browser | remote-browser.service | Docker + remote-browser-firewall.service |
+| Drop | url-drop.service | None declared |
+| Minecraft Java | minecraft-java.service | None declared |
+| Grafana | grafana container | Docker |
+| Gotify | gotify container | Docker |
+| iGotify | igotify container | Docker + Gotify |
+| TiTiler | titiler container | Docker |
 
-La eGPU y Docker se observan, sin interruptor global. El panel aplica la política
-[una carga IA a la vez](gpu-services.md); rechaza un segundo arranque mientras otra
-carga figura activa. No detecta trabajos GPU iniciados manualmente fuera del catálogo.
-El arranque del navegador conserva las dependencias de su unidad systemd. iGotify
-arranca Gotify primero; Gotify no se puede apagar mientras iGotify esté activo.
-La VPN va dentro de Transmission y no puede apagarse por separado.
+Docker and the eGPU are displayed without a global switch. The panel allows
+[one AI workload at a time](gpu-services.md), but cannot see GPU jobs started
+manually outside its catalog.
 
-Minecraft usa la unidad Fabric actual, con SIGINT y hasta 120 s para guardar el
-mundo; no usa la unidad antigua `minecraftjava.service`. Se comprobó `server-port=25565`.
-El panel pide confirmación antes de apagar Minecraft, Transmission o el navegador.
-Un contenedor activo con healthcheck fallido aparece como **Revisar salud** y
-mantiene disponible el apagado. Activo no equivale a una prueba funcional completa.
+Starting the browser keeps its systemd dependencies. iGotify starts Gotify
+first; Gotify cannot stop while iGotify runs. Transmission's VPN stays inside
+its container.
 
-## Arquitectura y mantenimiento
+Minecraft uses `minecraft-java.service`, SIGINT and up to 120 seconds to save
+the world. The old `minecraftjava.service` is not used. The game port is 25565.
+Stopping Minecraft, Transmission or the browser requires confirmation.
 
-- Nginx valida cada petición con Authentik y sobrescribe `X-Authentik-Username`.
-- API Python sin dependencias externas, usuario `beachlab-admin`, socket Unix
-  `/run/beachlab-admin/http.sock` con permisos 0660, grupo `www-data`; sin puerto TCP.
-- Frontend React/Vite con datos consultados cada 5 s. Pérdida de conexión desactiva
-  controles. Si Authentik devuelve 401, la API conserva ese estado en el mismo
-  origen y la página renueva la sesión mediante la navegación normal de SSO,
-  sin reenviar automáticamente ninguna operación pendiente. CPU es carga media de un minuto, no porcentaje de utilización.
-- POST exige origen exacto, JSON, cookie Secure/HttpOnly/SameSite=Strict y token
-  HMAC vinculado al usuario. GET no cambia servicios.
-- El helper root `/usr/local/sbin/beachlab-admin-control` acepta solo IDs y
-  operaciones fijos. No interpreta comandos shell ni rutas del cliente. Sudoers
-  enumera cada comando. Un lock serializa operaciones y revalida el estado.
-- Los diarios de `beachlab-admin.service` registran actor, servicio, acción y resultado.
-- Código y build: `/opt/beachlab-admin`, propiedad root. Clave CSRF persistente
-  privada: `/var/lib/beachlab-admin/csrf.key`.
-- El servicio requiere sudo: no añadir `NoNewPrivileges=true` sin cambiar el
-  mecanismo del helper. No conceder acceso al socket Docker al usuario HTTP.
+A running container with a failed healthcheck shows **Revisar salud** and can
+still be stopped. Check the application's logs to find the failure.
 
-Para actualizar desde un checkout revisado, compilar localmente:
+## Configuration
+
+Nginx validates each request with Authentik and replaces
+`X-Authentik-Username`. The Python API runs as `beachlab-admin` on
+`/run/beachlab-admin/http.sock`, mode 0660 and group `www-data`, with no TCP
+listener.
+
+The React/Vite frontend refreshes every five seconds. A lost connection disables
+the controls. A 401 renews the SSO session through normal navigation, without
+repeating a pending operation. The CPU figure is one-minute load average.
+
+POST requires the exact origin, JSON, a Secure/HttpOnly/SameSite=Strict cookie
+and a user-bound HMAC token. GET does not change services. The root helper
+`/usr/local/sbin/beachlab-admin-control` accepts fixed service IDs and
+operations. Sudoers enumerates them; a lock serializes operations and checks
+the state again. The service journal records user, service, action and result.
+
+Code and build files live in `/opt/beachlab-admin`, owned by root. The CSRF key
+is `/var/lib/beachlab-admin/csrf.key`. The helper needs sudo, so
+`NoNewPrivileges=true` would break it. Do not give the HTTP user Docker socket
+access.
+
+## Update
+
+Build and test from the repository:
 
 ```sh
 npm ci --prefix services/admin-panel/frontend
@@ -79,62 +85,37 @@ npm run build --prefix services/admin-panel/frontend
 python3 -m unittest discover -s services/admin-panel/tests -v
 ```
 
-Copiar `server.py`, `control.py` y `frontend/dist/` a `/opt/beachlab-admin/` como
-root; instalar `control.py` en `/usr/local/sbin/beachlab-admin-control` (0755),
-`sudoers` en `/etc/sudoers.d/beachlab-admin` (0440), y la unidad en
-`/etc/systemd/system/beachlab-admin.service`. Validar `visudo -cf` antes de sustituir
-sudoers. Tras cambiar la unidad: `systemctl daemon-reload`; reiniciar solo el panel.
-Conservar hashes antiguos de JS/CSS hasta que terminen las sesiones abiertas.
+Copy `server.py`, `control.py` and `frontend/dist/` into `/opt/beachlab-admin/`
+as root. Install:
 
-`provision-access.py`, ejecutado como root en el NUC, configura el proveedor y
-preserva los demás proveedores del outpost. Requiere el Authentik existente y sus
-dos usuarios. `authentik/configure.py` también preserva proveedores ajenos y usa
-slugs para actualizar aplicaciones y flujos; se volvió a ejecutar con éxito.
+- `control.py` as `/usr/local/sbin/beachlab-admin-control`, mode 0755.
+- `sudoers` as `/etc/sudoers.d/beachlab-admin`, mode 0440.
+- The unit as `/etc/systemd/system/beachlab-admin.service`.
 
-El CNAME `admin` apunta a `beachlab.org`. Certbot usa webroot
-`/var/www/letsencrypt`; certificado en `/etc/letsencrypt/live/admin.beachlab.org`.
-El hook versionado `services/authentik/renew-nginx.sh` recarga Nginx para `auth` y
-`admin`. Instalar el vhost después de emitir el certificado, validar `nginx -t` y
-recargar. Para retirar el panel: desactivar su vhost y su unidad, validando Nginx;
-esto no detiene los servicios controlados. Conservar los permisos de Authentik
-hasta decidir expresamente su revocación.
+Run `visudo -cf` before replacing sudoers. After a unit change, run
+`systemctl daemon-reload` and restart the panel. Keep old JS/CSS hashes until
+open sessions finish.
 
-## Transmission y verificación
+`provision-access.py` runs as root on the NUC and preserves other outpost
+providers. It needs the existing Authentik instance and both users.
+`authentik/configure.py` also preserves unrelated providers and updates
+applications and flows by slug.
 
-La prueba real del usuario arrancó Transmission desde el panel. Se verificó la
-web local y pública con HTTP 200 usando las credenciales existentes; el túnel
-estaba levantado y una petición HTTPS desde el contenedor funcionó. El healthcheck
-de la imagen falló en `nslookup google.com`: devolvió A y NXDOMAIN, saliendo con
-error. No se considera validado el funcionamiento de todos los trackers ni la
-resolución general DNS. No se desactivó el healthcheck ni se reinició el contenedor
-para ocultar esta advertencia.
+The `admin` CNAME points to `beachlab.org`. Certbot uses
+`/var/www/letsencrypt` and stores the certificate under
+`/etc/letsencrypt/live/admin.beachlab.org`. Install the vhost after issuing
+the certificate, run `nginx -t` and reload. The renewal hook is
+`services/authentik/renew-nginx.sh`.
 
-**Histórico, revertido el 2026-09-14:** Transmission usa ahora autenticación RPC
-propia para Remote GUI; no reejecutar este script sin autorización específica.
-`protect-transmission.py` añadió Authentik al location existente, manteniendo
-la autenticación RPC del upstream. Genera un include root 0600 con la credencial
-existente de `rpc_creds`, nunca incorporada al repositorio. Reejecutar al rotar esa
-credencial. Hace copia de Nginx bajo `/opt/authentik/nginx-before-transmission-*`
-y restaura el archivo si falla la validación. La web se abrió en Safari con la
-sesión passkey de Fran y mostró la interfaz y sus transferencias.
+To remove the panel, disable its vhost and unit and validate Nginx. The
+controlled services keep running. Revoke its Authentik permissions separately.
 
-Verificaciones del 2026-09-14:
+## Transmission
 
-- 10 pruebas de controlador/CSRF y build Vite correctos.
-- API desplegada: sin identidad 401; origen/CSRF inválidos 403; ID fuera de la
-  lista 404. Cabecera de identidad falsificada desde Internet redirige al login.
-- Arranque real de Whisper mediante la API: 200; web local: 200; apagado: 200,
-  restaurando el estado inactivo. Minecraft y servicios compartidos no se detuvieron.
-- API Authentik: los diez registros de aplicaciones incluyen Fran y Fran Jr en
-  modo `any`; el outpost conserva cuatro proveedores (incluido administración).
-- Safari autenticado: panel con 12 servicios; Transmission accesible por passkey.
-- Vista local del mismo build con snapshot del servidor y acciones deshabilitadas:
-  búsqueda, confirmación/cancelación, persistencia de errores, 390 px sin desborde
-  horizontal; consola sin errores. La revisión móvil no prueba login WebAuthn móvil.
+Transmission uses its own RPC login for Remote GUI. The old
+`protect-transmission.py` script added Authentik and was reverted on
+2026-09-14. Only run it again when explicitly asked to change that access model.
 
-Diseño contrastado con el concepto generado antes de implementar: cabecera compacta,
-título y métricas, paleta clara con azul, filas alineadas y jerarquía de dependencias
-se conservan. Diferencias deliberadas: 12 servicios reales frente a 7 del concepto,
-puerto de Minecraft para copiar, advertencia de salud y estados reales. Las capturas
-de QA se inspeccionaron en escritorio y móvil; no se incorporan datos de prueba al
-frontend desplegado.
+The script writes the RPC secret include with mode 0600, backs up Nginx under
+`/opt/authentik/nginx-before-transmission-*` and restores it if validation fails.
+For the VPN healthcheck and Remote GUI setup, see [Transmission](transmission.md).

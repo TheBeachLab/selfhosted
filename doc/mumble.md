@@ -1,7 +1,5 @@
 # Mumble Server (murmur)
 
-**Author:** Fran
-
 Mumble is a low latency voice chat service. Before you start, decide the host (walkie.beachlab.org) and the port (50000) and modify your `/etc/hosts/`, add an CNAME record, set up NAT port forwarding and create a firewall rule.
 
 ```bash
@@ -54,6 +52,3 @@ registerName=Beach Lab Fun
 ```
 
 Reload the server if you make changes `sudo service mumble-server restart`
-
-
-

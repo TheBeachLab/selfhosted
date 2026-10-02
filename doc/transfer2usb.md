@@ -1,7 +1,5 @@
 # Auto Transfer contents to USB
 
-**Author:** Fran
-
 - [Install](#install)
 - [Prepare](#prepare)
 - [Script](#script)
@@ -27,9 +25,7 @@ Note the value:
 `ID_PATH=pci-0000:00:14.0-usb-0:2:1.0-scsi-0:0:0:0` This is Left port  
 `ID_PATH=pci-0000:00:14.0-usb-0:1:1.0-scsi-0:0:0:0` This is right port
 
-
 Therefore for the left the wildcard value could be "*usb-0:2:*"
-
 
 # Script
 Generate a script in `/usr/local/bin/usb_left_copy.sh` and give permissions.

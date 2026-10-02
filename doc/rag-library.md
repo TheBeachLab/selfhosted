@@ -1,30 +1,23 @@
-# High-Precision eBook RAG (SFTP Inbox)
-
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-08
+# eBook RAG (SFTP Inbox)
 
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick operations](#quick-operations)
 - [Ingest folders (SFTP)](#ingest-folders-sftp)
 - [Supported formats](#supported-formats)
 - [Pipeline service](#pipeline-service)
 - [Precision setup (high)](#precision-setup-high)
-- [Important GPU note for this host (GTX 1060 3GB)](#important-gpu-note-for-this-host-gtx-1060-3gb)
+- [GPU](#gpu-2026-02-18)
 - [Environment config](#environment-config)
 - [Operations](#operations)
-- [Current status snapshot (2026-02-08)](#current-status-snapshot-2026-02-08)
 
 <!-- vim-markdown-toc -->
 
-## Goal
-
-Run a local high-precision RAG pipeline where documents are dropped via SFTP and indexed automatically.
+Upload documents through SFTP to index them in the local RAG library.
 
 ## Quick operations
 
-**⚠️ On-Demand Service:** RAG library does NOT auto-start on boot. Use `gpu-service` to manage it:
+RAG does not start at boot. Start and stop it with `gpu-service`:
 
 ```bash
 gpu-service status                    # Check if running
@@ -121,12 +114,3 @@ sqlite3 /opt/rag-library/data/registry.db "select status,count(*) from files gro
 # One-shot manual query
 /opt/rag-library/.venv/bin/python /opt/rag-library/rag_pipeline.py query "tu pregunta"
 ```
-
-## Current status snapshot (2026-02-08)
-
-- service: active
-- indexed files: 2
-- failed files: 0
-- inbox watcher: active
-
-(Use SQL command above for live numbers.)

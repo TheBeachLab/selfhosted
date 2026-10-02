@@ -1,27 +1,31 @@
 # Transmission Daemon with NordVPN
 
-**Author:** Fran
+The web interface and RPC use Transmission's own login over HTTPS so
+Transmission Remote GUI can connect. Nginx passes the client's authentication
+to the daemon. The `authentik-check.conf` and `transmission-rpc-secret.conf`
+includes were removed from `location ^~ /transmission/` on 2026-09-14.
 
-Actualización 2026-09-14: la web y RPC usan las credenciales propias de
-Transmission sobre HTTPS, para permitir Transmission Remote GUI. Se retiraron
-solo de `location ^~ /transmission/` los includes `authentik-check.conf` y
-`transmission-rpc-secret.conf`: Nginx pasa la autenticación del cliente al daemon.
-No volver a ejecutar `services/admin-panel/protect-transmission.py` sin una
-petición explícita de cambiar este modelo de acceso. El arranque sigue disponible
-[en el panel](admin-panel.md); Descargas y las demás webs conservan la passkey.
+Start Transmission from the [administration panel](admin-panel.md). Downloads
+and the other websites keep their passkey login. The old
+`services/admin-panel/protect-transmission.py` changes this access model;
+only run it when explicitly asked to change Transmission's access.
 
-Configuración de Remote GUI: host `beachlab.org`, puerto `443`, SSL activado,
-ruta RPC `/transmission/rpc`, usuario `transmission` y contraseña RPC existente.
-No se abre el puerto 9091 al exterior. Verificación real: HTTPS RPC sin credenciales
-y con contraseña incorrecta devuelve 401; con credenciales existentes y el
-intercambio de sesión 409 devuelve 200 `success` en `session-get`. La web sin
-credenciales también devuelve 401; Descargas sigue redirigiendo al login.
-La VPN permaneció `healthy` y no se modificaron contenedor ni rutas.
-Backup Nginx: `/opt/authentik/nginx-before-transmission-rpc-20260914T161905`.
+Remote GUI settings:
+
+- Host: `beachlab.org`
+- Port: `443`, SSL enabled
+- RPC path: `/transmission/rpc`
+- User: `transmission` and its existing RPC password
+
+Port 9091 stays private. Missing or incorrect credentials return 401.
+A valid RPC client handles the 409 session exchange before calling `session-get`.
+
+The previous Nginx file is backed up at
+`/opt/authentik/nginx-before-transmission-rpc-20260914T161905`.
 
 ## VPN health and route protection (2026-09-14)
 
-Verified on the live `transmission-vpn` container: the bundled healthcheck
+The bundled `transmission-vpn` healthcheck
 (`/etc/scripts/healthcheck.sh`) queried `google.com`; NordVPN DNS returned an A
 record but NXDOMAIN for AAAA, making `nslookup` fail. Other tested domains and
 HTTPS worked. This does not establish a subscription-related cause.
@@ -53,23 +57,19 @@ and use `up -d --pull never transmission-vpn` to apply without upgrading the ima
 A timestamped `.before-vpn-health-*` copy of the original Compose file is retained
 beside it on the host.
 
-Implementation evidence: the installed image's `/etc/transmission/start.sh`
+The image's `/etc/transmission/start.sh`
 removes the Docker default route when `DROP_DEFAULT_ROUTE=true`, before starting
 Transmission. The wrapper checks that no IPv4 default route exists and Internet
 routes via `tun0`, then runs the image's DNS, ping and process checks. IPv6 is
 disabled for this IPv4 VPN. This is route-based protection, not an enabled UFW
 firewall; the explicit VPN-server and local-network routes remain available.
 
-Live validation: VPN connected, wrapper passed, HTTPS through the tunnel worked,
-and local RPC responded with its expected unauthenticated HTTP 401. Temporarily
-removing both VPN Internet routes made `ip route get 1.1.1.1` report unreachable,
-HTTPS fail and the healthcheck return 1. Routes were restored in a `finally`
-block and the healthcheck passed again. This tests loss of tunnel routes, not
-every possible VPN failure or tracker. Docker health status alone does not
-restart an unhealthy container.
+Removing both VPN Internet routes during the test made `ip route get 1.1.1.1` unreachable,
+HTTPS fail and the healthcheck return 1. The routes were restored afterwards.
+That covers loss of tunnel routes, not every VPN or tracker failure.
+Docker does not restart an unhealthy container just because the healthcheck fails.
 
 - [Transmission Daemon with NordVPN](#transmission-daemon-with-nordvpn)
-
 
 For Pink
 
@@ -143,8 +143,6 @@ pink@thebeachlab:~/docker/transmission-vpn$ docker exec -it transmission-vpn cur
   "readme": "https://ipinfo.io/missingauth"
 }
 ```
-
-
 
 Add location in nginx
 

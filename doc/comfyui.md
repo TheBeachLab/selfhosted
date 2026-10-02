@@ -1,10 +1,5 @@
 # ComfyUI
 
-> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
-> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
-
-**Author:** Watson
-
 ComfyUI node-based image/video GUI, served at `https://comfyui.beachlab.org`
 through [Authentik with a passkey](authentik.md).
 
@@ -31,9 +26,7 @@ through [Authentik with a passkey](authentik.md).
 - **Memory:** `MemoryHigh=8G`, `MemoryMax=10G`, disk-backed dynamic loading
   (`--fast-disk`) and pinned memory disabled, to fit this 16 GiB host.
 
-Versions above were read back from `/system_stats` and `nvidia-smi` after the
-2026-10-02 update. The stable release is
-[v0.38.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.38.0).
+This setup uses [v0.38.0](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.38.0).
 ComfyUI stays disabled at boot and is started for eGPU sessions; see
 [GPU service management](gpu-services.md).
 
@@ -60,6 +53,8 @@ journalctl -u comfyui -f
 ```
 
 ## Nginx
+
+The HTTP Basic settings below are kept for recovery; the site uses Authentik.
 
 ```bash
 sudo nginx -t && sudo nginx -s reload
@@ -120,15 +115,10 @@ tiled VAE decoding with 512 px tiles and 64 px overlap. The text encoder's
 CFG 1 is the publisher's quicker draft option and ignores the negative prompt.
 The publisher's 1024 × 1536 setting has not been benchmarked on this host.
 
-Validation: the full profile completed in 137.86 seconds, creating
-`output/NoctQ_V4/NUC_00001_.png` (768 × 1024). This is one observed run.
-After activating the updated service on port 8188, a separate 512 × 512,
-2-step execution succeeded. Running the full saved workflow from the browser's
-**Run** button then completed in 123.59 seconds and created `NUC_00002_.png`.
-Models were unloaded after validation so the idle UI leaves the GPU available.
-All existing custom-node imports succeeded;
-the API still registered the 16 UniRig/MIA nodes. This does not establish that
-every older workflow has been run on the new runtime.
+Two 768 × 1024 runs took 137.86 and 123.59 seconds on this host. Outputs are
+under `output/NoctQ_V4/`. Unload models after a job to free the GPU.
+The update retained the 16 UniRig/MIA nodes; older workflows still need trying
+on the new runtime.
 
 Built with Qwen. The publisher's
 [Qwen Research License](https://huggingface.co/Noctaluna/Noct-Q-Uncensored-Qwen-Image-2.1/blob/a81b9af51120a78e285e57906f2250a2a02080e9/LICENSE)

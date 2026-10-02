@@ -1,7 +1,5 @@
 # PostgREST
 
-**Author:** Fran
-
 - [Prepare firewall](#prepare-firewall)
 - [Install](#install)
 - [Create roles](#create-roles)

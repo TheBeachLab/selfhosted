@@ -1,7 +1,5 @@
 # Hailo AI dataflow compiler
 
-**Author:** Fran
-
 This is to create your custom models. This version is for Ubuntu x86
 
 In folder ~/ai/

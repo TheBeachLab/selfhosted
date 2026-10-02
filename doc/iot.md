@@ -1,7 +1,5 @@
 # IoT
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Node Red](#node-red)
@@ -272,4 +270,3 @@ Breakdown:
 - d: → set a default ACL, meaning new files or dirs created under these paths will inherit this ACL
 - u:mosquitto:rx → give user mosquitto read (r) and execute (x) permissions
 - /etc/letsencrypt/{live,archive} → target directories
-

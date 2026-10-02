@@ -1,19 +1,13 @@
 # OpenClaw TUI Quick Access (tmux)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-07
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick usage](#quick-usage)
-- [What was configured](#what-was-configured)
+- [Shell shortcuts](#shell-shortcuts)
 - [Manual fallback (no helper functions)](#manual-fallback-no-helper-functions)
 - [Notes](#notes)
 
 <!-- vim-markdown-toc -->
-
-## Goal
 
 Keep OpenClaw TUI running in a persistent tmux session, so reconnection is instant and safe.
 
@@ -30,13 +24,12 @@ watson_a
 watson_k
 ```
 
-## What was configured
+## Shell shortcuts
 
-`~/.bash_aliases` now contains:
+Add these shortcuts to `~/.bash_aliases`:
 
 ```bash
 # Personal shortcuts
-# Added by Mr. Watson 🦄 on 2026-02-07
 
 openclaw() {
   PATH="$HOME/.local/share/openclaw-node/current/bin:$PATH" /usr/bin/openclaw "$@"

@@ -4,10 +4,6 @@ The self-hosted OpenClaw agent is a separate deployment from other agents. Do
 not copy configuration, credentials, state or repair operations between hosts
 without verifying the target first.
 
-This public runbook intentionally omits SSH aliases, hostnames, messaging
-handles, local ports, exact state paths, backup filenames, account identifiers
-and runtime credentials.
-
 ## Upgrade and migration procedure
 
 1. Record the installed CLI and gateway versions privately.
@@ -122,14 +118,12 @@ checks of `pink-sudo` confirmed `~/.openclaw/openclaw.json` still selects
 `active`. These checks establish configuration and timer state, not successful
 failover or separate quota availability.
 
-OpenClaw can automatically switch models when the primary hits usage limits,
+OpenClaw's [model failover](https://docs.openclaw.ai/concepts/model-failover)
+can switch models when the primary hits usage limits,
 rate limits, billing/credit failures, auth failures, or overload timeouts —
 but **only if a fallback chain is configured**. Without `fallbacks`, the
 gateway cools down the failing profile and waits; it does not invent another
 provider.
-
-Sources cited by the recovered notes (not reverified during recovery): [Model failover](https://docs.openclaw.ai/concepts/model-failover),
-[Models](https://docs.openclaw.ai/concepts/models).
 
 ### Two-stage failover
 
@@ -157,8 +151,6 @@ The recovered note records configuration on 2026-08-07 and a Sol rate-limit → 
 
 Config: `~/.openclaw/openclaw.json` (user `pink`).
 Spark is ChatGPT/Codex OAuth-only.
-Sources: [Model failover](https://docs.openclaw.ai/concepts/model-failover),
-[Model providers](https://docs.openclaw.ai/concepts/model-providers).
 
 #### How automatic fallback is done (two pieces)
 

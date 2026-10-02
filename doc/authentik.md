@@ -1,65 +1,69 @@
-# Acceso web con passkey
+# Passkey access with Authentik
 
-## Estado y alcance
+The September 2026 setup uses Authentik 2026.8.2 instead of Nginx HTTP Basic.
+Open [auth.beachlab.org](https://auth.beachlab.org/) to sign in.
 
-Desde el 14 de septiembre de 2026, Authentik 2026.8.2 protege estos accesos
-mediante passkey, sustituyendo el HTTP Basic de Nginx:
-
-| Aplicación | URL |
+| Application | URL |
 | --- | --- |
 | Deutsch Sprint | https://beachlab.org/deutsch/ |
 | Whisper | https://beachlab.org/whisper/ |
 | Qwen3-TTS | https://beachlab.org/tts/ |
-| Descargas / Drop | https://beachlab.org/downloads/ (también `/drop/`) |
-| Navegador remoto | https://beachlab.org/browser/ |
+| Downloads / Drop | https://beachlab.org/downloads/ (also `/drop/`) |
+| Remote browser | https://beachlab.org/browser/ |
 | ComfyUI | https://comfyui.beachlab.org/ |
 | Barrakuda Designer | https://designer.daswerklab.de/ |
-| Administración | https://admin.beachlab.org/ |
+| Administration | https://admin.beachlab.org/ |
 
-Transmission quedó fuera de Authentik el 14 de septiembre para compatibilidad
-con Remote GUI; web y RPC exigen sus credenciales propias sobre HTTPS.
+Transmission keeps its own web and RPC login so Remote GUI can connect over
+HTTPS. The public websites keep their existing access.
 
-Portal: https://auth.beachlab.org/ . La cuenta `fran` tiene una passkey
-registrada en Apple Passwords para el RP `auth.beachlab.org`. No es administrador.
-Cuatro proveedores `forward_single` cubren los cuatro hosts; las seis rutas de
-Beachlab comparten proveedor y permisos. Las aplicaciones están restringidas
-explícitamente a `fran` y `fran-jr` mediante bindings personales en modo OR.
-El panel de administración tiene proveedor y permiso independiente. La web pública y las demás aplicaciones no se migraron.
-El alias `www.beachlab.org` se redirige al host canónico solo en las rutas protegidas.
+## Access
 
-El flujo `beachlab-passkey` exige WebAuthn con verificación del usuario y
-credencial residente; no acepta contraseña como alternativa. La sesión dura
-12 horas. No hay registro público. El acceso de emergencia se realiza por SSH.
+The `fran` and `fran-jr` accounts have personal bindings in OR mode. Neither
+account is an Authentik administrator. Four `forward_single` providers cover
+the four hosts. The six Beachlab routes share a provider; the administration
+panel has its own provider and permission.
 
-Fuentes de implementación consultadas el 2026-09-14:
-- [Forward auth](https://docs.goauthentik.io/add-secure-apps/providers/proxy/forward_auth).
-- [Integración Nginx](https://docs.goauthentik.io/add-secure-apps/providers/proxy/server_nginx/).
-- [Flujo sin contraseña](https://docs.goauthentik.io/add-secure-apps/flows-stages/stages/authenticator_validate/).
-- [Instalación Compose](https://docs.goauthentik.io/install-config/install/docker-compose/).
+The `beachlab-passkey` flow requires a resident WebAuthn credential and user
+verification, with no password fallback. Sessions last 12 hours. There is no
+public registration. The `www.beachlab.org` alias redirects to the canonical
+host only on protected routes.
 
-## Despliegue
+Fran's passkey is stored in Apple Passwords for `auth.beachlab.org`. Fran Jr
+registers his own through the private onboarding link, then opens
+`/if/flow/default-authenticator-webauthn-setup/`. Keep these links private.
+Authentik access does not create native accounts in Grafana or Gotify.
 
-Configuración versionada: `services/authentik/`.
-En el NUC (`ssh pink-sudo`):
+Nginx uses [forward auth](https://docs.goauthentik.io/add-secure-apps/providers/proxy/forward_auth)
+with the [Authentik Nginx integration](https://docs.goauthentik.io/add-secure-apps/providers/proxy/server_nginx/).
+The [authenticator validation stage](https://docs.goauthentik.io/add-secure-apps/flows-stages/stages/authenticator_validate/)
+controls the passwordless flow.
 
-- `/opt/authentik/compose.yaml`: PostgreSQL 16, servidor y worker Authentik.
-- `/opt/authentik/.env`: secretos aleatorios y token de aprovisionamiento, modo 0600;
-  directorio padre 0700. Nunca copiar a Git ni mostrar con `docker compose config`.
-- `authentik_database`: volumen Docker con la base de datos.
-- `/opt/authentik/data`, `certs`, `custom-templates`: datos persistentes.
-- `/etc/nginx/sites-available/auth.beachlab.org`: HTTPS hacia `127.0.0.1:19000`.
-- `/etc/nginx/snippets/authentik-check.conf` y `authentik-outpost.conf`: protección.
+## Install paths
 
-No se monta el socket Docker. PostgreSQL no publica puertos y Authentik solo
-publica HTTP en loopback. Límites: servidor y worker 2 GiB/2 CPU cada uno;
-PostgreSQL 512 MiB/1 CPU. Los contenedores resuelven `auth.beachlab.org` mediante
-`host-gateway` para llegar al Nginx local con TLS válido, sin depender del DNS
-recursivo ni del NAT de retorno. El CNAME público `auth` apunta a `beachlab.org`.
+The configuration is in `services/authentik/`. On the NUC (`ssh pink-sudo`):
 
-El certificado usa Certbot webroot `/var/www/letsencrypt`; conservar el bloque
-ACME de HTTP para renovaciones. `certbot.timer` está activo y el hook
-`/etc/letsencrypt/renewal-hooks/deploy/50-authentik-nginx` valida y recarga Nginx
-al renovar los certificados de `auth` o `admin`. El hook se ejecutó correctamente en la instalación.
+- `/opt/authentik/compose.yaml`: PostgreSQL 16, Authentik server and worker,
+  following the [Compose setup](https://docs.goauthentik.io/install-config/install/docker-compose/).
+- `/opt/authentik/.env`: secrets and provisioning token, mode 0600 inside a
+  0700 directory. Keep it out of Git; use `docker compose config --quiet`.
+- `authentik_database`: Docker volume for the database.
+- `/opt/authentik/data`, `certs` and `custom-templates`: persistent files.
+- `/etc/nginx/sites-available/auth.beachlab.org`: HTTPS to `127.0.0.1:19000`.
+- `/etc/nginx/snippets/authentik-check.conf` and `authentik-outpost.conf`:
+  proxy protection.
+
+The Docker socket is not mounted. PostgreSQL has no published port;
+Authentik's HTTP port is on localhost. Server and worker each have 2 GiB and
+two CPU; PostgreSQL has 512 MiB and one CPU.
+
+Containers resolve `auth.beachlab.org` through `host-gateway` to reach local
+Nginx with valid TLS. The public `auth` CNAME points to `beachlab.org`.
+
+Certbot uses `/var/www/letsencrypt`. Keep the HTTP ACME block for renewals.
+`certbot.timer` runs the renewal and
+`/etc/letsencrypt/renewal-hooks/deploy/50-authentik-nginx` validates and reloads
+Nginx for the `auth` and `admin` certificates.
 
 ```bash
 sudo docker compose --project-directory /opt/authentik -f /opt/authentik/compose.yaml ps
@@ -67,56 +71,35 @@ sudo docker compose --project-directory /opt/authentik -f /opt/authentik/compose
 sudo nginx -t
 ```
 
-El script `configure.py` configura cuenta, flujo, aplicaciones y proveedores
-por la API local autenticada. Está diseñado para este despliegue: revisar sus
-valores antes de volver a ejecutarlo, pues establece los permisos declarados.
-El script `switch-nginx.py prepare` prepara cinco archivos sin activar cambios;
-`activate` verifica una passkey de `fran` para el RP correcto, compara hashes,
-guarda originales y valida Nginx antes de recargar. Es una migración de una sola
-vez: no ejecutarla sobre una configuración ya migrada. Un fallo de validación o
-recarga restaura los originales. No se leen ni borran los `.htpasswd`.
+`configure.py` provisions the accounts, flow, applications and providers
+through the local API. Review its declared permissions before running it again.
 
-## Recuperación y copias
+`switch-nginx.py prepare` prepares five files. `activate` checks Fran's
+passkey, compares hashes, backs up the originals and validates Nginx before
+reloading. It restores the files if validation or reload fails and leaves
+`.htpasswd` files alone. This was the one-time migration; do not run it on
+an already migrated configuration.
 
-Si se pierde la passkey, desde una sesión SSH autorizada:
+## Recovery and backups
+
+If a passkey is lost, connect through SSH and create a temporary recovery link:
 
 ```bash
 sudo docker exec authentik-server-1 ak create_recovery_key 15 fran
 ```
 
-El comando entrega una ruta temporal de acceso: abrirla bajo
-`https://auth.beachlab.org`, registrar una nueva passkey en
-`/if/flow/default-authenticator-webauthn-setup/` y probarla en una sesión nueva.
-No publicar, versionar ni compartir ese enlace. Para administración de emergencia,
-el mismo comando admite `akadmin`; reservarlo para administración autorizada.
+Open the returned path under `https://auth.beachlab.org`, register a new
+passkey and try it in a fresh session. The same command accepts `akadmin`
+for administrator recovery. Do not publish or commit the recovery link.
 
-Incluir en las copias privadas la base de datos PostgreSQL (mediante `pg_dump`),
-`.env`, los directorios persistentes y los archivos Nginx. No basta con copiar el
-Compose. No se ha probado una restauración de Authentik en este despliegue.
+Back up PostgreSQL with `pg_dump`, plus `.env`, the persistent directories
+and Nginx files. Restoring this deployment still needs testing.
 
-Originales previos al cambio:
-`/opt/authentik/nginx-backup-20260914T111847Z/`. Para revertir, restaurar cada
-archivo en su ruta original según `FILES` de `switch-nginx.py`, ejecutar
-`nginx -t` y recargar Nginx. Las contraseñas Basic originales siguen disponibles.
-No restaurar sin comprobar antes si hubo cambios posteriores de otros trabajos.
+The pre-migration Nginx files are in
+`/opt/authentik/nginx-backup-20260914T111847Z/`. Restore each file to its
+original path using `FILES` in `switch-nginx.py`, then run `nginx -t` and
+reload. Check for later changes before restoring an old file. The original
+Basic passwords are retained for recovery.
 
-## Verificación realizada
-
-- Los tres contenedores estaban saludables; Compose y Nginx validaron.
-- Las siete URLs sin sesión terminaron en el flujo HTTPS `beachlab-passkey`.
-- Se registró Apple Passwords para `fran` y `auth.beachlab.org`.
-- A las 11:20 UTC, Authentik registró un login `auth_webauthn_pwl` de `fran`;
-  Nginx sirvió `/deutsch/` y sus JS/CSS con 200 inmediatamente después.
-- El usuario confirmó el acceso desde una ventana privada. El alias `www` y los
-  recursos de Deutsch mantuvieron la protección con cookies/cabeceras inválidas.
-- Las páginas públicas raíz de Beachlab y Das Werklab siguieron respondiendo 200.
-
-El acceso real con passkey se verificó con Deutsch Sprint. No equivale a una
-prueba funcional completa de las siete aplicaciones: al comprobar los upstreams,
-Whisper, TTS, ComfyUI y el navegador remoto estaban apagados (conexión rechazada).
-Su arranque sigue sus procedimientos propios; la migración de autenticación no
-arranca servicios GPU ni cambia su ciclo de trabajo.
-
-Fran Jr tiene acceso a todas estas aplicaciones, incluido el panel. Su passkey
-debe registrarla él mismo con el enlace de incorporación privado. Ver
-[administración](admin-panel.md) para el catálogo, permisos y pruebas posteriores.
+Signing in does not start GPU services or the browser. Use the
+[administration panel](admin-panel.md) to start them.

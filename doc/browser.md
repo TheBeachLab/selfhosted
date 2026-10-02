@@ -1,20 +1,16 @@
-# Navegador remoto
+# Remote browser
 
-> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
-> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
-
-Autor: Mr. Watson
-
-Chromium remoto accesible en:
+Chromium runs on the NUC and opens at:
 
 ```text
 https://beachlab.org/browser/
 ```
 
-Usa autenticación HTTP Basic propia, separada de Drop. El contenedor solo
-publica su puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
+Sign in with an [Authentik passkey](authentik.md). The old HTTP Basic files
+are kept for recovery. The container's HTTP port is on `127.0.0.1`; Nginx
+handles HTTPS and WebSocket.
 
-## Archivos
+## Files
 
 ```text
 /srv/remote-browser/docker-compose.yml
@@ -26,25 +22,27 @@ publica su puerto HTTP en `127.0.0.1`; Nginx termina HTTPS y reenvía WebSocket.
 /etc/nginx/.htpasswd-browser
 ```
 
-El perfil y las cookies persisten bajo `/srv/remote-browser/config/`. Las
-descargas quedan en `/home/pink/downloads`, montada como `/config/Downloads`.
-Se pueden gestionar con passkey en https://beachlab.org/downloads/ . El panel lateral
-permite subir y bajar archivos mediante la sección **Archivos**.
-La unidad systemd prepara `Downloads` con modo `0755` y deja `/config` en `0711`
-para que el Nginx interno pueda servir esa ruta sin poder listar el perfil.
-Es una única sesión de navegador: no abrirla simultáneamente entre personas.
-Las cookies y sesiones iniciadas quedan almacenadas en el servidor.
+The profile and cookies persist in `/srv/remote-browser/config/`. Downloads
+go to `/home/pink/downloads`, mounted as `/config/Downloads`. Open
+[Downloads](https://beachlab.org/downloads/) to manage them. The browser's
+**Archivos** side panel can upload and download files too.
 
-## Operación
+Systemd gives `Downloads` mode 0755 and `/config` mode 0711, so the internal
+Nginx can serve downloads without listing the profile.
 
-Estado:
+This is one shared browser session. Avoid simultaneous use by different people;
+signed-in sessions and cookies remain on the server.
+
+## Usage
+
+Status and logs:
 
 ```bash
 sudo systemctl status remote-browser remote-browser-firewall
 sudo docker logs --tail 100 remote-browser
 ```
 
-Actualizar:
+Update:
 
 ```bash
 cd /srv/remote-browser
@@ -52,30 +50,29 @@ sudo docker compose pull
 sudo systemctl restart remote-browser
 ```
 
-Reiniciar:
+Restart:
 
 ```bash
 sudo systemctl restart remote-browser
 ```
 
-## Seguridad
+## Isolation
 
-- Chromium corre aislado en Docker, sin montar el socket de Docker ni rutas del
-  host salvo su directorio de configuración.
-- Las credenciales son exclusivas de este servicio y solo se guardan como hash
-  bcrypt en `/etc/nginx/.htpasswd-browser`.
-- Terminales, `sudo` y las herramientas para abrir aplicaciones externas están
-  deshabilitados explícitamente. No se usa `HARDEN_DESKTOP`, porque las
-  versiones actuales de la imagen eliminan el gestor de archivos cuando está
-  activo, incluso si `SELKIES_FILE_TRANSFERS` solicita habilitarlo.
-- La red `172.31.250.0/28` no puede iniciar conexiones hacia rangos privados,
-  loopback, link-local ni otras redes Docker.
-- `remote-browser.service` arranca después del filtro de red; Docker no inicia
-  el contenedor directamente.
-- Compartir sesión, micrófono y gamepads están deshabilitados.
-- El contenedor tiene límites de 3 GiB de RAM, dos CPU y 1024 procesos.
+The container mounts its config and downloads, with no Docker socket.
+Terminals, sudo, external application tools, session sharing, microphone and
+gamepads are disabled. Limits are 3 GiB RAM, two CPU and 1024 processes.
 
-Comprobar el filtro:
+`HARDEN_DESKTOP` is not used because this image removes the file manager when
+it is enabled, even with `SELKIES_FILE_TRANSFERS` enabled.
+
+The `172.31.250.0/28` network cannot initiate connections to private ranges,
+localhost, link-local or other Docker networks. The systemd service starts
+after the firewall; Docker does not start the container independently.
+
+The legacy Basic password is stored as bcrypt in
+`/etc/nginx/.htpasswd-browser`, separately from Drop.
+
+Check the filter:
 
 ```bash
 sudo iptables -S REMOTE-BROWSER
@@ -83,4 +80,4 @@ sudo docker exec remote-browser curl -I --max-time 5 http://192.168.1.1
 sudo docker exec remote-browser curl -I --max-time 10 https://example.com
 ```
 
-El primer `curl` debe fallar y el segundo debe devolver una respuesta HTTP.
+The first curl should fail. The second should return an HTTP response.

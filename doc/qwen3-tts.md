@@ -1,14 +1,7 @@
 # Qwen3-TTS Voice Cloning Service
 
-> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
-> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
-
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-19
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick operations](#quick-operations)
 - [Nginx config](#nginx-config)
 - [Basic auth](#basic-auth)
@@ -21,13 +14,11 @@
 
 <!-- vim-markdown-toc -->
 
-## Goal
-
 Self-hosted voice cloning and multilingual TTS with Qwen3-TTS 1.7B. Clone any voice with 3+ seconds of audio, generate speech in 10 languages.
 
 ## Quick operations
 
-**✨ Auto-Loading Service:** Frontend always active at `https://beachlab.org/tts/`
+The web interface is available at `https://beachlab.org/tts/`
 
 - GPU model loads automatically when you submit a job
 - Auto-unloads after 120 seconds of inactivity (frees VRAM)
@@ -51,6 +42,9 @@ Implemented:
 - Natural language voice control ("excited", "calm and soothing", etc.)
 
 ## Nginx config
+
+The HTTP Basic configuration below is kept for recovery. The web interface
+now uses an [Authentik passkey](authentik.md).
 
 Added to `beachlab.org` server block:
 
@@ -177,7 +171,7 @@ sudo journalctl -u qwen3-tts -n 200 --no-pager
 
 ## Usage
 
-Navigate to `https://beachlab.org/tts/` (requires basic auth)
+Open `https://beachlab.org/tts/` with an Authentik passkey.
 
 ### Two modes:
 
@@ -196,21 +190,16 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 2. Upload reference audio (3-60s, clear speech)
    - **Supported formats:** MP3, WAV, OGG, OPUS, M4A, FLAC, AAC, and any ffmpeg-compatible format
    - Automatically converted to 16kHz mono WAV for processing
-3. **Optional: 🎙️ Reduce background noise (DeepFilterNet3, GPU)**
-   - Neural denoiser trained specifically for speech — far superior to spectral filters
-   - Runs on GPU before voice cloning inference
-   - Recommended for recordings with background noise (room, wind, traffic, etc.)
-5. **Transcription options:**
-   - ✨ **Auto-transcribe:** Check "Auto-transcribe with Whisper" to automatically detect speech (skip manual transcription)
-   - **Manual:** Leave unchecked and type exact words spoken in the reference audio
-6. ✅ **Check "Save this voice for reuse"** if you want to keep it
-   - Enter voice name (e.g., "John", "Maria", "Narrator")
-   - Optional: add description (e.g., "Male, deep voice, British accent")
-5. Enter text to generate
-6. Optional: select language and voice instructions
-7. Click "Generate Speech"
-8. Download wav when done
-9. Voice will appear in saved voices list (if you checked "save")
+3. Optionally reduce background noise with DeepFilterNet3. It runs on the GPU
+   before cloning.
+4. Check "Auto-transcribe with Whisper", or leave it unchecked and type the
+   exact words spoken in the reference.
+5. Check "Save this voice for reuse" to keep it. Give it a name and optional
+   description.
+6. Enter the text to generate.
+7. Optionally select the language and voice instructions.
+8. Click "Generate Speech".
+9. Download the audio when done. Saved voices appear in the voice list.
 
 ### Managing saved voices:
 
@@ -220,16 +209,8 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 
 ### Language support
 
-- Chinese
-- English
-- Japanese
-- Korean
-- German
-- French
-- Russian
-- Portuguese
-- Spanish
-- Italian
+Chinese, English, Japanese, Korean, German, French, Russian, Portuguese,
+Spanish and Italian.
 
 ### Cross-lingual voice cloning
 
@@ -237,9 +218,9 @@ Navigate to `https://beachlab.org/tts/` (requires basic auth)
 
 **Example scenarios:**
 
-- ✅ **Same language:** Reference audio in English → Generate English text → Natural English voice
-- ⚠️ **Cross-lingual with accent:** Reference audio in English → Generate Spanish text → Spanish with English accent
-- ✅ **Best quality:** Use reference audio in the **same language** as your target text
+- **Same language:** Reference audio in English → Generate English text → Natural English voice
+- **Cross-lingual with accent:** Reference audio in English → Generate Spanish text → Spanish with English accent
+- **Best quality:** Use reference audio in the **same language** as your target text
 
 **Tips for multilingual voices:**
 

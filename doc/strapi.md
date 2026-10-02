@@ -1,10 +1,7 @@
 # Strapi CMS
 
-**Author:** Fran
-
 - [Strapi CMS](#strapi-cms)
   - [Install](#install)
-
 
 ## Install
 Create database sisterapi in postgres
@@ -34,10 +31,10 @@ sudo apt-get update
 sudo apt-get install nodejs -y
 ```
 
-Install Yarn (optional but recommended): Yarn is often used as the package manager for Strapi:
+Install Yarn:
 `sudo npm install --global yarn`
 
-Install Strapi: Switch to the strapi user and install Strapi using either npx or yarn:
+Switch to the strapi user and install Strapi:
 ```bash
 sudo -i -u strapi
 cd /var/www/strapi
@@ -46,7 +43,7 @@ yarn create strapi-app sisterapi
 
 Follow instructions and give database user details created before.
 
-Set up a process manager: To ensure that Strapi stays running, you should use a process manager like pm2. Install and set it up as follows:
+Keep Strapi running with PM2:
 ```bash
 mkdir ~/.npm-global
 npm config set prefix '~/.npm-global'
@@ -74,5 +71,3 @@ sudo ufw status
 ```
 
 Strapi user: `pm2 save`
-
-

@@ -1,30 +1,25 @@
 # GPU Service Management (On-Demand)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-19
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Hardware context](#hardware-context)
 - [Services](#services)
 - [Management tool](#management-tool)
 - [Usage](#usage)
 - [Operations](#operations)
-- [Why on-demand](#why-on-demand)
+- [Why lazy-loading + manual control](#why-lazy-loading--manual-control)
 - [Thunderbolt Hot-Unplug Caveat](#thunderbolt-hot-unplug-caveat)
 
 <!-- vim-markdown-toc -->
 
-## Goal
-
-Monitor and manage GPU-intensive services (Whisper, RAG, Qwen3-TTS) with automatic lazy-loading and manual control to avoid VRAM exhaustion.
+Whisper, RAG and Qwen3-TTS share the same 8 GB GPU. Use `gpu-service` to
+start, stop and switch between them.
 
 ## Hardware context
 
 - **GPU:** NVIDIA RTX 2070 Super 8GB (via eGPU, USB-C/Thunderbolt)
 - **Total VRAM:** 8192 MiB
-- **Services can NOT run simultaneously:** Combined VRAM usage exceeds capacity
+- Run one GPU service at a time.
 
 VRAM usage per service (approximate):
 
@@ -39,47 +34,21 @@ VRAM usage per service (approximate):
 GPU service behavior:
 
 - **`whisper-web.service`** (port 8060, `/whisper` endpoint)
-  - ✨ **Auto-loading:** Frontend always active, GPU model loads on first job
+  - **Auto-loading:** Frontend always active, GPU model loads on first job
   - Auto-unloads after 120 seconds of inactivity
   - Auto-starts on boot
 
 - **`qwen3-tts.service`** (port 8070, `/tts` endpoint)
-  - ✨ **Auto-loading:** Frontend always active, GPU model loads on first job
+  - **Auto-loading:** Frontend always active, GPU model loads on first job
   - Auto-unloads after 120 seconds of inactivity
   - Auto-starts on boot
 
 - **`rag-library-ingest.service`** (SFTP inbox watcher)
-  - ⚠️ **Manual control:** Must be started/stopped manually with `gpu-service`
-  - Does NOT auto-start on boot
+  - **Manual control:** Must be started/stopped manually with `gpu-service`
+  - Does not start at boot
   - Runs continuously when active (no auto-unload)
 
-## Auto-Loading Behavior (Whisper/TTS)
-
-**How it works:**
-
-1. **Service always running:** FastAPI frontend available 24/7
-2. **GPU model lazy-loads:** Only loaded when first job arrives in queue
-3. **Auto-unload on idle:** After 120 seconds with no jobs, model is unloaded and VRAM freed
-4. **Failsafe:** If GPU OOM during load, job fails with clear error message
-
-**Example timeline:**
-
-```
-00:00 - User visits https://beachlab.org/whisper/
-00:01 - User uploads audio and clicks "Transcribe"
-00:02 - Worker thread detects queued job
-00:03 - GPU model begins loading (~10-20s first time)
-00:22 - Model loaded, transcription starts
-00:45 - Job completes, marked as 'done'
-02:45 - No new jobs for 120s → model unloads, VRAM freed
-```
-
-**Benefits:**
-
-- No 502 errors (frontend always available)
-- No manual service management needed
-- Efficient VRAM usage (only allocated when needed)
-- Multiple users can queue jobs (processed sequentially)
+Whisper and TTS queue jobs and process them sequentially.
 
 ## Management tool
 
@@ -106,7 +75,7 @@ gpu-service start rag
 gpu-service start tts
 ```
 
-**Important:** Only start ONE service at a time.
+Start one GPU service at a time.
 
 ### Stop a service
 
@@ -206,33 +175,14 @@ sudo pkill -9 -f "whisper-service|rag-library|qwen3-tts"
 
 ## Why lazy-loading + manual control
 
-1. **VRAM limit:** 8GB is not enough to run all three services simultaneously
-2. **Sporadic use:** Whisper, RAG, and TTS are used infrequently, not 24/7
-3. **Resource efficiency:** GPU idle when not needed
-4. **User experience:** Frontends always accessible, no manual service management needed
-
-**Design decisions:**
-
-- ✅ **Auto-loading (Whisper/TTS):** Frontend always available, GPU loads on demand
-  - No CUDA OOM on startup (model loads when first job arrives)
-  - Auto-unload after idle timeout (frees VRAM for other services)
-  - Failsafe: if GPU memory full, job fails with clear message
-- ⚠️ **Manual control (RAG):** Continuous processing when active
-  - No auto-unload (watcher runs continuously until stopped)
-  - Requires explicit `gpu-service start rag` before use
-  - Prevents unexpected VRAM usage when uploading large batches
-
-**Alternative approaches considered but rejected:**
-
-- ❌ **Smaller models:** Qwen3-TTS 0.6B has noticeably lower quality
-- ❌ **Shared VRAM pool:** Not supported by PyTorch/CUDA without full model unloading
-- ❌ **Always-on all services:** Exceeds 8GB VRAM capacity
+The card has 8 GB of VRAM. Run one service at a time. Whisper and TTS load
+their models for a job and unload them after 120 seconds idle. RAG keeps
+processing its inbox until I stop it.
 
 ## eGPU session model (required for host stability)
 
-**Recovered internal notes from 2026-08-04/05; not externally verified.**
-The original logs supporting the historical rows below were not recovered in
-this review; these rows must not be treated as a newly verified root cause.
+These August 2026 notes describe host hangs during long eGPU sessions.
+The original logs are missing, so they do not establish the cause.
 
 | Evidence | What it shows |
 |---|---|
@@ -242,7 +192,7 @@ this review; these rows must not be treated as a newly verified root cause.
 | Weekly ~05:00 reboots with Core X off | Clean multi-day uptime without eGPU |
 | No `systemctl reboot` in `auth.log` on those hang days | Not intentional software reboot |
 
-**Inference (not externally verified as root cause):** long-lived Thunderbolt/PCIe
+The working assumption is that long-lived Thunderbolt/PCIe
 attachment of the Core X on this NUC+Linux stack is unsafe. Failures are not
 limited to heavy CUDA jobs; idle attach for half a day has been enough. Full
 “always-on eGPU” on this host is not a reliable goal with the current
@@ -266,7 +216,7 @@ similar TB3 eGPU `Xid 79` / bus-loss failures on Linux are common; see
    Or: `egpu-session end --reboot` after powering the enclosure off first if you
    accept an immediate reboot.
 
-### Tools (deployment checked 2026-09-10)
+### Tools
 
 | Path | Role |
 |---|---|
@@ -275,9 +225,8 @@ similar TB3 eGPU `Xid 79` / bus-loss failures on Linux are common; see
 | `/etc/egpu-watchdog.env` | `EGPU_WARN_S=21600`, `EGPU_CRITICAL_S=36000` |
 | Repo copies | `scripts/egpu/egpu-session.sh`, `scripts/egpu/egpu-watchdog.sh` |
 
-On 2026-09-10, SHA-256 comparison over SSH confirmed both repository scripts
-match those paths on `pink-sudo`; `/etc/egpu-watchdog.env` contains the thresholds
-above. This checks installed content, not runtime recovery behavior.
+The scripts matched the host copies on 2026-09-10. The thresholds live in
+`/etc/egpu-watchdog.env`; that comparison did not test recovery from a hang.
 The recovered `egpu-session` script sources its state as shell code and does not
 quote notes containing spaces when saving them; treat this as a known limitation
 of the deployed snapshot, not a validated state-file interface.

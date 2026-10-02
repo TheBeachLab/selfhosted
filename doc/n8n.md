@@ -1,7 +1,5 @@
 # n8n
 
-**Author:** Fran
-
 ```bash
 docker run -it --rm \
  --name n8n \
@@ -64,8 +62,3 @@ sudo systemctl reload nginx
 With docker compose:
 
 WIP
-
-
-
-
-

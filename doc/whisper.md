@@ -1,33 +1,24 @@
-# Whisper Web (Protected Upload + GPU Transcription + Diarization)
-
-> Acceso actualizado el 2026-09-14: esta web usa [Authentik con passkey](authentik.md).
-> Las instrucciones HTTP Basic de este documento quedan como referencia de recuperación.
-
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-07
+# Whisper Web
 
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick operations](#quick-operations)
 - [Nginx config](#nginx-config)
 - [Basic auth file](#basic-auth-file)
 - [Service app](#service-app)
 - [Environment](#environment)
 - [systemd unit](#systemd-unit)
-- [Setup commands (sanitized)](#setup-commands-sanitized)
+- [Setup commands](#setup-commands)
 - [Operations](#operations)
 - [Data lifecycle](#data-lifecycle)
 
 <!-- vim-markdown-toc -->
 
-## Goal
-
 Expose a protected `/whisper` endpoint to upload media and generate transcript artifacts (`txt`, `srt`, `pdf`) with optional diarization.
 
 ## Quick operations
 
-**✨ Auto-Loading Service:** Frontend always active at `https://beachlab.org/whisper/`
+The web interface is available at `https://beachlab.org/whisper/`
 
 - GPU model loads automatically when you submit a job
 - Auto-unloads after 120 seconds of inactivity (frees VRAM)
@@ -51,6 +42,9 @@ Implemented:
 - Cleanup on job deletion and post-processing
 
 ## Nginx config
+
+The HTTP Basic configuration below is kept for recovery. The web interface
+now uses an [Authentik passkey](authentik.md).
 
 Added to `beachlab.org` server block:
 
@@ -155,7 +149,7 @@ RestartSec=3
 WantedBy=multi-user.target
 ```
 
-## Setup commands (sanitized)
+## Setup commands
 
 ```bash
 sudo mkdir -p /opt/whisper-service/{uploads,outputs,temp}

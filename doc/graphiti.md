@@ -1,7 +1,5 @@
 # Graphiti
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Install](#install)

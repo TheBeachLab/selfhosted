@@ -4,9 +4,10 @@
 
 The NUC (`ssh pink-sudo`, host `thebeachlab`) and Mac use **Taskwarrior 3.5.0**.
 The NUC hosts **TaskChampion Sync Server 0.7.1** and the **syncall 1.8.8**
-CalDAV adapter. These were the latest stable Taskwarrior/server releases checked
-on 2026-09-13: [Taskwarrior release](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.5.0),
-[TaskChampion server release](https://github.com/GothenburgBitFactory/taskchampion-sync-server/releases/tag/v0.7.1).
+CalDAV adapter, using the
+[Taskwarrior 3.5.0](https://github.com/GothenburgBitFactory/taskwarrior/releases/tag/v3.5.0)
+and [TaskChampion 0.7.1](https://github.com/GothenburgBitFactory/taskchampion-sync-server/releases/tag/v0.7.1)
+releases.
 
 ```text
 Mac Taskwarrior <-> TaskChampion (via SSH) <-> NUC Taskwarrior <-> syncall <-> Nextcloud Tasks <-> Apple Reminders
@@ -185,31 +186,12 @@ Recovery evidence is retained under `migration-v3/recovery-plan.json`. Run migra
 a new adapter after a failed migration. Back up and coordinate both replicas
 before any future migration.
 
-## Verified result (2026-09-13)
-
-Taskwarrior 3.5.0 on both hosts and TaskChampion Sync Server 0.7.1 are active.
-Post-recovery checks verified all **1,462 non-deleted tasks**, including **214
-pending** and **1,248 completed**, with original UUIDs and source fields
-(except modification timestamps changed by recovery). Every live Nextcloud UID
-matches its mapped Taskwarrior UUID. A full subsequent reconciliation succeeded.
-
-The [round-trip integration test](../scripts/taskwarrior/test_roundtrip.py)
-passed on 3.5 for creation, editing, completion/reopening, deletion, priority,
-date-only deadlines, and clearing tags/deadlines. It also proves an empty
-replica cannot delete mapped Nextcloud tasks. Mac creation reached Nextcloud
-through TaskChampion, and Nextcloud completion returned to the Mac; the test
-task was then deleted. A production SQLite backup passed integrity_check and
-contained the scoped syncall state. No Apple-device UI test is claimed.
-
 ## Historical taskd installation reference
 
 The following is the original setup, retained for the already-running service.
 It is not the Nextcloud bridge installation procedure. Taskwarrior 3 uses a
 different sync implementation and cannot use taskd; see the
 [official upgrade guide](https://taskwarrior.org/docs/upgrade-3/).
-
-
-
 
 It is a bit tedious but worth it
 
@@ -357,4 +339,3 @@ Credentials where shown when creating the user.
 ## Sync
 
 `task sync`
-

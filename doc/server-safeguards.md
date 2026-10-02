@@ -1,11 +1,7 @@
 # Server Safeguards (Resource Limits + Alerts)
 
-**Author:** Mr. Watson 🦄
-**Date:** 2026-02-08
-
 <!-- vim-markdown-toc GFM -->
 
-- [Goal](#goal)
 - [Quick checks](#quick-checks)
 - [1) Resource limits for AI services](#1-resource-limits-for-ai-services)
 - [2) Service failure notifications (iGotify)](#2-service-failure-notifications-igotify)
@@ -19,8 +15,6 @@
 - [Notes](#notes)
 
 <!-- vim-markdown-toc -->
-
-## Goal
 
 Keep the server stable under heavy workloads and alert on failures before they become incidents.
 

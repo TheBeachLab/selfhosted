@@ -1,7 +1,6 @@
 # Mail servers: Postfix, Dovecot and OpenDKIM
 
-**Author:** Fran
-**Status:** Incomplete — only Postfix basics, Dovecot and OpenDKIM not yet documented
+WIP. Only the Postfix setup is here. Dovecot and OpenDKIM still need documenting.
 
 <!-- vim-markdown-toc GFM -->
 

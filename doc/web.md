@@ -1,7 +1,5 @@
 # Nginx web server
 
-**Author:** Fran
-
 <!-- vim-markdown-toc GFM -->
 
 - [Nginx web server](#nginx-web-server)
@@ -14,7 +12,6 @@
     - [Setup the firewall](#setup-the-firewall)
     - [Stream with OBS](#stream-with-obs)
     - [Watch on VLC](#watch-on-vlc)
-    - [TODO](#todo)
   - [The result](#the-result)
   - [Not yet: Apache 2](#not-yet-apache-2)
 
