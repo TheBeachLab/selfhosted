@@ -1,74 +1,63 @@
-# Obsidian: notes, links and Canvas
+# Obsidian
 
 **Author:** Fran
-**Checked:** 2026-10-02
 
-Obsidian está instalado en el Mac (`1.13.7`). En la inspección acotada del NUC no
-se detectó la aplicación ni un contenedor o servicio. Ver el
-[inventario y la arquitectura](knowledge-graphs.md).
+<!-- vim-markdown-toc GFM -->
 
-## Qué uso para cada cosa
+- [Notes and Canvas](#notes-and-canvas)
+- [The vaults on the Mac](#the-vaults-on-the-mac)
+- [Run it on the NUC](#run-it-on-the-nuc)
 
-Las notas son archivos Markdown. Un enlace `[[Decisión]]` conecta notas y aparece
-en Graph view. Canvas permite colocar notas y tarjetas, dibujar conexiones y
-organizar el mapa manualmente; guarda un archivo `.canvas`.
-[Graph view](https://help.obsidian.md/plugins/graph) y
-[Canvas](https://help.obsidian.md/plugins/canvas), consultados el 2026-10-02.
+<!-- vim-markdown-toc -->
 
-```markdown
-# Decisión de arquitectura
+Obsidian is already installed on the Mac. I couldn't find an Obsidian service
+or application in the NUC folders I looked at. The browser setup below is WIP.
 
-Fuente: documento original, revisión y fecha.
-Estado: propuesta / confirmado con evidencia.
+## Notes and Canvas
 
-Usar [[LangGraph]] para el flujo y [[Graphiti]] para la memoria temporal.
-```
+The notes are plain Markdown files. Write `[[Another note]]` to link them.
+[Graph view](https://help.obsidian.md/plugins/graph) draws those links.
 
-El grafo de notas representa enlaces entre documentos. Los grafos de ejecución
-y las relaciones de Neo4j se mantienen mediante sus propias herramientas.
+[Canvas](https://help.obsidian.md/plugins/canvas) lets me arrange notes and cards
+and draw connections by hand. It saves a `.canvas` file in the vault.
 
-En el piloto del Mac:
+For an agent loop I would draw the idea here, then write the actual nodes and
+conditions in [LangGraph](langgraph.md).
+
+## The vaults on the Mac
+
+The project-knowledge pilot uses these folders:
 
 ```text
 /Users/Papi/Repositories/project-knowledge/vaults/strategy/
 /Users/Papi/Repositories/project-knowledge/vaults/hariburi/
 ```
 
-Las notas `Inicio`, `Decisiones` y `Reuniones` son editables. `Fuentes/` contiene
-vistas generadas; corregir el original y después ejecutar el indexador del
-piloto. Es el contrato descrito en su `AGENTS.md`, README y código, comprobados
-el 2026-10-02. No copiar esas vistas como si fueran fuentes verificadas.
+I can edit `Inicio`, `Decisiones` and `Reuniones`. The files in
+`Fuentes/` are generated. To fix one, edit the original and run the pilot's
+indexer again. Its README and `AGENTS.md` explain the commands.
 
-## Obsidian en el NUC, si necesito usarlo desde el navegador
+## Run it on the NUC
 
-La opción de [LinuxServer](https://docs.linuxserver.io/images/docker-obsidian/)
-ejecuta la aplicación mediante un escritorio remoto. Persiste configuración y
-archivos en `/config`, y ofrece HTTPS en el puerto interno 3001. La imagen
-incluye capacidades de escritorio y terminal; hay que restringir el acceso y
-los montajes. Fuente consultada el 2026-10-02.
+The [LinuxServer image](https://docs.linuxserver.io/images/docker-obsidian/)
+runs Obsidian in a remote desktop that opens in the browser. The image uses
+`/config` for its files and serves HTTPS on container port 3001.
 
-Configuración propuesta, pendiente de desplegar y probar:
+Use a separate config folder, such as `/srv/obsidian/config/`, and mount only
+the vault I want to open. Keep the whole home folder and the Docker socket out
+of the container. The desktop includes a terminal.
 
-- Imagen `lscr.io/linuxserver/obsidian`, fijada a un digest al instalar.
-- Configuración propia en `/srv/obsidian/config/`; vault explícito y distinto
-  del perfil. No montar el home entero ni el socket Docker.
-- Puerto del host propuesto `127.0.0.1:18888` hacia el HTTPS interno 3001.
-  Comprobar que siga libre. Los puertos 3000 y 3001 del host ya estaban ocupados.
-- Arranque bajo demanda, sin habilitar la eGPU. Probar un límite inicial de
-  2 GiB y dos CPU; ajustar según uso real.
-- Acceso inicial por túnel:
+Ports 3000 and 3001 were already in use on the NUC. Map a free host port, for
+example `127.0.0.1:18889:3001`, then connect from the Mac:
 
 ```bash
 ssh -N -o ExitOnForwardFailure=yes \
-  -L 127.0.0.1:18888:127.0.0.1:18888 pink-sudo
+  -L 127.0.0.1:18889:127.0.0.1:18889 pink-sudo
 ```
 
-Después de desplegar, abrir `https://127.0.0.1:18888/`. El certificado interno
-es autofirmado; el acceso público requiere TLS y autenticación propios según
-[Authentik](authentik.md), además de una prueba de WebSocket.
+Open `https://127.0.0.1:18889/`. The container uses a self-signed certificate.
+Keep it behind SSH for now. For public access, set up [Authentik](authentik.md)
+and TLS first.
 
-Antes de darlo por operativo: crear una nota y un Canvas de prueba, reiniciar,
-confirmar persistencia y probar una copia/restauración del vault y `/config`.
-El contenedor, la sincronización Mac–NUC y el acceso web no están configurados
-por esta guía. Elegir dónde vive el vault original antes de habilitar escritores
-en más de un equipo.
+Choose one place for the original vault before adding sync between the Mac
+and the NUC. Back up the vault and the config folder together.

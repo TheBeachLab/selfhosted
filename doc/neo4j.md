@@ -1,29 +1,30 @@
-# Neo4j Community and Browser
+# Neo4j
 
 **Author:** Fran
-**Checked:** 2026-10-02
-**NUC:** instalación pendiente.
 
-Neo4j guarda nodos, propiedades y relaciones. Browser viene con Community y
-permite visualizar resultados y ejecutar lecturas/escrituras Cypher.
-[Browser](https://neo4j.com/docs/browser/), consultado el 2026-10-02.
+<!-- vim-markdown-toc GFM -->
 
-Community admite una base estándar por instancia, además de `system`.
-Para proyectos aislados, usar contenedores y datos distintos; arrancar el
-proyecto activo. Un `group_id` no constituye una separación de permisos entre
-usuarios. [Administración de bases](https://neo4j.com/docs/operations-manual/current/database-administration/).
+- [Install](#install)
+- [Open Browser](#open-browser)
+- [Query the graph](#query-the-graph)
+- [Corrections and backups](#corrections-and-backups)
 
-## Laboratorio propuesto
+<!-- vim-markdown-toc -->
 
-Usar Neo4j 5.26 Community para la compatibilidad declarada por
-[Graphiti](https://github.com/getzep/graphiti#installation).
-El digest de `5.26-community` se consultó en el
-[registro oficial Docker](https://hub.docker.com/v2/namespaces/library/repositories/neo4j/tags/5.26-community)
-el 2026-10-02. La configuración siguiente está fijada a ese digest; el arranque
-en este NUC todavía no se ha validado.
+Neo4j stores nodes, properties and relationships.
+[Browser](https://neo4j.com/docs/browser/) comes with Community and lets me
+draw query results and run Cypher.
 
-Como `pink` en el NUC, crear un laboratorio nuevo. La creación exclusiva de
-`.env` evita sobrescribir credenciales existentes:
+Community has [one standard database per instance](https://neo4j.com/docs/operations-manual/current/database-administration/),
+apart from the system database. Use a separate container and data folder for
+each project.
+
+The NUC setup below is WIP. It uses Neo4j 5.26, which
+[Graphiti supports](https://github.com/getzep/graphiti#installation).
+
+## Install
+
+As `pink` on the NUC, create the folders and a password:
 
 ```bash
 umask 077
@@ -41,7 +42,9 @@ with Path(".env").open("x") as f:
 PY
 ```
 
-Guardar como `compose.yaml` en ese directorio:
+This creates `.env` only if it does not exist. Keep it private and out of Git.
+
+Save this as `compose.yaml`:
 
 ```yaml
 name: kg-lab
@@ -73,29 +76,27 @@ services:
       start_period: 30s
 ```
 
-La plantilla sigue el aislamiento y los límites del piloto local
-`project-knowledge/compose.yaml`; `user` corresponde al dueño de los montajes.
-Los límites son iniciales, pendientes de medir en el NUC. Fuentes de las opciones:
-[Docker](https://neo4j.com/docs/operations-manual/current/docker/introduction/)
-y [volúmenes](https://neo4j.com/docs/operations-manual/current/docker/mounting-volumes/).
+The image is pinned. Data, logs and backups stay in these
+[folders](https://neo4j.com/docs/operations-manual/current/docker/mounting-volumes/).
+Start with the memory limit above and adjust it after using the lab.
 
 ```bash
 sudo docker compose config --quiet
 sudo docker compose up -d neo4j
 sudo docker compose ps
 sudo docker compose logs --tail 50 neo4j
-sudo docker compose stop neo4j
 ```
 
-Usar `config --quiet`: la salida completa puede mostrar el secreto. Conservar
-`.env` en modo 0600 y el directorio privado. La contraseña inicial solo configura
-una base nueva; editar `.env` no cambia la contraseña de una base existente.
-Parar conserva los montajes; no usar `down -v` ni borrar `data` para corregir
-un fallo de arranque.
+Use `config --quiet` so the password does not appear in the output.
+Stop it with `sudo docker compose stop neo4j` when finished.
 
-## Acceso desde el Mac
+Changing the password in `.env` only affects a new database. It does not
+change the password of an existing one. Keep `data/` when troubleshooting.
 
-Después de arrancar, y comprobando que los puertos locales estén libres:
+## Open Browser
+
+On the Mac, make sure these local ports are free. The Strategy pilot also
+uses them; stop that pilot with its own tool or choose different local ports.
 
 ```bash
 ssh -N -o ExitOnForwardFailure=yes \
@@ -103,40 +104,45 @@ ssh -N -o ExitOnForwardFailure=yes \
   -L 127.0.0.1:17687:127.0.0.1:17687 pink-sudo
 ```
 
-Browser: `http://127.0.0.1:17474/browser/`. Conexión: `bolt://127.0.0.1:17687`,
-usuario `neo4j` y contraseña privada del laboratorio. Estos puertos también
-se usan en el piloto Strategy del Mac: pararlo mediante su herramienta propia
-o elegir otros puertos **locales** y ajustar la conexión Browser.
+Open `http://127.0.0.1:17474/browser/`. Connect to
+`bolt://127.0.0.1:17687` with user `neo4j` and the password from `.env`.
 
-El healthcheck solo comprueba HTTP. Completar la aceptación con una consulta
-autenticada:
+## Query the graph
+
+Begin with a simple query:
 
 ```cypher
 RETURN 1 AS ok;
 SHOW INDEXES;
-MATCH (n) RETURN labels(n) AS etiquetas, count(*) AS total;
+MATCH (n) RETURN labels(n) AS labels, count(*) AS total;
 MATCH p=(a)-[r]->(b) RETURN p LIMIT 50;
 ```
 
-En Graphiti, filtrar el proyecto de prueba en ambos extremos y en la relación:
+For Graphiti, filter the project on both nodes and the relationship:
 
 ```cypher
-:param proyecto => 'lab'
+:param project => 'lab'
 MATCH p=(a:Entity)-[r:RELATES_TO]->(b:Entity)
-WHERE a.group_id = $proyecto AND b.group_id = $proyecto AND r.group_id = $proyecto
+WHERE a.group_id = $project AND b.group_id = $project AND r.group_id = $project
 RETURN p LIMIT 50;
 ```
 
-## Correcciones y copias
+`group_id` is a query filter. Separate credentials and instances are what
+keep projects with different access permissions apart.
 
-En datos generados, corregir la fuente o ingerir un episodio de corrección según
-[Graphiti](graphiti.md). Una edición directa puede desaparecer en la siguiente
-reconstrucción y dejar una procedencia incoherente. Para datos manuales, separar
-etiquetas/propiedad de dueño, seleccionar un ID único, revisar el antes y aplicar
-la escritura en una transacción con recibo y consulta posterior.
+## Corrections and backups
 
-Para una copia de Community, detener primero ingestas y clientes escritores.
-El dump es offline. Desde el directorio del laboratorio:
+For generated data, correct the source or add a
+[Graphiti correction](graphiti.md#fix-a-fact). Editing the extracted
+relationship by hand can get overwritten when the graph is rebuilt.
+
+For manually maintained data, select the exact ID, inspect it, make the
+change in a transaction and query it again. Keep it separate from the
+indexer's labels.
+
+Community uses an [offline dump](https://neo4j.com/docs/operations-manual/current/docker/dump-load/).
+Stop ingestion and any other writers first. Move a previous
+`backups/neo4j.dump` to a dated backup before making another:
 
 ```bash
 sudo docker compose stop neo4j
@@ -146,21 +152,9 @@ sha256sum backups/neo4j.dump
 sudo docker compose up -d neo4j
 ```
 
-El archivo `backups/neo4j.dump` debe estar ausente antes del dump: archivar una
-copia anterior con su fecha sin sobrescribirla. Copiar el dump, `.env`, Compose,
-episodios y recibos a una copia privada externa al NUC. Si el dump falla,
-conservar datos y diagnóstico; comprobar el resultado antes de seguir.
+If the dump fails, keep the data and read the error before continuing.
+Copy the dump, `.env`, Compose file and Graphiti's original episodes to
+private storage outside the NUC.
 
-Probar `neo4j-admin database load` con el mismo digest, otro directorio `/data`
-y puertos diferentes, sin tocar la instancia original. Comprobar una consulta
-autenticada y la procedencia de los datos restaurados.
-[Dump/load Docker](https://neo4j.com/docs/operations-manual/current/docker/dump-load/),
-consultado el 2026-10-02. Esta guía no acredita una copia ni una restauración
-realizadas.
-
-## Verificación de esta guía
-
-La plantilla se validó el 2026-10-02 con `docker compose config --quiet` en el
-NUC, pasando la configuración por stdin y credenciales sintéticas. No se creó
-un contenedor, un montaje ni una base. La aceptación pendiente incluye arranque,
-consulta autenticada, límites efectivos, persistencia y dump/restauración.
+Try `neo4j-admin database load` in another instance with a new data
+folder and different ports. Run a query there before trusting the backup.

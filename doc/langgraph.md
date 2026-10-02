@@ -1,22 +1,29 @@
-# LangGraph: bounded loops and debugging
+# LangGraph
 
 **Author:** Fran
-**Checked:** 2026-10-02
-**NUC:** instalación pendiente.
 
-LangGraph define un estado, nodos y transiciones. Puedo generar algo, verificarlo
-y volver a intentarlo con un límite. Los nodos pueden usar funciones normales o
-un modelo. [Overview](https://docs.langchain.com/oss/python/langgraph/overview)
-y [Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api),
-consultados el 2026-10-02.
+<!-- vim-markdown-toc GFM -->
 
-## Entorno de laboratorio
+- [Install](#install)
+- [A simple loop](#a-simple-loop)
+- [Open it in Studio](#open-it-in-studio)
+- [Save and correct the state](#save-and-correct-the-state)
 
-Usar un entorno propio. El NUC tiene entornos de Hailo, RAG, Whisper y TTS;
-sus dependencias no deben convertirse en las del laboratorio.
+<!-- vim-markdown-toc -->
 
-Propuesta en el NUC, como `pink`. Si falta el módulo `venv`, instalar previamente
-el paquete Ubuntu `python3-venv`. El primer entorno solo instala uv:
+[LangGraph](https://docs.langchain.com/oss/python/langgraph/overview) runs
+functions as nodes in a graph. Each node reads the state and returns changes.
+A condition decides where to go next. This is what I need for a loop that
+generates something, checks it and tries again.
+
+The NUC setup is WIP.
+
+## Install
+
+Use a separate environment. If Python's venv module is missing, install it
+with `sudo apt install python3-venv`.
+
+As `pink` on the NUC:
 
 ```bash
 mkdir -p ~/venvs ~/knowledge-graphs/langgraph-lab
@@ -29,18 +36,13 @@ uv add 'langgraph==1.2.12' 'langgraph-cli[inmem]==0.4.32' \
   'langgraph-checkpoint-sqlite==3.1.1'
 ```
 
-Versiones consultadas en los metadatos de
-[LangGraph](https://pypi.org/project/langgraph/1.2.12/),
-[CLI](https://pypi.org/project/langgraph-cli/0.4.32/) y
-[SQLite checkpointer](https://pypi.org/project/langgraph-checkpoint-sqlite/3.1.1/)
-el 2026-10-02. `uv.lock` guarda la resolución completa; conservarlo con el código.
-[Proyectos uv](https://docs.astral.sh/uv/guides/projects/).
+Keep `uv.lock` with the code so the environment can be reproduced.
 
-## Un loop que puedo comprobar sin pagar llamadas a un modelo
+## A simple loop
 
-Guardar como `loop.py` en el laboratorio. La primera respuesta carece de
-`fuente`; la segunda la añade. Es una comprobación sintética para aprender el
-flujo, no una validación de la verdad de una respuesta.
+Save this as `loop.py`. The first attempt fails, the second passes and the
+graph pauses for review. This is a toy example: the check only looks for the
+word `source`. There are no model calls.
 
 ```python
 from typing import Literal, TypedDict
@@ -52,81 +54,85 @@ from langgraph.types import Command, interrupt
 
 
 class State(TypedDict):
-    texto: str
-    intento: int
-    limite: int
-    valido: bool
-    aprobado: bool
+    text: str
+    attempt: int
+    limit: int
+    valid: bool
+    approved: bool
 
 
-def generar(state: State):
-    intento = state["intento"] + 1
-    texto = "respuesta" if intento == 1 else "respuesta con fuente"
-    return {"texto": texto, "intento": intento, "aprobado": False}
+def generate(state: State):
+    attempt = state["attempt"] + 1
+    text = "answer" if attempt == 1 else "answer with source"
+    return {"text": text, "attempt": attempt, "approved": False}
 
 
-def validar(state: State):
-    return {"valido": "fuente" in state["texto"]}
+def validate(state: State):
+    return {"valid": "source" in state["text"]}
 
 
-def siguiente(state: State) -> Literal["generar", "revisar", "__end__"]:
-    if state["valido"]:
-        return "revisar"
-    return "generar" if state["intento"] < state["limite"] else END
+def next_step(state: State) -> Literal["generate", "review", "__end__"]:
+    if state["valid"]:
+        return "review"
+    return "generate" if state["attempt"] < state["limit"] else END
 
 
-def revisar(state: State):
-    decision = interrupt({"texto": state["texto"], "intento": state["intento"]})
-    texto = decision.get("texto", state["texto"])
-    if not isinstance(texto, str):
-        raise ValueError("La corrección debe ser texto")
-    valido = "fuente" in texto
-    return {"texto": texto, "valido": valido,
-            "aprobado": decision.get("aprobar") is True and valido}
+def review(state: State):
+    decision = interrupt({"text": state["text"], "attempt": state["attempt"]})
+    text = decision.get("text", state["text"])
+    if not isinstance(text, str):
+        raise ValueError("The correction must be text")
+    valid = "source" in text
+    return {"text": text, "valid": valid,
+            "approved": decision.get("approve") is True and valid}
 
 
 def build():
     builder = StateGraph(State)
-    builder.add_node("generar", generar)
-    builder.add_node("validar", validar)
-    builder.add_node("revisar", revisar)
-    builder.add_edge(START, "generar")
-    builder.add_edge("generar", "validar")
-    builder.add_conditional_edges("validar", siguiente)
-    builder.add_edge("revisar", END)
+    builder.add_node("generate", generate)
+    builder.add_node("validate", validate)
+    builder.add_node("review", review)
+    builder.add_edge(START, "generate")
+    builder.add_edge("generate", "validate")
+    builder.add_conditional_edges("validate", next_step)
+    builder.add_edge("review", END)
     return builder
 
 
-graph = build().compile()  # El servidor de desarrollo gestiona su persistencia.
+graph = build().compile()  # The dev server supplies the checkpointer.
 
 if __name__ == "__main__":
     app = build().compile(checkpointer=InMemorySaver())
     config = {"configurable": {"thread_id": str(uuid4())}, "recursion_limit": 12}
-    initial = {"texto": "", "intento": 0, "limite": 3,
-               "valido": False, "aprobado": False}
+    initial = {"text": "", "attempt": 0, "limit": 3,
+               "valid": False, "approved": False}
     for update in app.stream(initial, config, stream_mode="updates"):
         print(update)
-    print(app.invoke(Command(resume={"aprobar": True}), config))
+    print(app.invoke(Command(resume={"approve": True}), config))
     print(app.get_graph().draw_mermaid())
 ```
+
+Run it:
 
 ```bash
 LANGSMITH_TRACING=false uv run python loop.py
 ```
 
-La reanudación del ejemplo aprueba automáticamente **el resultado sintético**.
-En una aplicación real, `Command(resume=...)` debe llegar de la decisión humana
-en la interfaz. Cambiar `limite` a 1 debe terminar sin aprobación; reanudar con
-`{"aprobar": false}` debe rechazarlo. Una corrección sin `fuente` tampoco queda
-aprobada. El ejemplo no escribe en servicios ni llama a un LLM.
+The last call approves the demo automatically. In a real application, send
+`Command(resume=...)` after the user makes the decision.
 
-El contador limita intentos de generación. `recursion_limit` limita pasos del
-grafo y es una protección adicional; no sustituye una condición de salida.
-[Graph API, recursion limit](https://docs.langchain.com/oss/python/langgraph/graph-api#recursion-limit).
+Try `{"approve": False}` to reject it, or
+`{"approve": True, "text": "corrected answer with source"}` to edit it.
+A correction without `source` cannot be approved. With `limit` set to 1,
+the first attempt ends without reaching review.
 
-## Verlo y corregirlo en Studio
+The attempt counter stops retries. `recursion_limit` is an extra limit on
+graph steps. If I hit `GraphRecursionError`, I need to look at the exit
+condition before raising that number.
 
-Guardar `langgraph.json` junto a `loop.py`:
+## Open it in Studio
+
+Save `langgraph.json` next to `loop.py`:
 
 ```json
 {
@@ -135,65 +141,46 @@ Guardar `langgraph.json` junto a `loop.py`:
 }
 ```
 
-En el laboratorio del NUC:
+Start the development server on the NUC:
 
 ```bash
 LANGSMITH_TRACING=false uv run langgraph dev \
   --host 127.0.0.1 --port 2024 --no-browser
 ```
 
-Desde el Mac:
+From the Mac:
 
 ```bash
 ssh -N -o ExitOnForwardFailure=yes \
   -L 127.0.0.1:2024:127.0.0.1:2024 pink-sudo
 ```
 
-Abrir la API local en `http://127.0.0.1:2024/docs` y
-[Studio](https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024).
-Enviar el estado inicial, inspeccionar cada nodo y el estado de la pausa.
-Corregir texto/estado o el código y ejecutar de nuevo el tramo afectado.
+Open `http://127.0.0.1:2024/docs` for the API, or
+[Studio](https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024)
+to see the graph and run it with the initial state above. Inspect the paused
+state, correct it and resume. Edit `loop.py` to change the nodes or conditions.
 
-Studio carga su interfaz desde LangSmith. Configurar `LANGSMITH_TRACING=false`
-desactiva el envío de trazas según la guía oficial; la interfaz sigue siendo
-externa y cualquier nodo que llame a un proveedor envía a ese proveedor su
-entrada. Comprobar los requisitos de cuenta al usar Studio. Safari puede bloquear
-la conexión local: probar Chromium antes de abrir un túnel de un tercero.
-[Studio quickstart](https://docs.langchain.com/langsmith/quick-start-studio),
-consultado el 2026-10-02.
+Studio's interface comes from LangSmith, even when the server runs locally.
+`LANGSMITH_TRACING=false` disables trace uploads. See the
+[Studio setup](https://docs.langchain.com/langsmith/quick-start-studio) for
+account requirements. If Safari blocks the local connection, try Chromium.
 
-`langgraph dev` es el servidor de desarrollo. El
-[Agent Server standalone](https://docs.langchain.com/langsmith/deploy-standalone-server)
-tiene requisitos propios de licencia, claves e infraestructura. La biblioteca
-y el ejemplo local no implican tener esa plataforma instalada.
+`langgraph dev` is for development. Deploying
+[Agent Server](https://docs.langchain.com/langsmith/deploy-standalone-server)
+has separate license, key and infrastructure requirements.
 
-## Checkpoints y errores
+## Save and correct the state
 
-`InMemorySaver` conserva el estado dentro del proceso del ejemplo. Para conservarlo
-tras cerrar el proceso, usar `SqliteSaver` con una ruta privada, por ejemplo
-`/home/pink/knowledge-graphs/data/langgraph/lab.sqlite3`. Conservar también la
-revisión del código usada por cada ejecución.
-[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence).
+`InMemorySaver` loses the checkpoints when the process closes. Use
+[SqliteSaver](https://docs.langchain.com/oss/python/langgraph/persistence)
+for a persistent local file, outside Git.
 
-`get_state_history` permite encontrar un checkpoint; `update_state` crea una
-rama con la corrección, y `invoke(None, nueva_config)` continúa desde ella.
-No deshace operaciones externas ya realizadas. Al reanudar un `interrupt`,
-el nodo empieza de nuevo: las escrituras y llamadas con efectos necesitan ser
-idempotentes, también ante replay o reintentos.
-[Time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel) y
-[Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts).
+Use `get_state_history` to find a checkpoint, `update_state` to correct it,
+then `invoke(None, new_config)` to continue from that branch. The
+[time travel guide](https://docs.langchain.com/oss/python/langgraph/use-time-travel)
+has examples.
 
-Si aparece `GraphRecursionError`, revisar condición de salida, contador y
-transiciones. Registrar el fallo de verificación y corregirlo antes de ampliar
-el límite. Si una reanudación repite una acción, revisar la separación entre
-revisión, efectos externos y sus IDs de operación.
-
-## Verificación de esta guía
-
-El 2026-10-02 se ejecutó el ejemplo en un directorio temporal del Mac con
-Python 3.12.11 y las versiones fijadas arriba. Se comprobó aprobación, rechazo,
-corrección válida/inválida, salida con un intento, error al limitar la recursión
-y reanudación SQLite después de cerrar y abrir la conexión. El servidor `dev`
-arrancó en loopback, registró `loop`, respondió `{"ok": true}` en `/ok` y sirvió
-`/docs` con HTTP 200. Se detuvo al terminar. No se probó Studio con una cuenta
-LangSmith ni el despliegue o la interfaz de este servicio en el NUC.
+Replaying a checkpoint does not undo an email or a database write. An
+[interrupted node](https://docs.langchain.com/oss/python/langgraph/interrupts)
+starts again when resumed, so give external operations stable IDs and make
+retries safe.

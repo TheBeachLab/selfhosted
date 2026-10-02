@@ -1,27 +1,35 @@
-# Graph tools: generate, inspect and correct
+# Graph tools
 
 **Author:** Fran
-**Checked:** 2026-10-02
 
-Para explorar el grafo sin una interfaz externa, usar JupyterLab, NetworkX,
-PyVis y Graphviz. Los paquetes de Hailo que ya existen en el NUC son parte de
-otro entorno; crear el laboratorio de [LangGraph](langgraph.md) y añadir:
+<!-- vim-markdown-toc GFM -->
+
+- [Install](#install)
+- [Find cycles and draw the graph](#find-cycles-and-draw-the-graph)
+- [Graphviz](#graphviz)
+- [JupyterLab](#jupyterlab)
+
+<!-- vim-markdown-toc -->
+
+I want to see the graph without depending on an external interface.
+NetworkX can inspect its structure, PyVis makes an interactive HTML page and
+Graphviz produces an SVG.
+
+## Install
+
+Use the Python 3.12 [LangGraph lab](langgraph.md):
 
 ```bash
 cd ~/knowledge-graphs/langgraph-lab
 uv add 'networkx==3.7' 'pyvis==0.3.2' 'jupyterlab==4.6.4'
 ```
 
-Versiones consultadas el 2026-10-02 en
-[NetworkX](https://pypi.org/project/networkx/3.7/),
-[PyVis](https://pypi.org/project/pyvis/0.3.2/) y
-[JupyterLab](https://pypi.org/project/jupyterlab/4.6.4/).
-NetworkX 3.7 requiere Python 3.12+; no instalarlo sobre los entornos Python 3.10
-de los servicios existentes.
+The NUC has graph packages inside the Hailo and other environments. Leave those
+with their applications; these versions go in the lab.
 
-## Exportar el grafo del ejemplo
+## Find cycles and draw the graph
 
-Guardar como `inspect_graph.py`, junto al `loop.py` de la guía LangGraph:
+Save this as `inspect_graph.py` next to `loop.py`:
 
 ```python
 from pathlib import Path
@@ -37,94 +45,77 @@ g = nx.DiGraph()
 g.add_nodes_from(workflow.nodes)
 g.add_edges_from((edge.source, edge.target) for edge in workflow.edges)
 
-print("Ciclos cortos:", list(nx.simple_cycles(g, length_bound=6)))
-print("Aislados:", list(nx.isolates(g)))
-print("Sin salida:", [n for n in g if n != "__end__" and g.out_degree(n) == 0])
-print("Inalcanzables:", sorted(set(g) - nx.descendants(g, "__start__") - {"__start__"}))
+print("Short cycles:", list(nx.simple_cycles(g, length_bound=6)))
+print("Isolated nodes:", list(nx.isolates(g)))
+print("Dead ends:", [n for n in g if n != "__end__" and g.out_degree(n) == 0])
+print("Unreachable:", sorted(set(g) - nx.descendants(g, "__start__") - {"__start__"}))
 
 Path("loop.mmd").write_text(workflow.draw_mermaid(), encoding="utf-8")
 view = Network(height="750px", width="100%", directed=True, cdn_resources="in_line")
 view.from_nx(g)
 html = view.generate_html(notebook=False)
-# Esta vista no usa controles Bootstrap. PyVis 0.3.2 los carga desde un CDN.
+# PyVis adds remote Bootstrap files that this view does not need.
 html = re.sub(r'<link\b[^>]*href="https?://[^"]+"[^>]*>', "", html)
 html = re.sub(r'<script\b[^>]*src="https?://[^"]+"[^>]*>\s*</script>', "", html)
 Path("loop.html").write_text(html, encoding="utf-8")
 ```
 
+Run it:
+
 ```bash
 uv run python inspect_graph.py
 ```
 
-`loop.html` permite explorar los nodos y `loop.mmd` guarda el Mermaid generado
-desde la estructura real del ejemplo. El ciclo `generar → validar → generar`
-es intencionado. NetworkX analiza la estructura; no demuestra que una condición
-de salida funcione ni que se respete el límite de intentos. Eso se comprueba
-ejecutando el loop. `length_bound=6` limita la búsqueda a ciclos cortos.
-[simple_cycles](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.cycles.simple_cycles.html),
-[PyVis](https://pyvis.readthedocs.io/en/latest/documentation.html).
+Open `loop.html` in the browser. The Mermaid version is in `loop.mmd`.
 
-La plantilla de PyVis 0.3.2 añade Bootstrap remoto incluso con recursos inline.
-El ejemplo elimina esas dos referencias, que esta vista sin filtros no necesita.
-Revisar los recursos de cualquier otra plantilla antes de considerarla offline.
+The `generate -> validate -> generate` cycle is expected. The loop is
+supposed to retry. [NetworkX](https://networkx.org/documentation/stable/reference/algorithms/generated/networkx.algorithms.cycles.simple_cycles.html)
+finds the cycle; running the loop tells me whether it stops.
 
-Mover nodos en la visualización no modifica el código ni la base. Corregir
-`loop.py`, volver a ejecutar y regenerar el HTML. Para datos Neo4j, consultar un
-subgrafo acotado, guardar IDs y procedencia, y pasar por el flujo de corrección
-de [Neo4j](neo4j.md) o [Graphiti](graphiti.md).
+Moving nodes around only changes the drawing. To fix the loop, edit
+`loop.py`, run it again and regenerate the HTML. For stored facts, use the
+[Graphiti correction](graphiti.md#fix-a-fact).
 
-## Dibujar con Graphviz
+## Graphviz
 
-El NUC ya tiene `dot`. Guardar como `loop.dot` este diagrama manual:
+The NUC already has `dot`. Save this as `loop.dot`:
 
 ```dot
 digraph loop {
   rankdir=LR;
-  generar -> validar;
-  validar -> generar [label="fallo e intentos disponibles"];
-  validar -> revisar [label="válido"];
-  validar -> fin [label="límite"];
-  revisar -> fin [label="aprobación o rechazo"];
+  generate -> validate;
+  validate -> generate [label="failed, retries left"];
+  validate -> review [label="valid"];
+  validate -> end [label="limit"];
+  review -> end [label="approve or reject"];
 }
 ```
+
+Generate the image:
 
 ```bash
 dot -Tsvg loop.dot -o loop.svg
 ```
 
-El SVG es útil para documentación y revisiones; actualizar el `.dot` cuando
-cambie el flujo. [Opciones de Graphviz](https://graphviz.org/doc/info/command.html).
+This one is a hand-written diagram. Update it when the code changes.
+[Graphviz](https://graphviz.org/doc/info/command.html) supports other output
+formats too.
 
-## JupyterLab por túnel
+## JupyterLab
 
-Desde el laboratorio del NUC, con su autenticación de token activa:
+Start it in the NUC lab:
 
 ```bash
 uv run jupyter lab --ip=127.0.0.1 --port=18888 --no-browser
 ```
 
-Desde el Mac:
+From the Mac:
 
 ```bash
 ssh -N -o ExitOnForwardFailure=yes \
   -L 127.0.0.1:18888:127.0.0.1:18888 pink-sudo
 ```
 
-Abrir la URL con token que entrega Jupyter, sin guardarlo en Git ni compartirlo.
-El puerto 18888 se reserva aquí para Jupyter **o** el Obsidian remoto propuesto;
-usar otro si ambos están activos. Un notebook ejecuta código con los permisos
-de su usuario. Mantener el listener en loopback.
-[Acceso al servidor Jupyter](https://jupyter-server.readthedocs.io/en/latest/operators/public-server.html).
-
-Estas instrucciones preparan un laboratorio; la interfaz Jupyter del NUC y la
-persistencia de sus notebooks quedan pendientes de probar tras instalarlo.
-
-## Verificación de esta guía
-
-El 2026-10-02, el exportador del ejemplo se ejecutó en el laboratorio temporal
-del Mac: encontró el ciclo esperado, sin nodos aislados, inalcanzables ni salidas
-muertas distintas de `END`. Se abrió el HTML en el navegador de Codex y se
-comprobó que dibujaba los cinco nodos y las transiciones; no registró errores o
-avisos de consola. Se comprobó que el HTML no tenía recursos externos activos
-en etiquetas `script`/`link`. El `dot` ya instalado en el NUC generó un SVG válido,
-guardado en el directorio temporal del Mac. No se arrancó Jupyter en el NUC.
+Open the URL with the token that Jupyter prints. Keep its
+[authentication](https://jupyter-server.readthedocs.io/en/latest/operators/public-server.html)
+enabled and the listener on localhost. A notebook can run commands as its user.
