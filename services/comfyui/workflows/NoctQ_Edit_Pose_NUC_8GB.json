@@ -1,0 +1,700 @@
+{
+  "last_node_id": 14,
+  "last_link_id": 14,
+  "nodes": [
+    {
+      "id": 10,
+      "type": "LoadImage",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        335,
+        395
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            13,
+            4
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.38.0"
+      },
+      "widgets_values": [
+        "denim_girl.png",
+        "image"
+      ],
+      "title": "MAIN PERSON / SCENE - image2",
+      "color": "#223",
+      "bgcolor": "#335",
+      "widgets_values_named": {
+        "image": "denim_girl.png",
+        "upload": "image"
+      }
+    },
+    {
+      "id": 12,
+      "type": "LoadImage",
+      "pos": [
+        360,
+        0
+      ],
+      "size": [
+        335,
+        395
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.38.0"
+      },
+      "widgets_values": [
+        "woman_running_in_field.png",
+        "image"
+      ],
+      "title": "POSE / FRAMING reference - image1",
+      "color": "#232",
+      "bgcolor": "#353",
+      "widgets_values_named": {
+        "image": "woman_running_in_field.png",
+        "upload": "image"
+      }
+    },
+    {
+      "id": 4,
+      "type": "TextEncodeQwenImage21",
+      "pos": [
+        750,
+        0
+      ],
+      "size": [
+        500,
+        470
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 2,
+          "shape": 7
+        },
+        {
+          "name": "images.image_1",
+          "type": "IMAGE",
+          "link": 3,
+          "shape": 7
+        },
+        {
+          "name": "images.image_2",
+          "type": "IMAGE",
+          "link": 4,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ],
+          "slot_index": 1
+        },
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            9
+          ],
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "TextEncodeQwenImage21"
+      },
+      "widgets_values": [
+        "Edit <image1>, keeping the person's exact body pose, facing direction, silhouette and placement. Replace the person's face and head with the face and hairstyle of the person in <image2>. Replace the person's entire clothing and footwear with the clothing and shoes worn by the person in <image2>, fitting these clothes naturally to the unchanged pose. Replace the background with the location shown in <image2> and match its lighting. Use <image1> only for pose and framing. Use <image2> for the person's identity, hairstyle, outfit, shoes and scene.",
+        "",
+        640
+      ],
+      "title": "2. EDIT INSTRUCTIONS",
+      "color": "#232",
+      "bgcolor": "#353",
+      "widgets_values_named": {
+        "prompt": "Edit <image1>, keeping the person's exact body pose, facing direction, silhouette and placement. Replace the person's face and head with the face and hairstyle of the person in <image2>. Replace the person's entire clothing and footwear with the clothing and shoes worn by the person in <image2>, fitting these clothes naturally to the unchanged pose. Replace the background with the location shown in <image2> and match its lighting. Use <image1> only for pose and framing. Use <image2> for the person's identity, hairstyle, outfit, shoes and scene.",
+        "negative_prompt": "",
+        "resolution": 640
+      }
+    },
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        1230
+      ],
+      "size": [
+        230,
+        105
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "NoctQ_V4_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Noctaluna/Noct-Q-Uncensored-Qwen-Image-2.1/resolve/a81b9af51120a78e285e57906f2250a2a02080e9/NoctQ_V4_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "NoctQ_V4_int8_convrot.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        245,
+        1230
+      ],
+      "size": [
+        230,
+        105
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3vl_8b_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/cb504a4090723e43f17ad01cec0359490e2de613/text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_8b_int8_convrot.safetensors",
+        "qwen_image",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        490,
+        1230
+      ],
+      "size": [
+        230,
+        105
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            2,
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "qwen_image_2.1_vae_bf16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/cb504a4090723e43f17ad01cec0359490e2de613/vae/qwen_image_2.1_vae_bf16.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen_image_2.1_vae_bf16.safetensors"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "QwenImage21Cache",
+      "pos": [
+        750,
+        720
+      ],
+      "size": [
+        240,
+        90
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "QwenImage21Cache"
+      },
+      "widgets_values": [
+        "cpu",
+        "int8"
+      ],
+      "title": "Reference cache"
+    },
+    {
+      "id": 6,
+      "type": "KSampler",
+      "pos": [
+        1000,
+        520
+      ],
+      "size": [
+        250,
+        265
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 6
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 8
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        62607250,
+        "randomize",
+        25,
+        1,
+        "euler",
+        "simple",
+        1
+      ],
+      "title": "3. RUN - 25 steps"
+    },
+    {
+      "id": 7,
+      "type": "VAEDecodeTiled",
+      "pos": [
+        1280,
+        760
+      ],
+      "size": [
+        260,
+        160
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 10
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            12,
+            14
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecodeTiled"
+      },
+      "widgets_values": [
+        512,
+        64,
+        64,
+        8
+      ],
+      "title": "Tiled decode"
+    },
+    {
+      "id": 8,
+      "type": "SaveImage",
+      "pos": [
+        1280,
+        0
+      ],
+      "size": [
+        560,
+        690
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "NoctQ_Edit/Pose"
+      ],
+      "title": "4. RESULT"
+    },
+    {
+      "id": 14,
+      "type": "ImageCompare",
+      "pos": [
+        750,
+        490
+      ],
+      "size": [
+        240,
+        210
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 13
+        },
+        {
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 14
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "ImageCompare"
+      },
+      "widgets_values": [],
+      "title": "Before / after"
+    },
+    {
+      "id": 9,
+      "type": "MarkdownNote",
+      "pos": [
+        0,
+        435
+      ],
+      "size": [
+        700,
+        305
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Pose: upload photos and Run\n\n1. Press **Upload** on each labeled photo node.\n2. Adjust the green instructions if needed, then press **Run**.\n3. The result is saved under `NoctQ_Edit/Pose`.\n\n**The pose photo sets the body pose and framing.** The main photo guides the scene, person, outfit and shoes.\n\n`<image1>` = pose, `<image2>` = base.\n\nFor only a face/head or garment change, use the **Face** or **Clothing** workflow; those keep the main photo's framing. Clear faces, visible limbs and clear garment photos help.\n\nThis is generative editing. Identity, pose and small clothing details may vary; the scene is regenerated. 640 pixel budget, 25 steps.\n\nBuilt with Qwen. Existing Noct Q V4 weights and core ComfyUI nodes. Sources, validation and license: doc/comfyui.md, NoctQ-LICENSE.txt and NoctQ-NOTICE.txt.\n\nPose control works through composition. The model can keep the pose photo's background or outfit despite the instructions; use All with clear face and garment references for better appearance control."
+      ],
+      "title": "Upload guide"
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      3,
+      0,
+      4,
+      1,
+      "VAE"
+    ],
+    [
+      3,
+      12,
+      0,
+      4,
+      2,
+      "IMAGE"
+    ],
+    [
+      4,
+      10,
+      0,
+      4,
+      3,
+      "IMAGE"
+    ],
+    [
+      5,
+      1,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      6,
+      5,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      7,
+      4,
+      0,
+      6,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      4,
+      1,
+      6,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      9,
+      4,
+      2,
+      6,
+      3,
+      "LATENT"
+    ],
+    [
+      10,
+      6,
+      0,
+      7,
+      0,
+      "LATENT"
+    ],
+    [
+      11,
+      3,
+      0,
+      7,
+      1,
+      "VAE"
+    ],
+    [
+      12,
+      7,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      13,
+      10,
+      0,
+      14,
+      0,
+      "IMAGE"
+    ],
+    [
+      14,
+      7,
+      0,
+      14,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "Upload photos",
+      "bounding": [
+        -15,
+        -45,
+        730,
+        465
+      ],
+      "color": "#3f789e",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.5,
+      "offset": [
+        35,
+        35
+      ]
+    },
+    "frontendVersion": "1.53.6",
+    "reference_editor": {
+      "built_with": "Qwen",
+      "model_manifest": "noctq-models.json",
+      "assets_manifest": "noctq-reference-assets.json",
+      "variant": "Pose",
+      "roles": [
+        "pose",
+        "base"
+      ],
+      "modified": true,
+      "official_template_sha256": "a1ff79f02bb0e5553699e3f2813d1c2ed53c37f7ff7d2dd4823eabb4a2178975",
+      "canvas": "pose"
+    }
+  },
+  "version": 0.4
+}

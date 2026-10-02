@@ -1,0 +1,91 @@
+{
+  "source_revision": "9fac9ca259773c82c25553103edd51b6550d5fc4",
+  "assets": {
+    "base": {
+      "file": "denim_girl.png",
+      "source": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/9fac9ca259773c82c25553103edd51b6550d5fc4/input/denim_girl.png",
+      "size": 1380960,
+      "sha256": "5faf3035702d269d4d1d3f7b9ec3ef298d136819855bcf4317a49dcec06666f2",
+      "destination": "denim_girl.png"
+    },
+    "face": {
+      "file": "redhair_girl_portrait.png",
+      "source": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/9fac9ca259773c82c25553103edd51b6550d5fc4/input/redhair_girl_portrait.png",
+      "size": 1328003,
+      "sha256": "301f0dec40773f0dabf45ba1d916e58a3c869b669532ec415f66b1186de2be4f",
+      "destination": "redhair_girl_portrait.png"
+    },
+    "pose": {
+      "file": "woman_running_in_field.png",
+      "source": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/9fac9ca259773c82c25553103edd51b6550d5fc4/input/woman_running_in_field.png",
+      "size": 4696078,
+      "sha256": "bbda5051358e3191fc89ec37f47d82108e8a4406ede147d79388fb6af401c400",
+      "destination": "woman_running_in_field.png"
+    },
+    "clothing": {
+      "file": "green_chiffon_short_dress.png",
+      "source": "https://raw.githubusercontent.com/Comfy-Org/workflow_templates/9fac9ca259773c82c25553103edd51b6550d5fc4/input/green_chiffon_short_dress.png",
+      "size": 4925906,
+      "sha256": "7938d25d0a6e55896441c88bb1ecdd8f293dadef4ec2c1a2db08347e0fe8381e",
+      "destination": "green_chiffon_short_dress.png"
+    }
+  },
+  "model_manifest": "noctq-models.json",
+  "comfyui_version": "0.38.0",
+  "workflow_templates_version": "0.11.70",
+  "official_template": "image_qwen_image_2_1_image_edit.json",
+  "official_template_sha256": "a1ff79f02bb0e5553699e3f2813d1c2ed53c37f7ff7d2dd4823eabb4a2178975",
+  "official_template_source": "https://github.com/Comfy-Org/workflow_templates/blob/9fac9ca259773c82c25553103edd51b6550d5fc4/templates/image_qwen_image_2_1_image_edit.json",
+  "reference_guide": "https://huggingface.co/Qwen/Qwen-Image-2.1-PE-I2I/blob/main/system_prompt.txt",
+  "profile": {
+    "resolution": 640,
+    "steps": 25,
+    "cfg": 1,
+    "cache_device": "cpu",
+    "cache_dtype": "int8",
+    "vae_tile_size": 512,
+    "vae_overlap": 64
+  },
+  "workflows": [
+    {
+      "variant": "All",
+      "roles": [
+        "pose",
+        "base",
+        "face",
+        "clothing"
+      ],
+      "ui": "NoctQ_Edit_All_NUC_8GB.json",
+      "api": "NoctQ_Edit_All_NUC_8GB.api.json",
+      "canvas": "pose"
+    },
+    {
+      "variant": "Face",
+      "roles": [
+        "base",
+        "face"
+      ],
+      "ui": "NoctQ_Edit_Face_NUC_8GB.json",
+      "api": "NoctQ_Edit_Face_NUC_8GB.api.json"
+    },
+    {
+      "variant": "Pose",
+      "roles": [
+        "pose",
+        "base"
+      ],
+      "ui": "NoctQ_Edit_Pose_NUC_8GB.json",
+      "api": "NoctQ_Edit_Pose_NUC_8GB.api.json",
+      "canvas": "pose"
+    },
+    {
+      "variant": "Clothing",
+      "roles": [
+        "base",
+        "clothing"
+      ],
+      "ui": "NoctQ_Edit_Clothing_NUC_8GB.json",
+      "api": "NoctQ_Edit_Clothing_NUC_8GB.api.json"
+    }
+  ]
+}

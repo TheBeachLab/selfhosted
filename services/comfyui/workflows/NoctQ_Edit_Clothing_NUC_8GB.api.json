@@ -1,0 +1,138 @@
+{
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "denim_girl.png"
+    }
+  },
+  "13": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "green_chiffon_short_dress.png"
+    }
+  },
+  "4": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "prompt": "Use <image1> as the main photo and editing canvas. Keep its background, lighting, camera viewpoint and image proportions. Replace the main person's clothing with the garment from <image2>, preserving its color, cut, fabric and decorative details. Fit the garment naturally to the body. Use <image2> only for clothing. Preserve the main person's facial identity and hairstyle. Preserve the main person's body pose and proportions. Preserve all other people and objects in the main photo.",
+      "negative_prompt": "",
+      "resolution": 640,
+      "clip": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "images.image_1": [
+        "10",
+        0
+      ],
+      "images.image_2": [
+        "13",
+        0
+      ]
+    }
+  },
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "NoctQ_V4_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "device": "cpu",
+      "dtype": "int8",
+      "model": [
+        "1",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 62607250,
+      "steps": 25,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "5",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "4",
+        1
+      ],
+      "latent_image": [
+        "4",
+        2
+      ]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecodeTiled",
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "NoctQ_Edit/Clothing",
+      "images": [
+        "7",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "ImageCompare",
+    "inputs": {
+      "compare_view": null,
+      "image_a": [
+        "10",
+        0
+      ],
+      "image_b": [
+        "7",
+        0
+      ]
+    }
+  }
+}

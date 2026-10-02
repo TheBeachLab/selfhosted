@@ -1,0 +1,158 @@
+{
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "denim_girl.png"
+    }
+  },
+  "11": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "redhair_girl_portrait.png"
+    }
+  },
+  "12": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "woman_running_in_field.png"
+    }
+  },
+  "13": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "green_chiffon_short_dress.png"
+    }
+  },
+  "4": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "prompt": "Edit <image1>, keeping the person's exact body pose, facing direction and placement. Replace the person's entire face and head with the facial identity and hairstyle from <image3>. Replace the person's entire outfit with the clothing from <image4>, matching its color, cut, fabric and decorative details. Preserve the pose, arm positions and leg positions from <image1> while fitting the new clothing naturally. Replace the background with the location from <image2>, using its lighting. Take only the shoes from <image2> and fit them to the posed feet. Use <image1> for pose and framing, <image2> for the scene and shoes, <image3> for the face and head, and <image4> for clothing.",
+      "negative_prompt": "",
+      "resolution": 640,
+      "clip": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "images.image_1": [
+        "12",
+        0
+      ],
+      "images.image_2": [
+        "10",
+        0
+      ],
+      "images.image_3": [
+        "11",
+        0
+      ],
+      "images.image_4": [
+        "13",
+        0
+      ]
+    }
+  },
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "NoctQ_V4_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "device": "cpu",
+      "dtype": "int8",
+      "model": [
+        "1",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 62607250,
+      "steps": 25,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "5",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "4",
+        1
+      ],
+      "latent_image": [
+        "4",
+        2
+      ]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecodeTiled",
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "NoctQ_Edit/All",
+      "images": [
+        "7",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "ImageCompare",
+    "inputs": {
+      "compare_view": null,
+      "image_a": [
+        "10",
+        0
+      ],
+      "image_b": [
+        "7",
+        0
+      ]
+    }
+  }
+}

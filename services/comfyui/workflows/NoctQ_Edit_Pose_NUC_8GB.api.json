@@ -1,0 +1,138 @@
+{
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "denim_girl.png"
+    }
+  },
+  "12": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "woman_running_in_field.png"
+    }
+  },
+  "4": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "prompt": "Edit <image1>, keeping the person's exact body pose, facing direction, silhouette and placement. Replace the person's face and head with the face and hairstyle of the person in <image2>. Replace the person's entire clothing and footwear with the clothing and shoes worn by the person in <image2>, fitting these clothes naturally to the unchanged pose. Replace the background with the location shown in <image2> and match its lighting. Use <image1> only for pose and framing. Use <image2> for the person's identity, hairstyle, outfit, shoes and scene.",
+      "negative_prompt": "",
+      "resolution": 640,
+      "clip": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "images.image_1": [
+        "12",
+        0
+      ],
+      "images.image_2": [
+        "10",
+        0
+      ]
+    }
+  },
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "NoctQ_V4_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "device": "cpu",
+      "dtype": "int8",
+      "model": [
+        "1",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 62607250,
+      "steps": 25,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "5",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "4",
+        1
+      ],
+      "latent_image": [
+        "4",
+        2
+      ]
+    }
+  },
+  "7": {
+    "class_type": "VAEDecodeTiled",
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "6",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "NoctQ_Edit/Pose",
+      "images": [
+        "7",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "ImageCompare",
+    "inputs": {
+      "compare_view": null,
+      "image_a": [
+        "10",
+        0
+      ],
+      "image_b": [
+        "7",
+        0
+      ]
+    }
+  }
+}

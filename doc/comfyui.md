@@ -127,6 +127,109 @@ limits use to non-commercial research/evaluation. Copies of
 [LICENSE](../services/comfyui/NoctQ-LICENSE.txt) and
 [NOTICE](../services/comfyui/NoctQ-NOTICE.txt) accompany the modified workflow.
 
+### Face, pose and clothing reference editor
+
+Open **Workflows → NoctQ-Edit**. The editor reuses the installed Noct Q V4
+weights, Qwen3-VL encoder and Qwen Image 2.1 VAE. All nodes are part of the
+installed ComfyUI 0.38.0 backend; no extra model or extension is required.
+
+Four UI workflows and matching API exports are in
+[services/comfyui/workflows](../services/comfyui/workflows/):
+
+| Workflow | Photos to upload |
+|---|---|
+| `NoctQ_Edit_All_NUC_8GB` | Main scene, face/head, pose and clothing |
+| `NoctQ_Edit_Face_NUC_8GB` | Main photo and face/head reference |
+| `NoctQ_Edit_Pose_NUC_8GB` | Main person/photo and pose reference |
+| `NoctQ_Edit_Clothing_NUC_8GB` | Main photo and garment reference |
+
+Press **Upload** on each labeled photo node, edit the green instructions, then
+press **Run**. Use a single-change workflow when you need only one operation.
+Clear faces, visible limbs and a clear garment image help. The before/after
+widget compares the main photo with the result; results are saved under
+`output/NoctQ_Edit/`.
+
+The
+[official Qwen edit template](https://github.com/Comfy-Org/workflow_templates/blob/9fac9ca259773c82c25553103edd51b6550d5fc4/templates/image_qwen_image_2_1_image_edit.json)
+and
+[Qwen editing prompt guide](https://huggingface.co/Qwen/Qwen-Image-2.1-PE-I2I/blob/main/system_prompt.txt)
+specify explicit image roles and `<image1>`, `<image2>`, etc. The local
+workflows provide these tags in the instructions. The encoder receives both
+images and the VAE, and its first-reference latent goes directly to the sampler,
+following the installed template's alignment rule.
+
+Settings: 640-pixel reference budget, 25 steps, Euler/simple, CFG 1, batch 1,
+CPU INT8 prefix cache and 512 px tiled VAE decoding. This reference budget is
+a total-area target, preserving the first reference's proportions; it is not
+an output width. The example main photo produces 640 × 640 in Face/Clothing.
+These are generative edits: exact likeness and garment detail are not
+guaranteed, and surrounding details can also change.
+
+Direct pose editing of the main-photo canvas kept the original stance in two
+observed runs (CFG 1 and CFG 3). Pose workflows therefore use the pose photo
+as the composition template, with the other photos guiding appearance and
+scene edits. Pose and All outputs follow the pose photo's framing;
+they are not a pixel-preserving replacement in the main photo. In the
+combined test, the requested head, green dress and sneakers appeared in the
+running stance, but the background stayed from the pose reference. In the
+Pose-only test, the red outfit from the pose reference remained. For more
+control over appearance, use All with clear face and separate garment photos.
+This model can ignore a requested transfer; exact skeleton control is not
+provided by these workflows.
+
+The pinned public examples, upstream revision, sizes, SHA-256 values and
+installed template hash are in
+[noctq-reference-assets.json](../services/comfyui/noctq-reference-assets.json).
+The examples are from Comfy-Org's template input assets, not personal photos.
+To install these workflows without replacing a different existing file:
+
+```bash
+python3 services/comfyui/install-reference-workflows.py --comfyui /opt/comfyui
+```
+
+ComfyUI 0.38.0 initially failed in `comfy_aimdo.malloc_graph.pop` with
+`aimdo memory compile error` when sampling four references at both 640 and
+512 budgets. The
+[reference-compiler.conf](../services/comfyui/reference-compiler.conf)
+workaround adds `--disable-comfy-compiler`, a supported
+[0.38.0 CLI flag](https://github.com/Comfy-Org/ComfyUI/blob/6b747c04/comfy/cli_args.py).
+Disk-backed dynamic loading, disabled pinned memory, and the 8/10 GiB cgroup
+limits stay in effect. This setting avoided that failure in subsequent runs;
+the underlying allocator bug has not been established or fixed.
+
+```bash
+sudo install -m 644 services/comfyui/reference-compiler.conf \
+  /etc/systemd/system/comfyui.service.d/reference-compiler.conf
+sudo systemctl daemon-reload
+sudo systemctl restart comfyui
+```
+
+The workflow installer was checked for repeated installation and for refusing
+to replace a customized workflow. The sample Face and Clothing runs completed
+in 81.65 and 81.63 seconds respectively. The initial main-canvas four-reference
+run was launched from the browser after uploading all four photos and completed
+in 165.09 seconds. Face/head and clothing transfers were visible; the pose stayed
+close to the original stance. Outputs and test receipts are retained on the NUC
+under `output/NoctQ_Edit/` and `/var/tmp/comfyui-reference-62607250/`.
+
+The final combined pose-canvas test completed at 512 × 768 / 25 steps; its
+receipt is `all-pose-canvas-history.json` with prompt
+`35922c43-1c62-4461-bf82-4e6169e2939a`, and the output is
+`output/NoctQ_Edit/AllPoseCanvas_00001_.png`. The Pose-only receipt is
+`pose-transfer-history.json`, prompt `f498118b-90ab-400a-8a77-4868341f9eed`,
+output `PoseTransfer_00001_.png`. These runs establish runtime and observed
+example behavior, not general identity or pose fidelity. The final installed
+All workflow was also run through the browser, completing in 130.03 seconds
+at 512 × 768 / 25 steps. Prompt: `cd6eaebf-695a-4555-88e6-4396ed81720f`;
+output: `output/NoctQ_Edit/All_00002_.png`; receipt:
+`final-all-ui-result.json`. During the sampled part of that run, GPU use peaked
+at 6,537 MiB and cgroup memory at 8,156,495,872 bytes. The service's memory-event
+counters reported zero OOM events and zero OOM kills.
+
+After the compiler setting changed, the existing Krea workflow completed its
+768 × 1024 / 8-step run in 42.18 seconds, and the original Noct Q workflow passed
+a 768 × 1024 / 2-step compatibility check in 22.62 seconds.
+
 ## Krea Noct V4 / Krea2
 
 Installed and SHA-256 verified on 2026-10-02. The NUC profile uses the public
