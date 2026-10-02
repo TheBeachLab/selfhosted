@@ -10,6 +10,7 @@ through [Authentik with a passkey](authentik.md).
 - [Change auth password](#change-auth-password)
 - [Add/update models](#addupdate-models)
 - [Noct Q V4 / Qwen Image 2.1](#noct-q-v4--qwen-image-21)
+- [Krea Noct V4 / Krea2](#krea-noct-v4--krea2)
 - [Custom nodes (ComfyUI Manager)](#custom-nodes-comfyui-manager)
 - [Update ComfyUI](#update-comfyui)
 - [DNS + SSL setup (one-time, after DNS propagation)](#dns--ssl-setup-one-time-after-dns-propagation)
@@ -125,6 +126,63 @@ Built with Qwen. The publisher's
 limits use to non-commercial research/evaluation. Copies of
 [LICENSE](../services/comfyui/NoctQ-LICENSE.txt) and
 [NOTICE](../services/comfyui/NoctQ-NOTICE.txt) accompany the modified workflow.
+
+## Krea Noct V4 / Krea2
+
+Installed and SHA-256 verified on 2026-10-02. The NUC profile uses the public
+INT8 convrot V4 weights from
+[Noctaluna's pinned repository](https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/tree/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4),
+with dependencies from
+[Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2/tree/eb1eddd3983a54678545a9b2c178c5853b30f7be).
+The publisher recommends 12 GB or more for INT8, and INT4 from Civitai for
+8 GB cards. This local INT8 profile uses the existing NVMe dynamic loading;
+it does not keep the whole diffusion model in VRAM.
+
+| File | Folder | Size |
+|---|---|---|
+| `KreaNoct_V4_int8_convrot.safetensors` | `diffusion_models` | 13,492,706,520 bytes |
+| `qwen3vl_4b_fp8_scaled.safetensors` | `text_encoders` | 5,242,467,968 bytes |
+| `qwen_image_vae.safetensors` | `vae` | 253,806,246 bytes |
+
+Total weights: 18,988,980,734 bytes. The
+[manifest](../services/comfyui/krea2-models.json) pins revisions, sizes and
+upstream SHA-256 values. The
+[installer](../services/comfyui/install-krea2.py) verifies every file before
+publishing it without replacing a different existing file:
+
+```bash
+/opt/comfyui/.venv/bin/python services/comfyui/install-krea2.py \
+  --hf /opt/comfyui/.venv/bin/hf --comfyui /opt/comfyui
+```
+
+Open **Workflows → KreaNoct → KreaNoct_V4_NUC_8GB**. The
+[UI workflow](../services/comfyui/workflows/KreaNoct_V4_NUC_8GB.json) and
+[API export](../services/comfyui/workflows/KreaNoct_V4_NUC_8GB.api.json)
+use core nodes from the installed official `image_krea2_turbo_t2i_int8.json`
+template in workflow templates 0.11.70. The template SHA-256 is in the manifest.
+The workflow has been flattened and adapted with no prompt enhancer or LoRA.
+
+Settings: 768 × 1024, batch 1, 8 steps, Euler, simple scheduler, CFG 1,
+`CLIPLoader` type `krea2`, and 512 px tiled VAE decoding with 64 px overlap.
+`ConditioningZeroOut` supplies the unused negative conditioning at CFG 1.
+Change the green prompt node to describe the desired image. Use one GPU job
+at a time and unload models after a session. The publisher's 1024 × 1536
+setting has not been benchmarked on this host.
+
+Validation on the installed 0.38.0 backend and RTX 2070 Super:
+a 512 × 512 / 2-step smoke test took 17.34 seconds. The saved workflow was
+opened and run through the UI at 768 × 1024 / 8 steps in 32.81 seconds. A
+second full run, after clearing both model and node caches, completed in
+40.25 seconds with no cached nodes. Its sampled GPU usage reached 7,455 MiB
+and the ComfyUI cgroup reached 6,265,049,088 bytes (about 5.84 GiB), below the
+10 GiB service limit. These figures apply to this profile, prompt and stack.
+The two full outputs are `output/KreaNoct_V4/NUC_00001_.png` and
+`NUC_00002_.png`. Validation prompt IDs: `d8c18bdf-737d-4a5e-8181-2e7598347cd1`
+(UI) and `86868376-4630-4b74-ab42-a0e7f5be99d4` (empty caches).
+
+The [Krea 2 Community License](../services/comfyui/Krea2-LICENSE.pdf) and
+[attribution](../services/comfyui/Krea2-NOTICE.txt) are retained beside the
+manifest in `user/default/model-info/KreaNoct-V4/`. The weights are unmodified.
 
 ## Custom nodes (ComfyUI Manager)
 

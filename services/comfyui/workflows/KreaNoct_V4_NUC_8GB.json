@@ -1,0 +1,493 @@
+{
+  "last_node_id": 10,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        330,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "KreaNoct_V4_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/resolve/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4/KreaNoct_V4_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "KreaNoct_V4_int8_convrot.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        0,
+        130
+      ],
+      "size": [
+        330,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3vl_4b_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/eb1eddd3983a54678545a9b2c178c5853b30f7be/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3vl_4b_fp8_scaled.safetensors",
+        "krea2",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        0,
+        290
+      ],
+      "size": [
+        330,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "qwen_image_vae.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/eb1eddd3983a54678545a9b2c178c5853b30f7be/vae/qwen_image_vae.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [
+        430,
+        0
+      ],
+      "size": [
+        400,
+        320
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            3,
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": [
+        "An amateur phone photograph of an orange cat sitting on a wooden workbench in a bright coastal workshop. A blue ceramic mug stands beside the cat, with a notebook and a few hand tools further back. Morning sunlight enters through a wide window overlooking the sea. The cat looks toward the window, natural fur texture, candid composition, soft realistic shadows."
+      ],
+      "title": "Describe tu imagen",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "pos": [
+        380,
+        350
+      ],
+      "size": [
+        320,
+        106
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        768,
+        1024,
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "KSampler",
+      "pos": [
+        850,
+        0
+      ],
+      "size": [
+        320,
+        262
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 3
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 5
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        0,
+        "randomize",
+        8,
+        1.0,
+        "euler",
+        "simple",
+        1.0
+      ]
+    },
+    {
+      "id": 7,
+      "type": "VAEDecodeTiled",
+      "pos": [
+        1280,
+        0
+      ],
+      "size": [
+        270,
+        154
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecodeTiled"
+      },
+      "widgets_values": [
+        512,
+        64,
+        64,
+        8
+      ]
+    },
+    {
+      "id": 8,
+      "type": "SaveImage",
+      "pos": [
+        1280,
+        100
+      ],
+      "size": [
+        520,
+        780
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "KreaNoct_V4/NUC"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "MarkdownNote",
+      "pos": [
+        0,
+        520
+      ],
+      "size": [
+        800,
+        380
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "MarkdownNote"
+      },
+      "widgets_values": [
+        "## Krea2 Noct V4 · Intel NUC / RTX 2070 Super 8 GB\n\n768 × 1024, una imagen por lote, 8 pasos, Euler, simple, CFG 1. Escribe tu descripción en el nodo verde. No hace falta prompt negativo. El VAE se decodifica por bloques de 512 px.\n\nEsta variante es INT8 convrot: ComfyUI carga los pesos por partes desde el NVMe. Mantén una sola generación activa y evita otros trabajos GPU. La resolución del autor, 1024 × 1536, queda fuera de este perfil.\n\nModelo: Noctaluna/Krea2-Noct-Uncensored, revisión d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4. Componentes: Comfy-Org/Krea-2. Los hashes están fijados en krea2-models.json. Solo nodos locales de ComfyUI.\n\nKrea 2 Community License: copia y atribución en user/default/model-info/KreaNoct-V4/. Libera la VRAM al terminar una sesión con Unload Models."
+      ]
+    },
+    {
+      "id": 10,
+      "type": "ConditioningZeroOut",
+      "pos": [
+        860,
+        350
+      ],
+      "size": [
+        240,
+        60
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ConditioningZeroOut",
+        "cnr_id": "comfy-core"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      1,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      4,
+      0,
+      6,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      4,
+      4,
+      0,
+      10,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      5,
+      10,
+      0,
+      6,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      5,
+      0,
+      6,
+      3,
+      "LATENT"
+    ],
+    [
+      7,
+      6,
+      0,
+      7,
+      0,
+      "LATENT"
+    ],
+    [
+      8,
+      3,
+      0,
+      7,
+      1,
+      "VAE"
+    ],
+    [
+      9,
+      7,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7,
+      "offset": [
+        40,
+        40
+      ]
+    },
+    "krea2_source": {
+      "model": "https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/blob/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4/README.md",
+      "template": {
+        "package": "comfyui-workflow-templates 0.11.70",
+        "file": "image_krea2_turbo_t2i_int8.json",
+        "sha256": "90a616a3bdea21a2579e2b16e5acee3178284bf2d90a5508af77a27f0a0fca1e"
+      },
+      "modified": true,
+      "profile": "Intel NUC, RTX 2070 Super 8GB"
+    }
+  },
+  "version": 0.4
+}

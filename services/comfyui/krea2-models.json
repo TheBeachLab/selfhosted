@@ -1,0 +1,41 @@
+{
+  "model": "Noctaluna/Krea2-Noct-Uncensored",
+  "variant": "KreaNoct V4 INT8 convrot",
+  "source": "https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/blob/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4/README.md",
+  "workflow_template": {
+    "package": "comfyui-workflow-templates 0.11.70",
+    "file": "image_krea2_turbo_t2i_int8.json",
+    "sha256": "90a616a3bdea21a2579e2b16e5acee3178284bf2d90a5508af77a27f0a0fca1e"
+  },
+  "license": {
+    "file": "Krea2-LICENSE.pdf",
+    "sha256": "b82a2805162bde714a4eb27b9063c4fc3345d08a30be055134a6160e5430ba74",
+    "source": "https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/resolve/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4/LICENSE.pdf"
+  },
+  "files": [
+    {
+      "repo": "Noctaluna/Krea2-Noct-Uncensored",
+      "revision": "d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4",
+      "file": "KreaNoct_V4_int8_convrot.safetensors",
+      "destination": "diffusion_models/KreaNoct_V4_int8_convrot.safetensors",
+      "size": 13492706520,
+      "sha256": "03622b92c5631870c40426c0dfd3c98b1db33b662140b1e4000210d62f518e2a"
+    },
+    {
+      "repo": "Comfy-Org/Krea-2",
+      "revision": "eb1eddd3983a54678545a9b2c178c5853b30f7be",
+      "file": "text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+      "destination": "text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+      "size": 5242467968,
+      "sha256": "54bd5144df0bbc25dd6ccadfcb826b521445a1b06ae5a42570bdd2974ca87094"
+    },
+    {
+      "repo": "Comfy-Org/Krea-2",
+      "revision": "eb1eddd3983a54678545a9b2c178c5853b30f7be",
+      "file": "vae/qwen_image_vae.safetensors",
+      "destination": "vae/qwen_image_vae.safetensors",
+      "size": 253806246,
+      "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f"
+    }
+  ]
+}

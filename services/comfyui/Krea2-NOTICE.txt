@@ -1,0 +1,6 @@
+Krea 2 is licensed under the Krea 2 Community License Agreement. For more information, visit https://krea.ai/krea-2-licensing.
+
+Model: Krea Noct V4, a derivative published by Noctaluna.
+Source: https://huggingface.co/Noctaluna/Krea2-Noct-Uncensored/tree/d93fbcb45e6f6995f2ecdd4edfdb1ef12db6e6e4
+
+Local adaptation: workflow flattened from the official ComfyUI Krea2 INT8 template; model selection, output size, prompt and tiled VAE decoding modified for this NUC. The upstream weights were not modified.
