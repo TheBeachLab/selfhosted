@@ -1,0 +1,31 @@
+{
+  "checked_on": "2026-10-02",
+  "comfyui_release": "v0.38.0",
+  "model_card": "https://huggingface.co/Noctaluna/Noct-Q-Uncensored-Qwen-Image-2.1/blob/a81b9af51120a78e285e57906f2250a2a02080e9/README.md",
+  "files": [
+    {
+      "repo": "Noctaluna/Noct-Q-Uncensored-Qwen-Image-2.1",
+      "revision": "a81b9af51120a78e285e57906f2250a2a02080e9",
+      "file": "NoctQ_V4_int8_convrot.safetensors",
+      "destination": "diffusion_models/NoctQ_V4_int8_convrot.safetensors",
+      "size": 7256784368,
+      "sha256": "4d92d5538253ab36e6a73b056cce5f697950f4303cb9e6686a3198d0ea13f9e8"
+    },
+    {
+      "repo": "Comfy-Org/Qwen-Image-2.1",
+      "revision": "cb504a4090723e43f17ad01cec0359490e2de613",
+      "file": "text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+      "destination": "text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+      "size": 9350798360,
+      "sha256": "8bfd0f6e12abf2d2d697ecc888e5e90b0d6741d6708f05799f53afa560452e8f"
+    },
+    {
+      "repo": "Comfy-Org/Qwen-Image-2.1",
+      "revision": "cb504a4090723e43f17ad01cec0359490e2de613",
+      "file": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "destination": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "size": 675509688,
+      "sha256": "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9"
+    }
+  ]
+}

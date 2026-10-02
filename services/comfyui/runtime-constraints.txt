@@ -1,0 +1,5 @@
+# CUDA 13.0 wheels from https://download.pytorch.org/whl/cu130
+# Matching stable trio available for Python 3.10 and the RTX 2070 Super.
+torch==2.11.0+cu130
+torchvision==0.26.0+cu130
+torchaudio==2.11.0+cu130

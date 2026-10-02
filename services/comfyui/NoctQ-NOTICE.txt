@@ -1,0 +1,8 @@
+Qwen is licensed under the Qwen RESEARCH LICENSE AGREEMENT, Copyright (c) 2026 Hangzhou Tongyi Laboratory Technology Co., Ltd. All Rights Reserved.
+
+Built with Qwen.
+
+Noct Q V4 Base (noctaluna, September 2026) is a derivative work of Qwen/Qwen-Image-2.1, distributed free
+of charge for non-commercial use under the Qwen Research License Agreement (full text in LICENSE).
+
+Changes: the Qwen-Image-2.1 transformer weights were modified by noctaluna.
