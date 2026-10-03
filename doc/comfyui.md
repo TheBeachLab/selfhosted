@@ -11,6 +11,7 @@ through [Authentik with a passkey](authentik.md).
 - [Add/update models](#addupdate-models)
 - [Noct Q V4 / Qwen Image 2.1](#noct-q-v4--qwen-image-21)
 - [Krea Noct V4 / Krea2](#krea-noct-v4--krea2)
+- [SeedVR2 video upscale: 480p to 1080p](#seedvr2-video-upscale-480p-to-1080p)
 - [Custom nodes (ComfyUI Manager)](#custom-nodes-comfyui-manager)
 - [Update ComfyUI](#update-comfyui)
 - [DNS + SSL setup (one-time, after DNS propagation)](#dns--ssl-setup-one-time-after-dns-propagation)
@@ -286,6 +287,92 @@ The two full outputs are `output/KreaNoct_V4/NUC_00001_.png` and
 The [Krea 2 Community License](../services/comfyui/Krea2-LICENSE.pdf) and
 [attribution](../services/comfyui/Krea2-NOTICE.txt) are retained beside the
 manifest in `user/default/model-info/KreaNoct-V4/`. The weights are unmodified.
+
+## SeedVR2 video upscale: 480p to 1080p
+
+Installed on 2026-10-03 from the [official ComfyUI integration](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/tree/4490bd1f482e026674543386bb2a4d176da245b9),
+version 2.5.24. The [model manifest](../services/comfyui/seedvr2-models.json)
+pins the publisher revisions, sizes and SHA-256 values. Model paths:
+
+| File | Folder | Bytes |
+|---|---|---|
+| `seedvr2_ema_3b-Q4_K_M.gguf` | `models/SEEDVR2` | 1,995,344,224 |
+| `ema_vae_fp16.safetensors` | `models/SEEDVR2` | 501,324,814 |
+
+The two files total 2,496,669,038 bytes (2.33 GiB). Initial free disk space
+was 164.73 GiB; final free space was 153.38 GiB. The isolated runtime also occupies about 8.8 GiB; the
+previous `venvs/noctq-62607250` runtime remains available for rollback.
+License, attribution and manifest copies are in `user/default/model-info/SeedVR2`.
+
+To reproduce the models:
+
+```bash
+/opt/comfyui/.venv/bin/python services/comfyui/install-seedvr2.py \
+  --hf /opt/comfyui/.venv/bin/hf --comfyui /opt/comfyui
+```
+
+The installer stages downloads on the model filesystem and verifies every
+size and SHA-256 before publishing. Clone the pinned custom-node revision
+into `custom_nodes/ComfyUI-SeedVR2_VideoUpscaler`. Prepare an independent
+runtime from the existing environment, then install
+[seedvr2-requirements.txt](../services/comfyui/seedvr2-requirements.txt) with
+[runtime-constraints.txt](../services/comfyui/runtime-constraints.txt).
+The latter keeps the tested PyTorch/CUDA trio unchanged. Run `pip check`
+before activation. The runtime used here is `venvs/seedvr2-c9f78fe8`.
+
+The CUDA `torch.prod` operation failed to find `libnvrtc-builtins.so.13.0`
+even though the file was present in the wheel. Adding the wheel's `nvidia/cu13/lib`
+directory to `LD_LIBRARY_PATH` corrected the same operation. The service
+uses [seedvr2-runtime.conf](../services/comfyui/seedvr2-runtime.conf);
+the video executor applies that path to its own child process.
+
+Open **Workflows → SeedVR2 → SeedVR2_480p_to_1080p_NUC_8GB**.
+Upload the video in the first node and press **Run**. The
+[UI workflow](../services/comfyui/workflows/SeedVR2_480p_to_1080p_NUC_8GB.json)
+and [API export](../services/comfyui/workflows/SeedVR2_480p_to_1080p_NUC_8GB.api.json)
+connect the original audio and FPS to the saved H.264 MP4 under `output/SeedVR2`.
+
+The profile uses five frames per model batch, one overlapping frame,
+32 CPU-swapped DiT blocks, SDPA, and tiled VAE encode/decode at 256 pixels
+with 64-pixel overlap. The initial 512-pixel VAE encoder exhausted VRAM;
+256-pixel encoding passed that phase. Do not increase batch size on this
+8 GiB GPU without testing. Run one GPU job at a time.
+
+`resolution=1080` sets the short edge while preserving the source proportions.
+`max_resolution=0` avoids lowering the height to 1078 for an 854 × 480
+source, which happened with the initial 1920-pixel longest-edge cap.
+
+Validation used a nine-frame 854 × 480 / 25 FPS clip made from an existing
+Krea output image, with a short audio track. The full API workflow completed
+in 369.03 seconds (prompt `71fd8465-0763-4a9d-b002-d3cd01edd188`), with
+sampled GPU usage of 7,757 MiB and ComfyUI cgroup RAM of 6,470,815,744 bytes.
+The corrected streaming executor completed its two chunks in 378.02 seconds.
+`ffprobe` confirmed **1920 × 1080, nine frames, 25 FPS, 0.36 seconds** in
+`output/SeedVR2/1080p-stream-smoke-c9f78fe8.mp4`, with an audio stream.
+The audio packet SHA-256 values matched the source exactly.
+The CUDA VAE decoder encountered recoverable allocation failures; the
+publisher's cache-clear/retry path completed them. This GPU is very slow for
+this profile, and this short synthetic clip does not validate quality on
+moving people or a long source video. It is not a processed user video.
+
+All five required video/upscaler node types loaded on the normal 8188 service;
+the existing 16 UniRig/MIA node types remained registered. The GUI workflow
+opened with the selected Q4 model, 256-pixel tiles and five-frame batch.
+
+The UI workflow loads the complete clip into tensors. For longer videos,
+use the [executor](../services/comfyui/upscale-video.py), installed at
+`user/default/scripts/upscale-video.py`. It invokes the pinned upstream CLI
+with `--chunk_size 5` to bound RAM usage, then restores all source audio
+streams. AAC/MP3/ALAC audio is copied; other audio is encoded to AAC.
+It requires constant frame rate, writes a new MP4 and refuses to overwrite
+existing output. Stop ComfyUI only after checking that its queue is empty:
+
+```bash
+sudo systemctl stop comfyui
+/opt/comfyui/.venv/bin/python /opt/comfyui/user/default/scripts/upscale-video.py \
+  /path/to/source-480p.mp4 /path/to/new-1080p.mp4
+sudo systemctl start comfyui
+```
 
 ## Custom nodes (ComfyUI Manager)
 

@@ -1,0 +1,13 @@
+# Additions to the preserved ComfyUI 0.38.0 / CUDA 13 runtime.
+omegaconf==2.3.1
+antlr4-python3-runtime==4.9.3
+diffusers==0.40.0
+huggingface_hub==1.33.0
+click==8.5.0
+hf-xet==1.6.0
+safetensors==0.8.0
+peft==0.21.2
+rotary-embedding-torch==0.9.1
+accelerate==1.15.0
+importlib_metadata==9.0.1
+zipp==4.1.0

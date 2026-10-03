@@ -1,0 +1,4 @@
+SeedVR2 by ByteDance-Seed. ComfyUI integration by numz and AInVFX.
+Source: https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/tree/4490bd1f482e026674543386bb2a4d176da245b9
+Models: https://huggingface.co/AInVFX/SeedVR2_comfyUI/tree/ac66d6d98fa49975d893b58c55bff7677191c862 and https://huggingface.co/numz/SeedVR2_comfyUI/tree/09ced71023636e9bc8cdf9cdecfb2625d1e691e8
+Model weights are unmodified. The workflow is adapted for the NUC 8 GB GPU.

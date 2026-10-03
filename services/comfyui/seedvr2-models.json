@@ -1,0 +1,34 @@
+{
+  "model": "SeedVR2 3B Q4_K_M",
+  "custom_node": {
+    "repo": "https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler",
+    "revision": "4490bd1f482e026674543386bb2a4d176da245b9",
+    "version": "2.5.24"
+  },
+  "workflow_template": {
+    "source": "https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/blob/4490bd1f482e026674543386bb2a4d176da245b9/example_workflows/SeedVR2_HD_video_upscale.json"
+  },
+  "files": [
+    {
+      "repo": "AInVFX/SeedVR2_comfyUI",
+      "revision": "ac66d6d98fa49975d893b58c55bff7677191c862",
+      "file": "seedvr2_ema_3b-Q4_K_M.gguf",
+      "destination": "SEEDVR2/seedvr2_ema_3b-Q4_K_M.gguf",
+      "size": 1995344224,
+      "sha256": "e665e3909de1a8c88a69c609bca9d43ff5a134647face2ce4497640cc3597f0e"
+    },
+    {
+      "repo": "numz/SeedVR2_comfyUI",
+      "revision": "09ced71023636e9bc8cdf9cdecfb2625d1e691e8",
+      "file": "ema_vae_fp16.safetensors",
+      "destination": "SEEDVR2/ema_vae_fp16.safetensors",
+      "size": 501324814,
+      "sha256": "20678548f420d98d26f11442d3528f8b8c94e57ee046ef93dbb7633da8612ca1"
+    }
+  ],
+  "license": {
+    "file": "SeedVR2-LICENSE.txt",
+    "sha256": "5967a0c153e731109b76c5d83b5e0fae2382b6aaf7b898d08ff03702eea59430",
+    "source": "https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/blob/4490bd1f482e026674543386bb2a4d176da245b9/LICENSE"
+  }
+}
