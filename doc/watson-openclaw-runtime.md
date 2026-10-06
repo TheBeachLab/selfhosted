@@ -101,14 +101,56 @@ usernames, account handles, tokens and provider configuration.
 
 ## Model failover when primary is out of usage
 
-On 2026-09-28, a live readback of `~/.openclaw/openclaw.json` on the Watson host
-confirmed `openai/gpt-6-sol` as the primary, `high` as `thinkingDefault`, the
-Codex agent runtime for that model, and `openai/gpt-5.3-codex-spark` as the
-fallback. The model allowlist also retains `openai/gpt-5.6-sol`. An isolated
-Gateway agent turn returned `OK.` with `agentMeta.model=gpt-6-sol` after the
-OpenClaw 2026.9.6 upgrade. Check the live config and account catalog again
-before treating these dated values as current. The selected model and effort
-follow [OpenClaw's OpenAI model guidance](https://docs.openclaw.ai/providers/openai/models).
+On 2026-10-06, separate live readbacks on Watson (`pink-sudo`, user `pink`) and
+Flora (`liderflor`, user `openclaw`) confirmed `openai/gpt-6.1-sol` as the
+primary, `high` as `thinkingDefault`, and the Codex runtime for that model.
+Both retain `openai/gpt-5.3-codex-spark` as their configured fallback. Flora's
+`GPT` alias now selects 6.1 Sol. This confirms configuration, not fallback
+availability. The selected model and effort follow
+[OpenClaw's OpenAI model guidance](https://docs.openclaw.ai/providers/openai/models).
+
+### GPT-6.1 Sol with native Codex
+
+Both hosts were running stable OpenClaw `2026.9.8 (fc23bc8)`, whose managed
+Codex package was `0.158.0`. Configuration validation accepted the 6.1 model,
+but an actual Flora turn was rejected with `model_not_found` and
+`The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.`
+Watson's initial turn also failed. The
+[2026.9.8 release notes](https://docs.openclaw.ai/releases/2026.9.8) describe
+incomplete GPT-6.1 support; accepting a config is insufficient evidence of
+successful execution.
+
+Each host already had stable Codex `0.160.0` installed separately under
+`~/.local/share/openclaw-codex-0.160.0`. Selecting its executable through
+`plugins.entries.codex.config.appServer.command` and restarting only the
+OpenClaw gateway allowed both accounts to execute the exact model. This
+configuration field is supported by the installed Codex plugin schema and
+the [Codex app-server transport reference](https://docs.openclaw.ai/plugins/codex-harness-reference/app-server-transport).
+It selects a separate binary; it does not replace OpenClaw's managed package.
+
+| Host | Config | Selected app-server executable |
+| --- | --- | --- |
+| Watson | `/home/pink/.openclaw/openclaw.json` | `/home/pink/.local/share/openclaw-codex-0.160.0/node_modules/.bin/codex` |
+| Flora | `/var/lib/openclaw/.openclaw/openclaw.json` | `/var/lib/openclaw/.local/share/openclaw-codex-0.160.0/node_modules/.bin/codex` |
+
+Separate isolated Gateway turns, without channel delivery or tool calls,
+returned `OK` with `status=ok`, `agentMeta.model=gpt-6.1-sol`, runtime `codex`,
+and `terminalReceipt.effective.responseModel=gpt-6.1-sol`. Each test requested
+`--thinking high`. Receipt run IDs were
+`3cd2de54-0804-4216-9317-6d03c1329393` (Watson) and
+`f4f7f361-da19-46f1-ab3e-d6ca940ce996` (Flora). Both gateway services were
+active with `NRestarts=0` after the tests. This verifies a basic turn on each
+account, not every tool or the fallback chain.
+
+Config backups and private test receipts are retained on each host under
+`~/.openclaw/backups/gpt61-high-20261006-c120de80/`; credentials and full
+receipts are not stored in Git. Future maintenance must preserve the selected
+Codex binary until the managed replacement has been verified with an actual
+6.1 turn. To revert this model change, use a validated config patch to restore
+`openai/gpt-6-sol`, keep `thinkingDefault=high`, and remove the custom
+`appServer.command` field; restore Flora's `GPT` alias to 6 Sol, restart the
+gateway, and verify a real turn. Recheck live state before treating these
+dated observations as current.
 
 Recovered August notes: historical success claims and provider behavior below
 are internal notes, not independently revalidated here. On 2026-09-10, read-only
