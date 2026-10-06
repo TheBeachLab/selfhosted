@@ -26,6 +26,22 @@ SERVICES = [
     dict(id='igotify', name='iGotify', description='Notificaciones en iOS', group='monitoring', container='igotify', dependencies=['docker','gotify'], icon='phone'),
     dict(id='titiler', name='TiTiler', description='Procesamiento de mapas', group='monitoring', container='titiler', dependencies=['docker'], icon='map'),
 ]
+CONTROL_HINTS = {
+    'comfyui': 'Activa y desactiva todas las herramientas de ComfyUI: Noct Q, edición de cara/pose/ropa, Krea2, SeedVR2, UniRig, Wan 2.1 y el resto de workflows. Al apagar se interrumpen las tareas en curso.',
+    'qwen': 'Activa y desactiva la síntesis y clonación de voz de Qwen3-TTS. Al apagar se interrumpen las tareas en curso.',
+    'whisper': 'Activa y desactiva la transcripción de audio de Whisper. Al apagar se interrumpen las tareas en curso.',
+    'rag': 'Activa y desactiva la ingesta e indexación de documentos de la biblioteca RAG.',
+    'transmission': 'Activa y desactiva Transmission junto con su VPN. Al apagar se pausan las descargas y se cierra ese túnel VPN.',
+    'browser': 'Activa y desactiva el navegador remoto Chromium. Al apagar se cierra la sesión y se interrumpen sus tareas.',
+    'drop': 'Activa y desactiva Drop: el gestor de archivos y las descargas por URL de /downloads/ y /drop/.',
+    'minecraft': 'Activa y desactiva el servidor Minecraft Java. Al apagar se desconectan los jugadores y se guarda el mundo.',
+    'grafana': 'Activa y desactiva los paneles de métricas de Grafana.',
+    'gotify': 'Activa y desactiva el servidor de notificaciones Gotify. Para apagarlo, detén antes iGotify si está en marcha.',
+    'igotify': 'Activa y desactiva el envío de notificaciones a iOS. Al encender también arranca Gotify si está apagado; al apagar, Gotify sigue en marcha.',
+    'titiler': 'Activa y desactiva el procesamiento de mapas de TiTiler.',
+}
+for service in SERVICES:
+    service['controlHint'] = CONTROL_HINTS[service['id']]
 BY_ID = {s['id']: s for s in SERVICES}
 AI_IDS = {s['id'] for s in SERVICES if s['group'] == 'ai'}
 BUSY = {'active','activating','reloading','deactivating'}

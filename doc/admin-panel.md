@@ -6,6 +6,18 @@ open services. The code is in `services/admin-panel/`.
 The switches change the running state. They do not enable or disable boot
 startup.
 
+Each switch shows what it starts and stops, including shared tools and the
+effect of stopping a job. These descriptions come from `CONTROL_HINTS` in
+[`control.py`](../services/admin-panel/control.py); they are also attached to
+the switch for screen readers and included in search.
+
+ComfyUI has one switch for Noct Q, the face/pose/clothing editors, Krea2,
+SeedVR2, UniRig, Wan 2.1 and its other workflows. These are tools inside
+`comfyui.service`, not separate services. The workflow files were confirmed
+on the NUC under `/opt/comfyui/user/default/workflows/` on 2026-10-06; see
+[the ComfyUI runbook](comfyui.md) for how to open them. Stopping ComfyUI
+interrupts its running jobs.
+
 ## Access
 
 Authentik protects the panel with its own `beachlab-admin` provider.
