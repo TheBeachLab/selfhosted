@@ -18,12 +18,13 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 `thebeachlab.github`, replacing its previous client login to Headscale at
 `https://hs.beachlab.org`. Its control server is now
 `https://controlplane.tailscale.com`, MagicDNS name
-`thebeachlab.tail520737.ts.net`, and IPv4 address `100.91.63.61`.
-`tailscaled` is enabled and active; the existing `192.168.1.0/24` route
-advertisement was retained. LAN route approval and forwarding were not tested.
+`nuc.tail520737.ts.net`, and IPv4 address `100.91.63.61`.
+`tailscaled` is enabled and active. The `192.168.1.0/24` subnet advertisement
+was removed with `sudo tailscale set --advertise-routes=`; the NUC now
+advertises no subnet routes. Access the NUC using its Tailscale address.
 Source: live NUC `tailscale status --json`, `tailscale debug prefs`,
 `systemctl is-enabled tailscaled`, and `systemctl is-active tailscaled`;
-Mac `tailscale ping thebeachlab`
+Mac `tailscale ping 100.91.63.61`
 and successful OpenSSH access to `100.91.63.61:622` with the existing host key.
 
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
