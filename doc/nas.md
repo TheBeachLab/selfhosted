@@ -11,6 +11,41 @@ Verified by SSH on 2026-10-08: DS411slim (`DS411slimv10-j`), DSM
 LAN address at that verification: `192.168.1.100`; DSM HTTP port `5000`,
 DSM HTTPS port `5001`, existing DSM OpenSSH port `22222`, SMB port `445`.
 
+## Private access
+
+Connected and verified on 2026-10-08 in tailnet `thebeachlab.github`:
+
+- Name: `diskstation.tail520737.ts.net`
+- IPv4: `100.92.107.45`
+- DSM: <http://diskstation.tail520737.ts.net:5000/>
+- SMB: `smb://100.92.107.45`
+- Existing DSM SSH: `ssh -p 22222 unix@100.92.107.45`
+
+Sources: NAS `tailscale status --json` reported `Running`, `Online: true`,
+and an empty health list; the Mac's peer list reported the same DNS name
+and IP. From the Mac, `tailscale ping 100.92.107.45` used the direct
+Tailscale connection. DSM returned HTTP 200 with the DiskStation title;
+the MagicDNS URL above also returned HTTP 200. OpenSSH succeeded with the
+previously trusted NAS host key
+(`-o HostKeyAlias=192.168.1.100 -o StrictHostKeyChecking=yes`). TCP ports
+445 and 5001 were reachable. SMB authentication/file access and an HTTPS
+certificate check were not performed. These checks used the Tailscale IP
+from a Mac on the same LAN; access from a separate external network was
+not tested.
+
+Readback of `tailscale debug prefs`: `WantRunning=true`, `CorpDNS=false`,
+`RouteAll=false`, no advertised routes, and `RunSSH=false`. The NAS does
+not take Tailscale DNS settings, accept other subnet routes, advertise a
+subnet, or run Tailscale SSH. The package's DSM enabled flag exists;
+a full NAS reboot was not performed to test startup after authentication.
+
+Installation cleanup: the NAS scratch directory
+`/volume1/@tmp/nas-tailscale-b23718af` was removed, and Tailscale remained
+connected afterward. The temporary root task `Tailscale install b23718af`
+remains in DSM Task Scheduler, disabled and prefixed with `exit 0`;
+both settings were read back from DSM after saving. It cannot run the
+installation commands in that state.
+
 ## Tailscale compatibility
 
 The official `88f6282` DSM6 package for 1.104.1 installed successfully,
