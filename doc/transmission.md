@@ -23,6 +23,31 @@ A valid RPC client handles the 409 session exchange before calling `session-get`
 The previous Nginx file is backed up at
 `/opt/authentik/nginx-before-transmission-rpc-20260914T161905`.
 
+## Download destination in clients
+
+Use `/downloads` as the destination in Transmission Web and Remote GUI. Docker
+mounts the server's `/home/pink/downloads` there; the host path is not available
+inside the Transmission container. The container mount and `session-get`
+destination were checked live on 2026-10-08.
+
+Existing torrents can retain their own `downloadDir` even when the session
+default is correct. Check each affected torrent before changing the global
+setting. A completed torrent can remain in `/downloads/.incomplete` after a
+failed move to an invalid destination, so it stays hidden from the
+[downloads page](drop.md).
+
+Use the client's **Set location** action with destination `/downloads` and move
+existing files, or RPC `torrent-set-location` with explicit torrent IDs/hashes,
+`location: "/downloads"`, and `move: true`. Transmission documents these
+arguments in its [4.0.5 RPC specification, section 3.6](https://github.com/transmission/transmission/blob/4.0.5/docs/rpc-spec.md#36-moving-a-torrent).
+Check the final `downloadDir`, completed-file location, and `/downloads/` listing
+afterwards. If a previous move error remains, verify the affected torrent's
+local data first. In 4.0.5, verification alone can leave the old error displayed;
+starting the torrent clears it in
+[`torrentStart`, `libtransmission/torrent.cc`](https://github.com/transmission/transmission/blob/4.0.5/libtransmission/torrent.cc#L718).
+After a successful start, restore a previously paused torrent to paused and
+read back its completion and error state.
+
 ## VPN health and route protection (2026-09-14)
 
 The bundled `transmission-vpn` healthcheck
