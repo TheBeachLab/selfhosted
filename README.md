@@ -28,6 +28,10 @@ and successful OpenSSH access to `100.91.63.61:622` with the existing host key.
 
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
 
+**NAS:** Synology DS411slim, DSM 6.2.4-25556 Update 8. See
+[NAS access and Tailscale compatibility](doc/nas.md) for the verified configuration
+and the legacy kernel's package requirements.
+
 **Previous servers (non-operational):**
 
 - *Suitcase* — 2015 Skylake i3-6100, 8 GB RAM, 500 GB SSD

@@ -1,0 +1,69 @@
+# Synology DiskStation
+
+## Hardware and DSM
+
+Verified by SSH on 2026-10-08: DS411slim (`DS411slimv10-j`), DSM
+6.2.4-25556 Update 8, architecture `88f6282` / `armv5tel`, Linux
+2.6.32.12. Sources on the NAS: `/proc/sys/kernel/syno_hw_version`,
+`/etc.defaults/VERSION`, `unique` in `/etc.defaults/synoinfo.conf`, and
+`uname -m` / `uname -r`.
+
+LAN address at that verification: `192.168.1.100`; DSM HTTP port `5000`,
+DSM HTTPS port `5001`, existing DSM OpenSSH port `22222`, SMB port `445`.
+
+## Tailscale compatibility
+
+The official `88f6282` DSM6 package for 1.104.1 installed successfully,
+but its daemon exited with `accept4: function not implemented`. A temporary
+userspace daemon probe of the official 1.102.4 binaries reproduced that error.
+The same probe of 1.80.3 stayed running and its CLI returned `Logged out`.
+These observations establish compatibility for the tested startup path, not
+that 1.80.3 is the newest compatible release.
+
+The package reports Go 1.23.5. Go documents Linux 3.2 as its minimum from
+Go 1.24; Tailscale separately documented the missing ARM `accept4` syscall
+on Synology kernels 2.6.32.12. Sources:
+[Go minimum requirements](https://go.dev/wiki/MinimumRequirements),
+[Tailscale issue 6792](https://github.com/tailscale/tailscale/issues/6792).
+
+Official package:
+[`tailscale-88f6282-1.80.3-600080003-dsm6.spk`](https://dl.tailscale.com/stable/tailscale-88f6282-1.80.3-600080003-dsm6.spk).
+SHA-256 checked against the vendor's
+[checksum](https://dl.tailscale.com/stable/tailscale-88f6282-1.80.3-600080003-dsm6.spk.sha256):
+`0db0efa0326fa40b5e9f106c47ef5ab246dc69ec22cc3f6d3aaed796cbed1828`.
+
+1.80.3 is an old release and lacks later fixes. Check the
+[vendor's security bulletins](https://tailscale.com/security-bulletins)
+before enabling additional Tailscale features. Do not blindly update this
+NAS to the current release: test daemon startup and access first, with a
+working LAN/DSM path available for recovery.
+
+For DSM6, the official package runs as root and supplies its own startup
+script. The extra DSM7 `configure-host` boot task is not required. Use DSM's
+existing SSH server over Tailscale; Tailscale SSH is unsupported on Synology.
+Source: [Tailscale Synology documentation](https://tailscale.com/docs/integrations/synology).
+
+The installed 1.80.3 package started successfully on 2026-10-08: the root
+installer's `synopkg status Tailscale` returned `Tailscale package is started`,
+`/var/packages/Tailscale/enabled` existed, and the daemon remained running.
+Use a root DSM context for `synopkg` status checks. The unprivileged SSH user
+received status 310 even while `tailscale status` responded and the PID was
+alive; that same user could not execute the package's status script.
+
+## Clock and installer precautions
+
+The NAS initially reported January 2000. After the user corrected the clock,
+DSM showed the Madrid time zone and NTP server `pool.ntp.org`; SSH returned
+the current date. A bad clock was observed, but it was not established as
+the sole cause of the DSM login failure.
+
+The package publisher filter rejected the first install with error 290.
+Installation required temporarily allowing `Any publisher`, with user
+approval. Restore `Synology Inc. and trusted publishers` afterward.
+That setting was read back in DSM after the compatible package was installed.
+The same filter behavior is documented in
+[Tailscale PR 9363](https://github.com/tailscale/tailscale/pull/9363).
+
+`/tmp` is a 122 MiB RAM filesystem on this NAS. Stage large packages in a
+private directory under `/volume1/@tmp`, verify their checksums there, and
+remove only the task's own temporary files after validation.
