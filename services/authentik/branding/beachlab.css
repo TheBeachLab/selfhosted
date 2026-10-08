@@ -1,0 +1,224 @@
+/* Beach Lab flow branding, Authentik 2026.8.2.
+ * Identity: https://beachlab.org/ (2026-10-08), website/src/style.css.
+ * The site's yellow water header stays light even in a dark browser theme.
+ * Font placeholders are expanded to data URLs by branding.py, avoiding CORS
+ * and signed-media expiry. Keep all layout rules scoped to flow components.
+ */
+@font-face {
+    font-family: "Beachlab Univers Thin";
+    src: url("{{UNIVERS_THIN}}") format("woff2");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Beachlab Univers Light";
+    src: url("{{UNIVERS_LIGHT}}") format("woff2");
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+}
+
+body:has(ak-flow-executor) {
+    background-color: #f9e231;
+    color-scheme: light;
+}
+
+/* Authentik's reset enables this native flow background only at >=35rem.
+ * Keep the same resolved brand image on narrow and short screens as well. */
+body:has(ak-flow-executor)::before {
+    background-image: var(--ak-global--background-image, none);
+}
+
+ak-flow-executor,
+:host(ak-flow-executor) {
+    --ak-c-login--MaxWidth: 30rem;
+    --ak-c-login--spacer: clamp(1.25rem, 4vw, 2.5rem);
+    --ak-c-login__main-ColumnWidth: minmax(0, var(--ak-c-login--MaxWidth));
+    --ak-c-login__main--BackgroundColor: transparent;
+    --ak-c-login__main--Color: #0c0c0c;
+    --ak-c-login__main--BoxShadow: none;
+    --ak-c-login__footer--Color: #0c0c0c;
+    --ak-global--BackgroundContrastFilter: none;
+    font-family: "Beachlab Univers Thin", Arial, sans-serif;
+    color: #0c0c0c;
+    color-scheme: light;
+}
+
+:host(ak-flow-executor) .pf-c-login {
+    --ak-c-login--BackgroundColorOverlay: transparent;
+    --ak-c-login__main--BackgroundColor: transparent;
+    grid-template-columns: 1fr minmax(0, 30rem) 1fr;
+    grid-template-rows: minmax(4rem, 1fr) auto minmax(4rem, 1fr);
+    gap: 0;
+    padding-inline: 1.25rem;
+}
+
+:host(ak-flow-executor) .pf-c-login::after {
+    height: auto;
+}
+
+:host(ak-flow-executor) [part="main"] {
+    --ak-c-login__main--MinHeight: unset;
+    background: transparent;
+    color: #0c0c0c;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+:host(ak-flow-executor) [part="branding"] {
+    padding: 0 0 clamp(2rem, 5vh, 3rem);
+}
+
+:host(ak-flow-executor) .branding-logo {
+    width: clamp(9rem, 20vh, 12rem);
+    height: auto;
+    max-width: 70%;
+    max-height: none;
+    object-fit: contain;
+}
+
+:host(ak-flow-card),
+:host(ak-stage-authenticator-validate),
+:host(ak-stage-authenticator-validate-webauthn) {
+    --pf-global--FontFamily--text: "Beachlab Univers Thin", Arial, sans-serif;
+    --pf-global--FontFamily--heading: "Beachlab Univers Thin", Arial, sans-serif;
+    --pf-global--Color--100: #0c0c0c;
+    --pf-global--Color--200: #1a1a1a;
+    --pf-global--BackgroundColor--100: transparent;
+    --pf-global--BackgroundColor--200: #f9e231;
+    --pf-global--primary-color--100: #0c0c0c;
+    --pf-global--primary-color--200: #1a1a1a;
+    --pf-global--primary-color--light-100: #0c0c0c;
+    font-family: "Beachlab Univers Thin", Arial, sans-serif;
+    color: #0c0c0c;
+    color-scheme: light;
+}
+
+:host(ak-flow-card) .pf-c-login__main-header {
+    padding: 0;
+    text-align: center;
+}
+
+:host(ak-flow-card) .pf-c-title.ak-m-clamped {
+    color: #0c0c0c;
+    font: 400 clamp(1.625rem, 3.4vw, 2rem)/1.2 "Beachlab Univers Thin", Arial, sans-serif;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+}
+
+:host(ak-flow-card) .pf-c-login__main-body {
+    padding: 1.5rem 0 0;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) .pf-c-form {
+    row-gap: 1.5rem;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) ak-form-static [slot="link"] a {
+    color: #0c0c0c;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) ak-form-static [slot="link"] a:hover {
+    color: #0c0c0c;
+    text-decoration-thickness: 2px;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) ak-form-static [slot="link"] a:focus-visible {
+    outline: 2px solid #0c0c0c;
+    outline-offset: 3px;
+}
+
+/* Use the public parts for the nested status, leaving Authentik's messages
+ * and spinner behavior intact. No generated text or hidden errors. */
+:host(ak-stage-authenticator-validate-webauthn) ak-empty-state::part(heading),
+:host(ak-stage-authenticator-validate-webauthn) ak-empty-state::part(body) {
+    color: #0c0c0c;
+    font: 400 1.0625rem/1.5 "Beachlab Univers Light", Arial, sans-serif;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) ak-empty-state::part(spinner) {
+    filter: grayscale(1) brightness(0.15);
+}
+
+:host(ak-stage-authenticator-validate-webauthn) .pf-c-button {
+    min-height: 3rem;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid #0c0c0c;
+    border-radius: 0;
+    font: 400 1.0625rem/1.25 "Beachlab Univers Light", Arial, sans-serif;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) .pf-c-button.pf-m-primary {
+    --pf-c-button--m-primary--BackgroundColor: #0c0c0c;
+    --pf-c-button--m-primary--Color: #f9e231;
+    --pf-c-button--m-primary--hover--BackgroundColor: #1a1a1a;
+    --pf-c-button--m-primary--hover--Color: #f9e231;
+    --pf-c-button--m-primary--focus--BackgroundColor: #1a1a1a;
+    --pf-c-button--m-primary--focus--Color: #f9e231;
+    --pf-c-button--m-primary--active--BackgroundColor: #1a1a1a;
+    --pf-c-button--m-primary--active--Color: #f9e231;
+}
+
+:host(ak-stage-authenticator-validate-webauthn) .pf-c-button:focus-visible {
+    outline: 2px solid #0c0c0c;
+    outline-offset: 4px;
+}
+
+:host(ak-flow-executor) [part="locale-select"] {
+    --ak-c-flow-executor__locale-select--Padding: 1.5rem;
+    --ak-c-flow-executor__locale-select--Color: #0c0c0c;
+    --ak-c-flow-executor__locale-select--Color--hover: #0c0c0c;
+    --ak-c-locale-select--label--Color: #0c0c0c;
+    --ak-c-locale-select--BackgroundColor--hover: transparent;
+    --ak-c-locale-select--Opacity: 1;
+    --pf-global--Color--100: #0c0c0c !important;
+    color: #0c0c0c;
+    filter: none;
+}
+
+:host(ak-flow-executor) [part="locale-select"]::part(label) {
+    font: 400 0.875rem/1.5 "Beachlab Univers Light", Arial, sans-serif;
+    color: #0c0c0c;
+    text-shadow: none;
+}
+
+:host(ak-flow-executor) [part="footer"] {
+    --pf-global--Color--100: #0c0c0c !important;
+    --pf-global--Color--200: #1a1a1a !important;
+    align-self: end;
+    color: #0c0c0c;
+    filter: none;
+    padding: 1.5rem 0;
+    font: 400 0.8125rem/1.5 "Beachlab Univers Light", Arial, sans-serif;
+}
+
+@media (max-width: 35rem) {
+    :host(ak-flow-executor) .pf-c-login {
+        grid-template-columns: 0 minmax(0, 1fr) 0;
+        grid-template-rows: minmax(4.5rem, 1fr) auto minmax(4.5rem, 1fr);
+    }
+
+    :host(ak-flow-executor) .branding-logo {
+        width: 9rem;
+    }
+}
+
+@media (max-height: 34rem) and (min-width: 35rem) {
+    :host(ak-flow-executor) .pf-c-login {
+        grid-template-rows: 3.75rem auto 4rem;
+    }
+
+    :host(ak-flow-executor) .branding-logo {
+        width: 6rem;
+    }
+
+    :host(ak-flow-executor) [part="branding"] {
+        padding-bottom: 1.5rem;
+    }
+}

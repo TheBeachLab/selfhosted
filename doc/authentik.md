@@ -103,3 +103,91 @@ Basic passwords are retained for recovery.
 
 Signing in does not start GPU services or the browser. Use the
 [administration panel](admin-panel.md) to start them.
+
+## Beach Lab branding
+
+`services/authentik/branding.py` applies the identity of
+[beachlab.org](https://beachlab.org/) to the existing login page using
+[Authentik 2026.8 branding](https://version-2026-8.goauthentik.io/customize/branding/).
+The original orange logo, yellow water, favicon and Univers fonts are in
+`services/authentik/branding/`; asset provenance and hashes are recorded in
+`branding/SOURCES.md`.
+
+The login stays on the site's yellow water background in both light and dark
+browser themes, matching the public site's header. The form is transparent
+and centered, with the original logo and Univers typography. Authentik keeps
+the passkey prompt, status messages, retry button, language selector and footer.
+CSS adds no replacement text and hides no authentication errors.
+
+Only `branding_logo`, `branding_favicon`, `branding_default_flow_background`
+and `branding_custom_css` are patched. The existing title `Beachlab`, flow
+assignments, credentials, permissions and WebAuthn relying party are preserved.
+The script identifies the brand matched by `auth.beachlab.org`, accepts its
+explicit domain or the established `authentik-default` fallback, and requires
+the installed version to be `2026.8.2` and authentication flow to be
+`beachlab-passkey`. Inspection on 2026-10-08 found the default brand, and the
+flow's own `background` was empty, so it inherits the brand background.
+
+Keep the source package's relative paths when installing: place `branding.py`
+and its sibling `branding/` directory under `/opt/authentik/`. Running the
+script requires root to read the existing provisioning token from `.env`.
+Neither the token nor signed file URLs are logged.
+
+```bash
+sudo python3 /opt/authentik/branding.py --dry-run
+sudo python3 /opt/authentik/branding.py --apply
+```
+
+The default action is also a read-only plan. Applying first creates a private
+JSON backup in `/opt/authentik/branding-backups/` (directory 0700, file 0600),
+then uploads three immutable media files through Authentik's native Files API.
+It verifies the uploaded bytes, rechecks that the brand has not changed since
+the plan, patches the four appearance fields and reads them back. All other
+brand fields must remain identical. Reapplying the same package makes no
+changes. The media folder includes a content digest, so later designs do not
+overwrite the previous assets.
+
+The [file picker](https://version-2026-8.goauthentik.io/customize/file-picker/)
+uses relative media paths and serves signed URLs. Fonts are embedded in the
+brand CSS to avoid cross-origin requests and expired media URLs. No Nginx
+change or container restart is required. The CSS uses flow component
+selectors and the public `main`, `branding`, `footer`, `locale-select` and
+status parts; review them when upgrading Authentik. The 2026.8.2 implementation
+injects brand CSS into each component's shadow root in
+[web/src/elements/Base.ts](https://github.com/goauthentik/authentik/blob/version/2026.8.2/web/src/elements/Base.ts)
+and into the document in
+[base/skeleton.html](https://github.com/goauthentik/authentik/blob/version/2026.8.2/authentik/core/templates/base/skeleton.html).
+The API's Django REST Framework `CharField` trims surrounding whitespace;
+the script sends stripped CSS and normalizes backup CSS before rollback.
+Authentik's
+[global reset](https://github.com/goauthentik/authentik/blob/version/2026.8.2/web/src/styles/global/reset/globals.css)
+enables the flow background on `body::before` only at widths of at least
+`35rem` and heights of at least `17.5rem`. Beach Lab CSS applies the same
+resolved brand image at every size, retaining the water on narrow screens.
+The existing profile-switch link is dark and underlined, with a visible focus
+outline; its label and behavior remain Authentik's.
+
+After applying, open a fresh session at
+[the passkey flow](https://auth.beachlab.org/if/flow/beachlab-passkey/).
+Check desktop and narrow screens, light and dark browser themes, readable
+status/error messages, the language selector and keyboard focus on retry.
+Use native Safari for passkey checks. Do not open passkey flows in agents'
+internal browsers; this is the user's explicit browser preference. Safari
+Responsive Design can check the layout at 390 x 844 without changing the flow.
+Confirm the original title `Accede con tu passkey` and the same passkey
+challenge. The native Touch ID/Face ID dialog belongs to the browser and
+operating system; the branding covers Authentik's page.
+
+To restore the previous appearance, use the exact backup path printed during
+application:
+
+```bash
+sudo python3 /opt/authentik/branding.py --rollback /opt/authentik/branding-backups/<backup>.json
+```
+
+Rollback requires the current appearance to match that backup's applied values,
+so it refuses to overwrite a later design. It restores only the four appearance
+fields, verifies the readback and preserves all current non-branding fields.
+Uploaded media is retained for recovery. Authentik recovery sessions also
+disable custom CSS, as implemented by
+[CurrentBrandSerializer](https://github.com/goauthentik/authentik/blob/version/2026.8.2/authentik/brands/api.py).
