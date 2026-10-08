@@ -14,6 +14,18 @@ My name is Francisco, in french it means "free person" . Some people in life wan
 
 **Server:** Intel NUC 11, 16 GB RAM, 1 TB NVMe. Ubuntu Server. Connected via 1 Gbps symmetric FTTH (dynamic IP). The Razer Core X eGPU is used as a **job session**, not always-on: long continuous attach (including idle) has hard-hung the host. Power it for Whisper/TTS/ComfyUI work, then power it off and reboot; see [GPU services / eGPU sessions](doc/gpu-services.md#egpu-session-model-required-for-host-stability) and [GPU setup](doc/gpu.md).
 
+**NUC Tailscale (verified 2026-10-08):** `thebeachlab` joined the GitHub tailnet
+`thebeachlab.github`, replacing its previous client login to Headscale at
+`https://hs.beachlab.org`. Its control server is now
+`https://controlplane.tailscale.com`, MagicDNS name
+`thebeachlab.tail520737.ts.net`, and IPv4 address `100.91.63.61`.
+`tailscaled` is enabled and active; the existing `192.168.1.0/24` route
+advertisement was retained. LAN route approval and forwarding were not tested.
+Source: live NUC `tailscale status --json`, `tailscale debug prefs`,
+`systemctl is-enabled tailscaled`, and `systemctl is-active tailscaled`;
+Mac `tailscale ping thebeachlab`
+and successful OpenSSH access to `100.91.63.61:622` with the existing host key.
+
 **RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
 
 **Previous servers (non-operational):**
