@@ -13,16 +13,20 @@ Open [auth.beachlab.org](https://auth.beachlab.org/) to sign in.
 | ComfyUI | https://comfyui.beachlab.org/ |
 | Barrakuda Designer | https://designer.daswerklab.de/ |
 | Administration | https://admin.beachlab.org/ |
+| Msgvault (Fran only) | https://msgvault.beachlab.org/ |
 
 Transmission keeps its own web and RPC login so Remote GUI can connect over
 HTTPS. The public websites keep their existing access.
 
 ## Access
 
-The `fran` and `fran-jr` accounts have personal bindings in OR mode. Neither
-account is an Authentik administrator. Four `forward_single` providers cover
-the four hosts. The six Beachlab routes share a provider; the administration
-panel has its own provider and permission.
+The shared applications use personal bindings for `fran` and `fran-jr` in OR
+mode. Neither account is an Authentik administrator. Five `forward_single` providers cover
+the five hosts. The six Beachlab routes share a provider; the administration
+panel has its own provider and permission. Msgvault has a separate provider
+and grants archive access only to `fran`; see [its runbook](msgvault.md).
+Source for the 2026-10-10 addition: Authentik proxy providers, applications,
+policy bindings and embedded-outpost API readback on the NUC.
 
 The `beachlab-passkey` flow requires a resident WebAuthn credential and user
 verification, with no password fallback. Sessions last 12 hours. There is no

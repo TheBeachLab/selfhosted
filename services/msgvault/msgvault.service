@@ -1,0 +1,41 @@
+[Unit]
+Description=Msgvault communications archive
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=msgvault
+Group=msgvault
+Environment=MSGVAULT_HOME=/var/lib/msgvault
+Environment=TZ=Europe/Madrid
+WorkingDirectory=/var/lib/msgvault
+ExecStart=/usr/local/bin/msgvault serve
+StateDirectory=msgvault
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=2G
+CPUQuota=200%
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

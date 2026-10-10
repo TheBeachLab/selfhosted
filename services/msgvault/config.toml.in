@@ -1,0 +1,17 @@
+[server]
+bind_addr = "127.0.0.1"
+api_port = 8096
+api_key = "__API_KEY__"
+daemon_auto_start = false
+daemon_auto_restart = "never"
+trusted_proxies = ["127.0.0.1"]
+
+[analytics]
+engine = "auto"
+auto_build_cache = true
+
+[activity]
+timezone = "Europe/Madrid"
+
+[deletion]
+remote_enabled = false

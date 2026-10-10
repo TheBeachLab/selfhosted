@@ -57,6 +57,7 @@ and the legacy kernel's package requirements.
 
 ### Services
 
+- [Msgvault communications archive](doc/msgvault.md)
 - [Taskwarrior and Nextcloud Tasks sync](doc/taskserver.md)
 - [Transmission Daemon (NordVPN)](doc/transmission.md)
 - [Mumble voice server](doc/mumble.md)
