@@ -1,0 +1,40 @@
+[Unit]
+Description=Msgvault read-only MCP endpoint
+Requires=msgvault.service
+After=msgvault.service
+PartOf=msgvault.service
+
+[Service]
+Type=simple
+User=msgvault
+Group=msgvault
+Environment=MSGVAULT_HOME=/var/lib/msgvault
+Environment=TZ=Europe/Madrid
+WorkingDirectory=/var/lib/msgvault
+ExecStart=/usr/local/bin/msgvault --config /var/lib/msgvault/mcp.toml --no-log-file mcp --http 127.0.0.1:8097
+UMask=0077
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/msgvault
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=512M
+CPUQuota=100%
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

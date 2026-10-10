@@ -1,0 +1,11 @@
+# The client-facing MCP key is separate from the daemon's owner API key.
+# https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/chat.md#streamablehttp-transport
+[server]
+api_key = "__MCP_KEY__"
+daemon_auto_start = false
+daemon_auto_restart = "never"
+
+[remote]
+url = "http://127.0.0.1:8096"
+api_key = "__DAEMON_KEY__"
+allow_insecure = true

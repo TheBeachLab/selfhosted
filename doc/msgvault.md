@@ -25,14 +25,18 @@ authenticated `/api/v1/stats`.
 /opt/msgvault/deployment/
 /opt/msgvault/backups/
 /var/lib/msgvault/config.toml
+/var/lib/msgvault/mcp.toml
 /var/lib/msgvault/msgvault.db
 /var/lib/msgvault/attachments/
 /var/lib/msgvault/analytics/
 /etc/systemd/system/msgvault.service
+/etc/systemd/system/msgvault-mcp.service
 /etc/nginx/sites-available/msgvault.beachlab.org
 /etc/nginx/snippets/msgvault-api-key.conf
 /etc/letsencrypt/live/msgvault.beachlab.org/
 /etc/letsencrypt/renewal-hooks/deploy/50-msgvault-nginx
+/usr/local/bin/msgvault-mcp-client
+/opt/msgvault/mcp-venv/
 ```
 
 The service runs as `msgvault`, with a private data directory (0700) and
@@ -51,6 +55,81 @@ API-key authentication skips msgvault's browser-session CSRF checks, as shown in
 The Nginx configuration therefore rejects mutations with a foreign Origin or
 cross-origin Fetch Metadata before adding the key. It replaces forwarded host
 and scheme headers and clears client Authorization and Forwarded headers.
+
+## API and MCP
+
+The REST API is active on `127.0.0.1:8096`. Its OpenAPI document is at
+`/openapi.json`; the installed 0.21.0 daemon reports API schema **3.0.0**.
+`GET /api/v1/settings` reads configuration and `PATCH /api/v1/settings` changes
+editable settings. The public HTTPS routes still require the Authentik session,
+including requests with an API key. Local scripts use the daemon's owner key
+over loopback or SSH. See the
+[0.21.0 API reference](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/api-server.md).
+
+`msgvault-mcp.service` exposes a separate, private MCP endpoint at
+`http://127.0.0.1:8097/mcp`. It runs without `--http-allow-writes`, so deletion
+staging, attachment export, Saved View changes and profile writes are absent.
+The inbound MCP key differs from the owner REST key. Its private `mcp.toml`
+uses `[remote]` to authenticate to the existing daemon; the MCP key itself
+cannot authenticate to the owner REST API (verified 401).
+Source: [0.21.0 MCP transport and write controls](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/chat.md).
+
+The stdio bridge reads its credential on the NUC. Neither client configuration
+contains a key:
+
+| Client | Registration | Connection |
+| --- | --- | --- |
+| Mac Codex | `~/.codex/config.toml`, server `msgvault` | SSH `pink-sudo`, then `sudo -n -u msgvault /usr/local/bin/msgvault-mcp-client` |
+| Watson | `/home/pink/.openclaw/openclaw.json`, `mcp.servers.msgvault` | Same local stdio client, with `codex.agents = ["main"]` |
+
+The OpenClaw agent scope applies to native Codex projection; it is not a policy
+for other runtime adapters. Mckenzie's existing `group:plugins` denial was
+preserved; configured MCP tools are owned by the `bundle-mcp` plugin
+([tool policy](https://docs.openclaw.ai/gateway/config-tools/tool-policy)).
+Existing model, channel and other agent settings were preserved. Templates are
+[codex-mcp.toml](../services/msgvault/codex-mcp.toml) and
+[openclaw-mcp.json](../services/msgvault/openclaw-mcp.json).
+Sources: [Codex MCP configuration](https://developers.openai.com/codex/mcp/) and
+[OpenClaw registry and agent scope](https://docs.openclaw.ai/cli/mcp/registry).
+
+The bridge uses `mcp-proxy` **0.13.0** and MCP Python SDK **1.30.0** in its
+private virtual environment. All resolved versions are pinned in
+[mcp-requirements.txt](../services/msgvault/mcp-requirements.txt).
+[install-mcp.py](../services/msgvault/install-mcp.py) installs the endpoint and
+bridge on an existing Msgvault host; it refuses existing MCP installation files.
+
+OpenClaw 2026.9.9 initially rejected the entire tool list because `query_sql`
+declares `oneOf` two object output schemas without an explicit root `type`.
+[mcp-proxy-compat.py](../services/msgvault/mcp-proxy-compat.py) adds the redundant
+`type: object` only for that schema, preserving both branches and all results.
+The adapter leaves installed Msgvault/OpenClaw packages unchanged. The original
+diagnostic and successful probe are retained privately in Watson's
+`~/.openclaw/backups/msgvault-mcp-20261010T193147Z/`. Check for later changes
+before recovery.
+
+Check the endpoint and bridge on the NUC:
+
+```bash
+sudo systemctl status msgvault-mcp
+sudo journalctl -u msgvault-mcp -n 30 --no-pager
+sudo /opt/msgvault/mcp-venv/bin/python /opt/msgvault/deployment/probe-mcp.py
+```
+
+The probe checks authentication separation, absence of write tools,
+`get_stats`, the corrected schema and a read-only `SELECT 1` through stdio.
+On 2026-10-10, the Mac's exact registered SSH command also initialized MCP,
+listed 36 tools and called `get_stats`. OpenClaw's native probe succeeded with
+38 tools (including its generated resource utilities), with no diagnostics.
+These checks exercise the MCP transports and clients, not an AI conversation.
+
+OpenClaw's saved-server mutations and live CLI probes require its gateway to
+be stopped for exclusive state ownership. Use its supported CLI with the
+managed Node runtime, then start the gateway again. Read-only `mcp status` and
+`mcp doctor` without `--probe` can run while it is active. Client configuration
+backups stay private under each client's backup directory; restore only this
+server's entry after checking later changes. Compare parsed Codex configuration
+before and after registration: this run's readback showed `node_repl.args`
+missing. It was restored from the baseline, then all prior settings matched.
 
 ## Maintain
 

@@ -1,0 +1,11 @@
+{
+  "command": "/usr/bin/sudo",
+  "args": ["-n", "-u", "msgvault", "/usr/local/bin/msgvault-mcp-client"],
+  "enabled": true,
+  "connectionTimeoutMs": 30000,
+  "requestTimeoutMs": 60000,
+  "supportsParallelToolCalls": true,
+  "codex": {
+    "agents": ["main"]
+  }
+}

@@ -1,0 +1,7 @@
+# Installed on the Mac; secrets are read only by the remote stdio bridge.
+# https://developers.openai.com/codex/mcp/
+[mcp_servers.msgvault]
+command = "/usr/bin/ssh"
+args = ["-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3", "pink-sudo", "sudo", "-n", "-u", "msgvault", "/usr/local/bin/msgvault-mcp-client"]
+startup_timeout_sec = 30
+tool_timeout_sec = 60
