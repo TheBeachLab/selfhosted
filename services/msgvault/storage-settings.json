@@ -1,0 +1,16 @@
+{
+  "updates": [
+    {"key": "analytics.builder_memory_limit", "value": {"string": "512MB"}},
+    {"key": "analytics.builder_threads", "value": {"integer": 1}},
+    {"key": "analytics.builder_temp_limit", "value": {"string": "2GB"}},
+    {"key": "analytics.min_rebuild_interval", "value": {"string": "15m0s"}},
+    {"key": "beeper.max_media_mb", "value": {"integer": 100}},
+    {"key": "slack.max_media_mb", "value": {"integer": 100}},
+    {"key": "teams.max_media_mb", "value": {"integer": 100}},
+    {"key": "discord.max_media_mb", "value": {"integer": 50}},
+    {"key": "beeper.media_max_participants", "value": {"integer": 20}},
+    {"key": "slack.media_max_participants", "value": {"integer": 20}},
+    {"key": "teams.media_max_participants", "value": {"integer": 20}},
+    {"key": "discord.media_max_participants", "value": {"integer": 20}}
+  ]
+}

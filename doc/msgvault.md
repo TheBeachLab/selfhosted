@@ -31,12 +31,18 @@ authenticated `/api/v1/stats`.
 /var/lib/msgvault/analytics/
 /etc/systemd/system/msgvault.service
 /etc/systemd/system/msgvault-mcp.service
+/etc/systemd/system/msgvault-backup.service
+/etc/systemd/system/msgvault-backup.timer
 /etc/nginx/sites-available/msgvault.beachlab.org
 /etc/nginx/snippets/msgvault-api-key.conf
 /etc/letsencrypt/live/msgvault.beachlab.org/
 /etc/letsencrypt/renewal-hooks/deploy/50-msgvault-nginx
 /usr/local/bin/msgvault-mcp-client
 /opt/msgvault/mcp-venv/
+/usr/local/sbin/msgvault-backup
+/var/lib/msgvault-backup/
+/var/lib/msgvault/backup-staging/
+/mnt/nas-downloads/backups/msgvault-restic/
 ```
 
 The service runs as `msgvault`, with a private data directory (0700) and
@@ -130,6 +136,117 @@ backups stay private under each client's backup directory; restore only this
 server's entry after checking later changes. Compare parsed Codex configuration
 before and after registration: this run's readback showed `node_repl.args`
 missing. It was restored from the baseline, then all prior settings matched.
+
+## Storage and encrypted backups
+
+[storage-settings.json](../services/msgvault/storage-settings.json) is the
+applied NUC profile. The settings API readback and authenticated `/health`
+confirmed these values after restarting the daemon; DuckDB is active and
+`pending_restart` is false.
+
+| Setting | Value |
+| --- | --- |
+| Cache builder memory / threads | 512 MB / 1 |
+| Cache builder temporary storage | 2 GB |
+| Minimum automatic cache rebuild interval | 15 minutes |
+| Beeper, Slack and Teams attachment size | 100 MiB per attachment |
+| Discord attachment size | 50 MiB per attachment |
+| Chat media participant threshold | 20 |
+
+The media limits apply to future downloads from those four chat providers.
+They do not impose a Gmail/IMAP attachment cap or remove existing files.
+The daemon's systemd limit remains 2 GiB; a DuckDB buffer limit is not a total
+process memory limit. Sources: [0.21.0 analytics settings](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#analytics)
+and [media policy](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#media-policy).
+
+`msgvault-backup.timer` runs daily at **02:30 Europe/Madrid**, with up to five
+minutes of random delay and catch-up after downtime. Its separate encrypted
+Restic repository is `/mnt/nas-downloads/backups/msgvault-restic`; the existing
+server backup's script, timer, repository and retention were left intact.
+This repository keeps **7 daily, 4 weekly and 6 monthly** snapshots. The job
+checks 5% of repository data nightly and all data on Sundays. Sources:
+[service](../services/msgvault/msgvault-backup.service),
+[timer](../services/msgvault/msgvault-backup.timer),
+[runner](../services/msgvault/backup.py), and
+[Restic 0.12.1 retention](https://restic.readthedocs.io/en/v0.12.1/060_forget.html).
+
+Each run first uses `msgvault backup create` to capture a coherent database,
+attachments, deletion audit, configuration and OAuth tokens while the daemon
+continues serving. It adds `mcp.toml`, service units and Nginx access files,
+then encrypts this temporary capture with Restic before writing it to the NAS.
+Msgvault 0.21.0's native repository has no encryption or retention; its temporary
+capture stays under the private (0700) local data directory. The explicit
+plaintext-secrets flag applies only to that local capture. The stage is removed
+after the encrypted snapshot, checks and retention succeed.
+Source: [0.21.0 capture and restore contract](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/backup.md).
+
+The capture temporarily needs space for another complete archive. The runner
+estimates that space without relying on compression and requires another
+**10 GiB free** on both disks. This is a backup preflight, not a total archive
+quota. It refuses a missing/wrong NFS mount or a changed repository identity.
+An upload failure retains the completed local capture for retry; an incomplete
+capture is preserved for operator inspection rather than deleted automatically.
+The five guard tests are in [test_msgvault_backup.py](../tests/test_msgvault_backup.py).
+
+The job reuses the existing root-only Restic password file. Its private NAS
+recovery copy was compared successfully before installation; locations and
+access are in [Backups](backups.md). No key values enter Git or command arguments.
+The repository identity, last successful run and restore receipt are private
+files under `/var/lib/msgvault-backup/`. Command failure diagnostics also stay
+there, mode 0600. Original pre-profile configuration is retained under
+`/opt/msgvault/backups/storage-<UTC timestamp>/`.
+
+First installation on this existing NUC layout:
+
+```bash
+sudo python3 services/msgvault/install-backup.py
+```
+
+The installer refuses existing backup paths and uses the settings API's current
+strong `ETag` in `If-Match` so concurrent edits are rejected. It changes only
+the profile's named settings. Contract: the installed OpenAPI `patchSettings`
+operation and [API reference](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/api-server.md).
+
+Run and inspect:
+
+```bash
+sudo systemctl start msgvault-backup.service
+systemctl list-timers msgvault-backup.timer
+systemctl show msgvault-backup.service -p Result -p ExecMainStatus
+sudo journalctl -u msgvault-backup.service -n 30 --no-pager
+```
+
+For a restore test, run in a root shell and restore into a new private directory:
+
+```bash
+umask 077
+backup_restore_dir=$(mktemp -d /var/lib/msgvault-backup/restore-XXXXXX)
+restic -r /mnt/nas-downloads/backups/msgvault-restic \
+  --password-file /root/.config/thebeachlab-backup/restic-password \
+  --cache-dir /var/lib/msgvault-backup/restic-cache \
+  restore latest --target "$backup_restore_dir/restic"
+msgvault --home /var/lib/msgvault --no-log-file backup restore \
+  --repo "$backup_restore_dir/restic/var/lib/msgvault/backup-staging/payload/archive" \
+  --target "$backup_restore_dir/archive" --jobs 1 --integrity-check
+```
+
+Review machine-specific paths in the restored `config.toml` before starting
+any daemon from it. The live archive is not overwritten by these commands.
+The separate `host-files` tree contains MCP and Nginx configuration for recovery.
+Keep test directories private and remove only the test directory after review.
+See [Restic restore](https://restic.readthedocs.io/en/v0.12.1/050_restore.html)
+and the native restore contract above.
+
+Verified on 2026-10-10: encrypted snapshot **e26ba98c**, full Restic data check,
+native repository verification, temporary restore and SQLite `integrity_check`
+all passed. Restored configuration and MCP access configuration matched the
+originals by SHA-256; a wrong repository password was rejected. Restored
+`sources`, `messages` and `attachments` each contained zero rows. This checks
+the initial empty archive, not populated message/attachment recovery. Repeat
+the restore check after the first import. Both test and capture directories
+were removed. Live proof: `/var/lib/msgvault-backup/restore-proof.json`, service
+readback, authenticated `/health`, the MCP `get_stats` call and public HTTPS
+302 into Authentik from the Mac.
 
 ## Maintain
 

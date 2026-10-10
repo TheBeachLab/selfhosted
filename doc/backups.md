@@ -148,6 +148,17 @@ sudo rm -rf /var/tmp/restic-restore-test
 The script refuses to run if `/mnt/nas-downloads` is not an NFS mount, so a
 NAS outage cannot silently fill the local root filesystem.
 
+## Msgvault archive backups
+
+Msgvault has a separate encrypted repository at
+`/mnt/nas-downloads/backups/msgvault-restic`, driven by `msgvault-backup.timer`
+at 02:30 Europe/Madrid plus up to five minutes of random delay. It captures the
+live archive coherently before the encrypted transfer and keeps 7 daily,
+4 weekly and 6 monthly snapshots. It reuses the existing private Restic password
+and recovery copy above. The general server backup remains separate.
+See [Msgvault storage and restore procedure](msgvault.md#storage-and-encrypted-backups)
+for the source files and the verified initial restore.
+
 ## Minecraft USB backups
 
 The Minecraft Java world also has a fast restore copy on a dedicated Kingston

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Msgvault backup at 02:30 Europe/Madrid
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Europe/Madrid
+RandomizedDelaySec=5m
+Persistent=true
+Unit=msgvault-backup.service
+
+[Install]
+WantedBy=timers.target

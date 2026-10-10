@@ -1,0 +1,24 @@
+[Unit]
+Description=Consistent Msgvault backup to encrypted Synology repository
+Requires=msgvault.service
+After=msgvault.service network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/nas-downloads
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/local/sbin/msgvault-backup
+TimeoutStartSec=12h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=100%
+MemoryMax=1G
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/msgvault /var/lib/msgvault-backup /mnt/nas-downloads/backups/msgvault-restic
+RestrictSUIDSGID=true
