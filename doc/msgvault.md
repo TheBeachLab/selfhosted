@@ -143,7 +143,7 @@ The provider uses the existing WebAuthn-only flow with required user
 verification, and its application has only Fran's access binding. Backend
 requests carrying Nginx's key and HTTPS headers reported `auth_mode=api_key`,
 `https=true`, no plain-HTTP warning, and zero archived messages/accounts.
-Native Safari reached the Touch ID prompt for Fran's existing passkey. The
-checks did not complete that biometric ceremony.
+Native Safari requested Touch ID for Fran's existing passkey, then loaded the
+authenticated msgvault Settings page without a second API-key login.
 Source: live Authentik API readback, NUC systemd/socket/SQLite checks, and HTTPS
 requests from the Mac.
