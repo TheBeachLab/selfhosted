@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Activate the tested native build on the existing NUC, with rollback.
+
+The daemon continues to own all database writes. An encrypted NAS backup must
+succeed before replacing the binary. Credentials are hashed, never printed.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import time
+import urllib.request
+import uuid
+
+STOCK_SHA256 = "2e00619b03f9914aaece4f6458299dc66bc9f6386856098ea9329c889d0a5a1e"
+NEW_BINARY = Path("/opt/msgvault/0.21.0-email-1/msgvault")
+LINK = Path("/usr/local/bin/msgvault")
+DROPIN = Path("/etc/systemd/system/msgvault.service.d/30-people-email-evidence.conf")
+UNITS = ["msgvault.service", "msgvault-mcp.service"]
+
+
+def command(*args):
+    return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def credentials():
+    return {
+        str(p): digest(p)
+        for p in Path("/var/lib/msgvault/tokens").glob("**/*.json")
+        if "provider" in str(p)
+    }
+
+
+def owner_key():
+    config = Path("/var/lib/msgvault/config.toml").read_text()
+    section = re.search(r"(?ms)^\[server\]\s*\n(.*?)(?=^\[|\Z)", config).group(1)
+    return re.search(r"(?m)^\s*api_key\s*=\s*[^\n]*?([0-9a-f]{64})", section).group(1)
+
+
+def health():
+    request = urllib.request.Request(
+        "http://127.0.0.1:8096/health",
+        headers={"Authorization": "Bearer " + owner_key()},
+    )
+    with urllib.request.urlopen(request, timeout=2) as response:
+        payload = json.load(response)
+    if payload.get("status") != "ok":
+        raise RuntimeError("Native health did not report ok")
+    return payload
+
+
+def wait_ready():
+    for _ in range(30):
+        try:
+            return health()
+        except (OSError, ValueError, RuntimeError):
+            time.sleep(1)
+    raise RuntimeError("Daemon did not become healthy within 30 seconds")
+
+
+def replace_link(target):
+    temporary = LINK.with_name(".msgvault-email-" + uuid.uuid4().hex)
+    try:
+        temporary.symlink_to(target)
+        os.replace(temporary, LINK)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def main():
+    if os.geteuid() != 0:
+        raise SystemExit("Run with sudo on the existing Msgvault host")
+    os.umask(0o077)
+    if not LINK.is_symlink() or not NEW_BINARY.is_file():
+        raise SystemExit("Expected existing symlink and tested native build")
+    old_target = LINK.resolve(strict=True)
+    if digest(old_target) != STOCK_SHA256:
+        raise SystemExit("Existing daemon differs from the verified stock build; preserving it")
+    command("sha256sum", "--check", str(NEW_BINARY.parent / "SHA256SUMS"))
+    version = command(str(NEW_BINARY), "version")
+    if "v0.21.0-email-1" not in version:
+        raise SystemExit("Unexpected candidate build")
+    if DROPIN.exists() or DROPIN.is_symlink():
+        raise SystemExit("Preserving existing email-evidence drop-in")
+    # The existing backup runner checks the NAS mount and encrypted repository.
+    command("systemctl", "start", "msgvault-backup.service")
+    result = command("systemctl", "show", "msgvault-backup.service", "--property=Result", "--value").strip()
+    if result != "success":
+        raise SystemExit("Encrypted NAS backup did not succeed")
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    checkpoint = Path("/var/lib/msgvault-backup") / ("email-profiles-" + stamp)
+    checkpoint.mkdir(mode=0o700)
+    receipt = {
+        "old_binary": str(old_target), "old_sha256": digest(old_target),
+        "new_binary": str(NEW_BINARY), "new_sha256": digest(NEW_BINARY),
+        "credential_hashes_before": credentials(), "nas_backup": result,
+    }
+    (checkpoint / "config-before.toml").write_bytes(Path("/var/lib/msgvault/config.toml").read_bytes())
+    (checkpoint / "activation.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    content = Path(__file__).with_name("people-email-evidence.conf").read_bytes()
+    try:
+        command("systemctl", "stop", *UNITS)
+        DROPIN.parent.mkdir(mode=0o755, exist_ok=True)
+        with DROPIN.open("xb") as output:
+            output.write(content)
+        DROPIN.chmod(0o644)
+        replace_link(NEW_BINARY)
+        command("systemctl", "daemon-reload")
+        command("systemctl", "start", *UNITS)
+        receipt["health"] = wait_ready()
+        command("systemctl", "is-active", *UNITS)
+        receipt["credential_hashes_after"] = credentials()
+        if receipt["credential_hashes_after"] != receipt["credential_hashes_before"]:
+            raise RuntimeError("Provider credential files changed unexpectedly")
+        receipt["activated"] = True
+    except BaseException:
+        command("systemctl", "stop", *UNITS)
+        replace_link(old_target)
+        if DROPIN.is_file() and DROPIN.read_bytes() == content:
+            DROPIN.unlink()
+        command("systemctl", "daemon-reload")
+        command("systemctl", "start", *UNITS)
+        wait_ready()
+        receipt["activated"] = False
+        receipt["rolled_back"] = True
+        (checkpoint / "activation.json").write_text(json.dumps(receipt, indent=2) + "\n")
+        raise
+    (checkpoint / "activation.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    print(json.dumps({"activated": True, "checkpoint": str(checkpoint), "version": "v0.21.0-email-1"}))
+
+
+if __name__ == "__main__":
+    main()

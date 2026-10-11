@@ -205,14 +205,76 @@ a local cost estimate is not an OpenAI billing cap. Sources:
 
 [people-openai.json](../services/msgvault/people-openai.json) is the policy body
 used to create the selected people provider. Its sources are conversation and
-meeting text from 2025-01-01 onward. `allow_sensitive` records the operator's
+meeting text from 2023-01-01 onward. This includes all archived correspondence
+currently linked to the eight selected profiles. `allow_sensitive` records the operator's
 choice to permit private archive text; this release uses the same flag for
 sensitive profile fields. The native exact-policy check and consent are active,
 as is the separate curated-person semantic embedding consent.
 `provider-declared` is a posture assertion, not verification of zero retention.
 Profile automation requires choosing people to track; conversation briefs
-require their own enrollment. No person was tracked or enrolled by this setup.
+require their own enrollment. Eight profiles are selected for maintenance.
 See the [0.21.0 policy boundary](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md#understand-and-correct-automatic-facts).
+
+### Automatic profiles from email
+
+The stock 0.21.0 extractor excludes Gmail and IMAP as subject-authored evidence.
+Enabling the provider alone therefore produces no email-derived profile facts.
+This restriction is implemented in
+[sender attribution](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/store/person_sweep_evidence.go)
+and the [exact-subject gate](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/peoplesweep/assembler.go).
+
+The local native build `v0.21.0-email-1` adds explicit email support through
+[people-email-evidence-v0.21.0.patch](../services/msgvault/patches/people-email-evidence-v0.21.0.patch).
+The systemd drop-in
+[people-email-evidence.conf](../services/msgvault/people-email-evidence.conf) sets
+`MSGVAULT_PEOPLE_EMAIL_EVIDENCE=1`. Only tracked, sender-bound Gmail/IMAP messages
+become seeds. The archived sender/profile binding is a declared identity, not
+cryptographic authentication of the From header. Recipient-only and group
+participation cannot assert that the person authored the text. Attachment
+authorship keeps the upstream authentication requirement.
+
+The email path removes quoted replies and common English, German, Spanish and
+French forwarding separators, retaining the sender's own signature. Extraction
+uses the native provider, typed catalog, evidence alignment, claim resolver,
+audit history and user-value protection. It accepts explicit facts and leaves
+unstated or ambiguous details empty. An organization address in a signature
+does not establish the person's residence. Briefs summarize the person's own
+messages; they cannot reconstruct owner replies or prove an old request is
+still pending. The extraction and brief programs have new fingerprints, so
+the configured provider must be checked and consented again after deployment.
+
+Build on Linux x86_64 with
+[build-email-profiles.sh](../services/msgvault/build-email-profiles.sh), passing
+a new output directory. It verifies the pinned upstream, Go and Bun archives,
+runs formatting, vet and the native evidence, sweep, brief and resolver tests,
+and compiles the embedded browser UI. Temporary build dependencies are removed
+on exit. It does not modify the live installation.
+
+Deploy with [activate-email-profiles.py](../services/msgvault/activate-email-profiles.py)
+beside the drop-in. It requires the verified stock binary, validates the built
+checksums, completes the existing encrypted NAS backup, records a private
+checkpoint, switches the binary symlink and starts both services. Failed health
+or credential checks restore the original binary and remove only its own
+drop-in. The original release remains at `/opt/msgvault/0.21.0/msgvault`.
+
+After activation, use the native CLI wrapper described under Maintain:
+
+```bash
+msgvault_cli person provider set openai --source-since 2023-01-01 --yes --json
+msgvault_cli person provider reverify openai --yes --json
+sudo systemctl restart msgvault.service msgvault-mcp.service
+msgvault_cli person brief enroll PERSON_ID --track --json
+msgvault_cli person sweep run --backstop --limit 8 --json
+msgvault_cli person sweep status --json
+```
+
+Enroll each selected profile separately. The daily 02:15 Europe/Madrid sweep
+maintains tracked facts and enrolled briefs with the existing request/token
+budgets. A run marked successful can still have no facts: check native request
+counts, evidence, claim decisions and the saved profile. A contact present only
+as a recipient has no self-authored evidence and retains its existing fields.
+Upstream upgrades require reviewing and rebasing the patch; a stock replacement
+does not inherit this email support from the drop-in alone.
 
 MCP discovers the daemon's vector capabilities at startup; its separate
 client-facing configuration does not need a copy of the vector settings.
