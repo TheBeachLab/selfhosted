@@ -139,28 +139,39 @@ missing. It was restored from the baseline, then all prior settings matched.
 
 ## AI providers
 
-On 2026-10-11, the OpenAI connection was **staged but not activated**. Message
-vectors, semantic people search and people inference remain disabled. The
-daemon and MCP service were restarted successfully, `/health` returned `ok`,
-and both settings endpoints reported no pending restart. The archive still has
-no source accounts or messages, so archive search and profile maintenance have
-not been exercised.
+On 2026-10-11, the OpenAI credentials were **restricted and installed, but AI
+is not activated**. Message vectors, semantic people search and people
+inference remain disabled. Both systemd services are active, `/health` returns
+`ok`, and both settings endpoints report no pending restart. HTTP and stdio MCP
+probes each listed 36 read-only tools and called `get_stats` successfully after
+the credential replacement. The archive has no source accounts or messages,
+so archive search and profile maintenance have not been exercised.
 
-The OpenAI service account is `msgvault` in `Default project`. Its dedicated key
-expires on **2026-11-10**. The approved Mac recovery copy is
-`/Users/Papi/.config/msgvault/openai.env`, mode 0600 inside a 0700 directory.
-The daemon holds the same key in two native, owner-only stores:
+The personal OpenAI key is `msgvault-restricted`, owned by Francisco Sanchez
+in `Default project`, with **Restricted** permissions and expiration on
+**2026-11-10**. Its creation form and the saved key table were read back. Only
+model listing, chat completions and embeddings were allowed. With that exact
+key, `GET /v1/models` returned HTTP 200 and listed both configured models;
+`GET /v1/files` returned HTTP 401 with an explicit missing `api.files.read`
+scope. This denial is a permission boundary, not an invalid-key diagnosis.
+
+The approved Mac recovery copy is `/Users/Papi/.config/msgvault/openai.env`,
+mode 0600 inside a 0700 directory. The daemon holds the same key in two native,
+owner-only stores:
 
 | Feature | Prepared configuration | Credential file on the NUC |
 | --- | --- | --- |
 | Message and people embeddings | `text-embedding-3-small`, 1536 dimensions, `https://api.openai.com/v1` | `/var/lib/msgvault/tokens/provider-credentials.json` |
 | People inference | Profile `openai`, model `gpt-6-luna`, `openai_chat` | `/var/lib/msgvault/tokens/people-providers/openai.json` |
 
-Both NUC credential files were checked as mode 0600, owned by `msgvault`, and
-compared with the approved local copy without displaying the secret. Keys are
-outside `config.toml`, Git and command arguments. Message credentials are bound
-to the configured endpoint origin; the people profile uses the native OpenAI
-preset. Sources: [0.21.0 stored provider credentials](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#stored-provider-credentials)
+Both NUC files were compared with the approved local copy without displaying
+the secret and checked as mode 0600, owned by `msgvault`. The former service
+account key was replaced in both live stores; its private Mac recovery copy
+is `/Users/Papi/.config/msgvault/openai-service-account-20261011.env`.
+The old cloud key has not been revoked. Keys are outside `config.toml`, Git
+and command arguments. Embedding credentials are bound to the configured
+endpoint origin; the people profile uses the native OpenAI preset. Sources:
+[0.21.0 stored provider credentials](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#stored-provider-credentials)
 and [people provider lifecycle](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md#configure-a-provider).
 
 [ai-settings.json](../services/msgvault/ai-settings.json) is the applied,
@@ -172,31 +183,35 @@ the same flag also permits sensitive profile fields. The native exact-policy
 check and consent are still absent. `provider-declared` is a posture assertion,
 not verification of zero retention. See the [0.21.0 policy boundary](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md#understand-and-correct-automatic-facts).
 
-The OpenAI project role `Msgvault AI` was saved and read back with only model
-listing, chat completions and embeddings permissions. Assigning it to the
-service account failed twice, including after reloading the organization
-context, with `Organization ... not found`. The account retained `Member`, and
-the key's read-only permission probe could still access `/v1/files` (HTTP 200).
-The cause of the assignment failure is unverified. No billed inference or
-embedding request was attempted, and the key must remain inactive in msgvault
-until its effective access is restricted.
+The remaining blocker is API credit. A fixed synthetic embedding request,
+containing no archive text, returned HTTP 429, `insufficient_quota` and
+`credit_balance_exhausted`. The organization's Billing overview independently
+showed **$0.00 API credit** and **auto-reload OFF**. The native people check
+returned HTTP 502, `provider_check_failed`; that API deliberately hides the
+provider's underlying error, so its exact cause is not established by the
+wrapper response. Do not retry a confirmed empty-credit error as a transient
+rate limit. No recurring credit purchase is configured.
 
-To finish activation after resolving the Platform role assignment:
+The service-account alternative was abandoned after assigning the saved
+`Msgvault AI` role failed twice with `Organization ... not found`. The account
+retained `Member`, and its former key could read `/v1/files`. The cause of the
+role-assignment failure remains unverified; the restricted personal key is
+the operator-approved replacement.
 
-1. Verify that the service account has only `Msgvault AI`, and that its key
-   allows model discovery but denies file access. Do not substitute a broad
-   key or an account with a different owner without an explicit choice.
-2. Run `person provider check openai --json` on the NUC. Only after the synthetic
-   check succeeds, record the already-approved exact-policy consent and select
+To finish after credit is available:
+
+1. Repeat the synthetic embedding request and require a 1536-element result.
+   Run `person provider check openai --json` on the NUC. Only after the native
+   exact-policy check succeeds, record the already-approved consent and select
    the provider with `person provider consent openai --yes` and
    `person provider use openai`.
-3. Enable message vectors and semantic people search through Settings. Set the
+2. Enable message vectors and semantic people search through Settings. Set the
    text schedule to `*/15 * * * *` and `run_after_sync = true`, then grant the
    separate semantic-person consent with
    `person provider consent --semantic-embeddings --yes`. Review inference
    budgets before the first real run. A local cost estimate is not an OpenAI
    billing cap.
-4. Restart the systemd daemon and MCP services; read back the running policies
+3. Restart the systemd daemon and MCP services; read back the running policies
    and build the initial index after a source is connected. Profile automation
    also requires choosing people to track; conversation briefs require their
    own enrollment. No person was enrolled by this setup.
@@ -204,19 +219,21 @@ To finish activation after resolving the Platform role assignment:
 The commands above use `sudo -u msgvault /usr/local/bin/msgvault --home
 /var/lib/msgvault --no-log-file` as their prefix. Use systemd for daemon
 restarts. Sources: [recommended text and people setup](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/recommended-configuration.md),
-[people check and consent](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md),
-and [OpenAI service-account least privilege](https://developers.openai.com/api/docs/guides/terraform/service-accounts).
+[people check and consent](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md).
 
-These settings were written through the daemon API with the current strong
-config ETag, the separate provider-store ETag and the people credential's
-opaque revision. Unrelated TOML settings were compared with the pre-change
-copy and preserved. That private copy is in
-`/opt/msgvault/backups/ai-20261011T010850Z/`. Native backups capture the entire
-`tokens` directory, so both stores are covered by the encrypted backup job
-described below. The backup job succeeded after staging the keys. An isolated
-restore from the latest encrypted snapshot passed the native integrity check;
-both recovered credential files matched the live files byte for byte. The
-private receipt is `/var/lib/msgvault-backup/ai-credential-restore-20261011.json`.
+Settings and credentials were written through the daemon API with the current
+strong config ETag, the separate provider-store ETag and the people
+credential's opaque revision. Unrelated TOML settings were preserved. Private
+pre-change copies are in `/opt/msgvault/backups/ai-20261011T010850Z/` and
+`/opt/msgvault/backups/ai-key-rotation-20261011T013224Z/`.
+Native backups capture the entire `tokens` directory. After replacing the
+keys, the encrypted backup service succeeded and snapshot `633d8e7f` was
+restored into an isolated private directory. The native integrity check passed,
+and both recovered credential files matched the live files byte for byte.
+The temporary restore was removed. The private receipt is
+`/var/lib/msgvault-backup/ai-restricted-credential-restore-20261011T014528Z.json`.
+The earlier receipt for the former key remains available at
+`/var/lib/msgvault-backup/ai-credential-restore-20261011.json`.
 
 ## Storage and encrypted backups
 
