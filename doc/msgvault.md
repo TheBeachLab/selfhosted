@@ -146,13 +146,15 @@ people inference are active**. Both systemd services are running; authenticated
 no pending restart, and the configured and running people-policy fingerprints
 match. The initial vector generation was created against an empty archive,
 and a synthetic MCP hybrid query completed successfully with zero results.
-A separate source sync then started, and messages are arriving. Index coverage
-will catch up through the configured 15-minute schedule; retrieval quality and
-real-person inference have not been exercised against the imported corpus.
+The subsequent iCloud import completed with 2,974 messages. The populated
+index checks are recorded under [Embedding input limits and recovery](#embedding-input-limits-and-recovery).
+Retrieval quality and real-person inference have not been evaluated against
+the imported corpus.
 
 The personal OpenAI key is `msgvault-restricted`, owned by Francisco Sanchez
 in `Default project`, with **Restricted** permissions and expiration on
-**2026-11-10**. Its creation form and saved key table were read back. Only model
+**2027-01-01** (confirmed by the OpenAI Administration API on 2026-10-11).
+Its creation form and saved key table were read back. Only model
 listing, chat completions and embeddings were allowed. With that key,
 `GET /v1/models` returned HTTP 200 and listed both configured models;
 `GET /v1/files` returned HTTP 401 with explicit missing `api.files.read`
@@ -221,6 +223,59 @@ syncs and the 15-minute cron trigger embedding automatically. Use the CLI
 wrapper under [Maintain](#maintain), which sets a working directory accessible
 to the service user. Sources:
 [vector build and sync triggers](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/vector-search.md).
+
+### Embedding input limits and recovery
+
+The applied profile sets `vector.embeddings.max_input_chars = 2000`.
+This is a limit per overlapping chunk, not a cutoff for the whole message;
+long messages produce multiple embedding inputs. The document prefix remains
+empty. OpenAI limits `text-embedding-3-small` inputs to **8192 tokens**;
+characters and tokens are different units, so the previous 32768-character
+default could produce an oversized request. Sources:
+[OpenAI embedding model limits](https://developers.openai.com/api/docs/guides/embeddings#embedding-models)
+and [Msgvault chunk sizing](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/vector-search.md#matching-max_input_chars-to-your-embedders-context-window).
+
+Changing this limit changes the generation fingerprint. Save it through
+`PATCH /api/v1/settings` with the current `ETag`, restart the daemon, then use
+the [Maintain](#maintain) wrapper:
+
+```bash
+msgvault_cli embeddings build --full-rebuild --yes
+```
+
+The native rebuild creates a new generation and activates it on completion;
+the previous generation is retained. Vector and hybrid search report
+`index_stale` while the configured fingerprint differs from the serving
+generation. Full-text search remains available. Source:
+[Msgvault generation rotation](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/vector-search.md#model-rotation).
+
+Check both authenticated `GET /api/v1/stats` and
+`POST /api/v1/search/coverage` with `{"filters":[]}` after the build.
+`missing_embeddings_total = 0` alone is insufficient: the worker also stamps
+message-specific permanent HTTP 4xx failures so subsequent scheduled passes
+skip them. A populated index is complete only when the eligible and embedded
+counts agree. Sources: the installed OpenAPI `getSearchCoverage` contract and
+[Msgvault permanent-failure handling](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/vector/embed/worker.go).
+
+Verified on 2026-10-11: generation 1 had 2,922 of 2,974 messages indexed
+(98.3%). The daemon journal identified exactly 52 distinct messages rejected
+with HTTP 400 `input too long`. After reducing the chunk limit from 32768
+to 2000 and running the native full rebuild, generation 2 activated in
+162.2 seconds with **2,974 succeeded and zero failed**. Authenticated coverage
+reported **2,974 eligible / 2,974 embedded (100%, ready)**. All 52 previously
+rejected message IDs have embeddings in generation 2. Its 6,583 chunks are
+at most 2,000 characters each, and no message reached the 64-chunk ceiling
+(maximum 35). The native `truncated: 223` counter includes hard chunk boundaries
+covered by overlap; it is not a count of dropped messages. Source:
+[Msgvault chunk accounting](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/vector/embed/worker.go).
+
+The logical hash of all message bodies, subjects and source identities matched
+before and after the rebuild. The two provider credential files were unchanged,
+both services reported active, and no restart was pending. A registered Codex
+MCP vector search returned a result from generation 2. Live proof and the
+private pre-change configuration are under
+`/opt/msgvault/backups/fragmentation-20261011T112151Z/`; `receipt.json` records
+the coverage, recovered IDs, content hashes and backup snapshots.
 
 Settings were saved through the daemon API with the current strong config
 ETag; the separate provider-store ETag and people credential's opaque revision

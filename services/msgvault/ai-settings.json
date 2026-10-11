@@ -5,6 +5,7 @@
     {"key": "vector.embeddings.endpoint", "value": {"string": "https://api.openai.com/v1"}},
     {"key": "vector.embeddings.model", "value": {"string": "text-embedding-3-small"}},
     {"key": "vector.embeddings.dimension", "value": {"integer": 1536}},
+    {"key": "vector.embeddings.max_input_chars", "value": {"integer": 2000}},
     {"key": "vector.embed.schedule.cron", "value": {"string": "*/15 * * * *"}},
     {"key": "vector.embed.schedule.run_after_sync", "value": {"boolean": true}},
     {"key": "vector.people.enabled", "value": {"boolean": true}},
