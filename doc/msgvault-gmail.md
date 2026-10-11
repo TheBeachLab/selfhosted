@@ -122,6 +122,14 @@ evidence is private under the Mac directory named above.
 
 ## Backup and recovery
 
+The initial 250-message import was subsequently cleaned and filed under
+English topics on 2026-10-11, with owner approval: **80** unwanted messages
+(including all **34** TestFlight notifications) reached Gmail Trash and were
+purged from Msgvault. The remaining **170** were filed; Inbox retained **2**
+new messages and **4** items for review. Source 1 stayed at **2,655** messages.
+See [Gmail organization and recovery evidence](msgvault-gmail-organization.md)
+for the exact workflow, account guards, current topic profile and verification.
+
 Encrypted NAS snapshot **`ba054dbc`**, captured at 15:16:34 UTC on 2026-10-11,
 completed successfully and passed the runner's Restic data check. An isolated
 Restic plus native restore reproduced sources 1/2 with **2,655 / 250**
