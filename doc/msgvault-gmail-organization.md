@@ -71,6 +71,22 @@ archive/vector results, `mcp-after.json` and `watson-mcp-after.json`.
 The Mac also retains the private plan and Codex MCP proof at
 `/Users/Papi/.config/msgvault/gmail-cleanup-20261011/`.
 
+### Owner review completed at 16:42 UTC
+
+The owner confirmed that the insurance issue was resolved by the new contract,
+that the apps were registered, and that the production-testing notice was
+acknowledged. Archive IDs **3005, 3061 and 3105** were therefore archived in
+Gmail and removed from `Action Required`; their topic labels, message metadata
+and read states were preserved. Acknowledging the testing email does not
+establish production approval.
+
+The owner explicitly retained **3126**, `TBL iCoud Notes`, in `Action Required`.
+Exact-source Gmail sync completed with **3 changes, 0 added**. Codex MCP then
+returned **1** item in `Gmail / Action Required` (3126) and **3** in
+`Gmail / Inbox` (3126 plus the two new alerts, 2981 and 3230). The archive still
+contains all 170 retained Gmail messages. Provider before/after receipts are
+private at `/var/lib/msgvault-backup/gmail-pending-20261011/`.
+
 ## Filing policy
 
 [gmail-topics.json](../services/msgvault/gmail-topics.json) records the English
