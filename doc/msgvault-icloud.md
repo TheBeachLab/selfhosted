@@ -4,6 +4,11 @@ Connected on 2026-10-11 to the NUC's Msgvault 0.21.0 installation.
 The Apple Account used to generate the app password is
 `daswerklab@gmail.com`; the IMAP mailbox is `daswerklab@icloud.com`.
 
+The subsequent [reviewed cleanup and English topic filing](msgvault-mail-organization.md)
+records the 325-message purge and separates Beach Lab LTD from German
+administration and finance. The initial import figures below are the
+pre-cleanup verification.
+
 | Setting | Applied value |
 | --- | --- |
 | IMAP server | `imap.mail.me.com:993`, implicit TLS |

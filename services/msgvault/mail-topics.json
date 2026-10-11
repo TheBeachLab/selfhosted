@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "source_id": 1,
+  "organize_existing_only": true,
+  "topics": [
+    {
+      "name": "Beach Lab LTD/Administration",
+      "description": "UK company filings, registered office and company administration."
+    },
+    {
+      "name": "Beach Lab LTD/Apps & Development",
+      "description": "App and developer correspondence that explicitly identifies Beach Lab LTD."
+    },
+    {
+      "name": "Beach Lab LTD/Finance",
+      "description": "Banking and financial correspondence explicitly attributed to Beach Lab LTD."
+    },
+    {
+      "name": "Employment",
+      "description": "Applications, recruiters and professional network correspondence."
+    },
+    {
+      "name": "Fab Academy, MIT & Panopticom",
+      "description": "Education, Fab network, MIT and Panopticom correspondence."
+    },
+    {
+      "name": "Finance & Receipts",
+      "description": "Receipts, payments and finance without confirmed Beach Lab LTD or German business attribution."
+    },
+    {
+      "name": "Germany/Administration & Engineering",
+      "description": "German public administration, recognition and engineering correspondence."
+    },
+    {
+      "name": "Germany/Finance & Taxes",
+      "description": "German banks, tax platforms, accounting and business planning."
+    },
+    {
+      "name": "Health & Insurance",
+      "description": "Medical appointments, health and other insurance records."
+    },
+    {
+      "name": "Housing & Local Life",
+      "description": "Housing, rental documents and local activities."
+    },
+    {
+      "name": "Newsletters",
+      "description": "Retained mailing lists and promotional publications."
+    },
+    {
+      "name": "Personal",
+      "description": "Personal correspondence and self-addressed notes."
+    },
+    {
+      "name": "Projects/Apps & Development",
+      "description": "Software and development outside the explicitly identified UK company correspondence."
+    },
+    {
+      "name": "Projects/Cyfract & MicroBubbles",
+      "description": "Cyfract, MicroBubbles and related project records."
+    },
+    {
+      "name": "Projects/Liderflor & Fronda",
+      "description": "Liderflor, Lidexgroup, Fronda and related work."
+    },
+    {
+      "name": "Review",
+      "description": "Preserved messages requiring a clearer topic or a separate unsolicited-mail decision."
+    },
+    {
+      "name": "Services & Security",
+      "description": "Accounts, infrastructure, security and privacy requests."
+    },
+    {
+      "name": "Travel & Purchases",
+      "description": "Reservations, transport, shopping and deliveries."
+    }
+  ]
+}
