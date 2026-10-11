@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>msgvault NUC — Personal mail archive</title>
+  <style>
+    body { max-width: 48rem; margin: 3rem auto; padding: 0 1.25rem; font: 1rem/1.6 system-ui, sans-serif; color: #20242a; background: #fafafa; }
+    h1, h2 { line-height: 1.2; }
+    h2 { margin-top: 2.5rem; }
+    a { color: #145a94; }
+    nav { display: flex; flex-wrap: wrap; gap: 1rem; }
+    footer { margin-top: 3rem; color: #555; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>msgvault NUC</h1>
+    <p>A personal, self-hosted mail archive for its owner. Authorized mail accounts are copied to a private server for keyword search, semantic search and consultation through MCP clients.</p>
+    <nav aria-label="Page sections">
+      <a href="#privacy">Privacy</a>
+      <a href="#terms">Use</a>
+      <a href="/">Open the private archive</a>
+    </nav>
+
+    <section id="privacy" aria-labelledby="privacy-title">
+      <h2 id="privacy-title">Privacy</h2>
+      <p>The Gmail connection requests <code>gmail.readonly</code> and <code>gmail.modify</code>. It reads message content, headers, attachments and mailbox labels to maintain the personal archive. The modification permission enables the owner's requested mail cleanup, including moving selected messages to Gmail Trash and managing labels.</p>
+      <p>Google also includes composing and sending mail in <code>gmail.modify</code>; the archive import and semantic indexing do not use those actions. This permission does not permit immediate permanent deletion that bypasses Trash. That action requires a separate, broader Google authorization.</p>
+      <p>Mail copies and the authorization token are stored on the owner's private server. The archive is protected by passkey sign-in; MCP access uses the owner's private connection. Backups are encrypted and stored on the owner's NAS.</p>
+      <p>For the requested semantic search, message text is sent to the configured OpenAI API to generate embeddings. The vectors are stored locally and used to find relevant messages. Authorized MCP clients receive the messages or excerpts the owner requests.</p>
+      <p>Archived copies remain until the owner removes them. Deleting a message in the provider does not automatically remove its archived copy. Revoking access in <a href="https://myaccount.google.com/connections">Google Account connections</a> stops further authorized access; existing archive copies must be managed separately.</p>
+      <p>Google mail data is used for the owner's archive and search features. It is not sold, used for advertising or used by this installation to train general-purpose AI models. Use and transfer of information received from Google APIs is governed by the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+    </section>
+
+    <section id="terms" aria-labelledby="terms-title">
+      <h2 id="terms-title">Use</h2>
+      <p>This installation is for its owner's personal use. Connecting a Google account requires that account holder's consent. The owner controls connected accounts, archived copies, backups and access to the archive.</p>
+      <p>The software is <a href="https://github.com/kenn-io/msgvault">Msgvault</a>, provided under its upstream open-source license. The owner remains responsible for operating and maintaining this self-hosted installation.</p>
+      <p>The public page contains service information only. Mail contents remain in the protected archive; account credentials are kept in private files on the server.</p>
+    </section>
+    <footer>Last updated: 11 October 2026.</footer>
+  </main>
+</body>
+</html>

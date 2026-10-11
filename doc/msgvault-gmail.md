@@ -1,62 +1,145 @@
 # Gmail in Msgvault
 
-The requested Gmail mailbox is **`daswerklab@gmail.com`**. It is independent
-of the already connected German iCloud mailbox **`daswerklab@icloud.com`**;
-using the Gmail address to sign in to Apple does not connect Google mail.
+**`daswerklab@gmail.com` is connected as native Gmail source 2.** It is
+independent of German iCloud source 1, **`daswerklab@icloud.com`**. Using the
+Gmail address as an Apple sign-in identifier does not connect Google mail.
 
-## Current authorization checkpoint
+| Source | Provider | Mailbox | Schedule |
+| --- | --- | --- | --- |
+| 1 | iCloud IMAP | `daswerklab@icloud.com` | `*/15 * * * *` |
+| 2 | Gmail API | `daswerklab@gmail.com` | `*/15 * * * *` |
 
-As of 2026-10-11, the NUC's native `/api/v1/accounts` and
-`/api/v1/sources/status` still list only iCloud source 1. Gmail is not yet
-registered, imported or semantically indexed. The native `[oauth]` section
-has an empty `client_secrets` path: no Google OAuth client is configured for
-Msgvault yet.
+## Google application and permissions
 
-The Google Cloud credentials page is open in Safari's regular `DE iCloud`
-profile. Preparing it was interrupted by foreground Safari window changes;
-the user has been asked to leave that tab active. No existing Cloud project,
-Google credential or Gmail permission was changed. Resume from this point
-rather than registering an unverified account or claiming Gmail is connected.
+The dedicated Google Cloud project is **`msgvault-beachlab`**, display name
+`msgvault`, number **`38818430731`**. Its Gmail API is enabled. The consent
+application and Desktop OAuth client are named **`msgvault NUC`**, with
+`daswerklab@gmail.com` as support/developer contact. Google showed
+**In production** before the final native authorization flow was started.
+The callback is `http://localhost:8089/callback`, reached through a temporary
+loopback SSH tunnel; it is not exposed publicly.
 
-## Connection procedure
+The owner approved `gmail.readonly` and `gmail.modify` on 2026-10-11 to import,
+search and clean mail. The stored token's exact scope set matches those two
+permissions and has a refresh token. No full-mail, Calendar or Drive scope
+was granted. Google includes composing and sending in `gmail.modify`; it
+does not offer a scope limited to moving messages to Trash.
 
-Use the native Gmail API source and request **read-only Gmail access**:
+Msgvault 0.21.0's `delete-staged` defaults to **Gmail Trash**, recoverable for
+30 days. `--permanent` needs a separate `https://mail.google.com/` grant.
+No Gmail deletion batch was selected or executed during connection. The
+global `[deletion].remote_enabled` remains false; an owner-approved exact
+batch can use the native one-command `MSGVAULT_ENABLE_REMOTE_DELETE=1` gate.
+Both MCP transports retain their read-only tool exposure. The Google provider
+grant permits cleanup through the native owner workflow; it does not itself
+enable MCP write tools.
 
-1. In Google Cloud, prepare a desktop OAuth client for Msgvault with the
-   Gmail API enabled. Verify the selected project and account before changes.
-   Any credential creation, legal agreement or final permission grant must
-   follow the applicable browser-control handoff/confirmation policy.
-2. Store the downloaded client JSON outside Git with owner-only permissions.
-   Configure the NUC's `[oauth].client_secrets` to that actual private file,
-   preserving all existing settings and taking a recoverable configuration
-   copy. The service user must be able to read the file.
-3. Run the installed 0.21.0 CLI from `/var/lib/msgvault` as the `msgvault`
-   user: `msgvault --home /var/lib/msgvault --no-log-file add-account
-   daswerklab@gmail.com --readonly`. On the NUC, use a loopback SSH tunnel for
-   the browser callback at `http://localhost:8089/callback`; do not expose the
-   callback listener publicly. `--headless` only prints setup instructions.
-4. Verify that the Google profile returned by authorization is exactly
-   `daswerklab@gmail.com`, and that the stored grant has `gmail.readonly`.
-   Check the newly assigned native source ID instead of assuming it is 2.
-5. Register a 15-minute source schedule and start a native full sync of this
-   exact Gmail source. Keep it separate from source 1 and the iCloud topic
-   views. Do not change Gmail messages, labels or folders as part of import.
-6. After the first manual import, run native `embeddings build --yes` to add
-   the new messages to the existing active semantic generation. Verify the
-   Gmail source counts, eligible/embedded coverage and a source-scoped semantic
-   query through the registered MCP. Scheduled later syncs use the already
-   enabled post-sync embedding trigger.
-7. Take an encrypted NAS backup including the new source, OAuth client and
-   token, and verify native backup completion. Record actual connection and
-   index results here only after live readback.
+Sources: [Google Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes),
+[native scope definitions](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/oauth/oauth.go),
+[native deletion workflow](https://github.com/kenn-io/msgvault/blob/v0.21.0/cmd/msgvault/cmd/deletions.go),
+installed `add-account`/`delete-staged` help, and live token metadata.
 
-The existing semantic model is `text-embedding-3-small`, 1536 dimensions with
-2000-character chunks. It was verified ready for all 2,651 current iCloud
-messages, with zero missing embeddings, after the follow-up Inbox filing.
-It does not yet provide evidence of Gmail indexing.
+Google allows personal apps with fewer than 100 users without verification;
+this application remains unverified and Google shows that warning. Production
+removes the special seven-day refresh-token expiration of External/Testing
+apps, not every possible cause of token revocation. Sources:
+[personal-use exception](https://support.google.com/cloud/answer/13464323?hl=en)
+and [token expiration](https://developers.google.com/identity/protocols/oauth2#expiration).
+
+## Credentials and public disclosures
+
+Private NUC files are mode 0600, owned by `msgvault`:
+
+- `/var/lib/msgvault/tokens/google-client-msgvault-nuc.json`
+- `/var/lib/msgvault/tokens/daswerklab@gmail.com.json`
+
+`[oauth].client_secrets` points to that client file. The prior configuration
+is preserved at
+`/var/lib/msgvault-backup/gmail-connection-20261011/config.before.toml`.
+The Mac recovery client is private at
+`/Users/Papi/.config/msgvault/gmail-connection-20261011/google-client.json`.
+Never put secrets, tokens or OAuth callback codes in Git or command output.
+
+Google's disabled **Publish app** action became available after the actual
+homepage/privacy/use links were saved. The owner then confirmed publication
+and the read/modify grant. The public disclosure URLs are:
+
+- `https://msgvault.beachlab.org/about`
+- `https://msgvault.beachlab.org/about#privacy`
+- `https://msgvault.beachlab.org/about#terms`
+
+[oauth-info.html](../services/msgvault/oauth-info.html) describes the personal
+archive, the Google grant, OpenAI embeddings, private storage, encrypted NAS
+backups and the separate archive deletion lifecycle. The authorized Google
+domain is `beachlab.org`.
+
+The Nginx template exposes only the exact informational `/about` route and
+its `/about/` redirect. A public GET returned HTTP 200 with a byte-for-byte
+match to the HTML; `/`, `/api/v1/stats` and `/about/anything` still redirected
+to Authentik. The archive's existing passkey checks remain active. For
+recovery, install the HTML from this repository as root-owned mode 0644 at
+`/var/www/msgvault-info/index.html`, install the site template, validate Nginx
+and reload it. The HTML can be reproduced from Git; the encrypted archive
+backup separately preserves the native client/token/configuration. Source:
+[Google OAuth Branding requirements](https://support.google.com/cloud/answer/15549049?hl=en)
+and private public-route readback evidence.
+
+## Import and semantic verification
+
+The first full sync, native run **31**, completed on 2026-10-11 at
+15:12:14 UTC: **249 found, 249 added, zero errors/skips**, 13.39 MB downloaded
+in 2 minutes 28 seconds. This matched the provider's profile count of 249
+before import. Scheduled run **32** at 15:15 UTC imported one new message,
+bringing Gmail to **250** and demonstrating that automatic incremental sync
+works. The iCloud archive remained at **2,655** messages at this readback.
+
+The initial job `msgvault-gmail-initial-20261011.service` ran exact-source
+`sync-full --source-id 2` followed by `embeddings build --yes`; it exited
+successfully. The build added all 249 initial messages to active generation
+**3**, with zero failures. Ten texts were reported as truncated under the
+existing 2000-character input limit; their archived messages remain available
+for reading and full-text search. The later scheduled message was also
+indexed. The live API reported **2,905 messages, 2,905 embedded, zero missing**,
+and vector status **ready**.
+
+The semantic model remains `text-embedding-3-small`, 1536 dimensions,
+fingerprint `text-embedding-3-small:1536:p1-111111:c2000:e1`. The configured
+15-minute embedding schedule and post-sync trigger remain enabled.
+Sources: [Msgvault vector sync triggers](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/vector-search.md)
+and the native job, generation list and authenticated API readback.
+
+Codex's registered MCP returned three semantic results for account
+`daswerklab@gmail.com`, all with `source_id=2`. The same query through the
+exact stdio command in Watson's current `mcp.servers.msgvault` configuration
+also returned three source-2 results. That checks Watson's configured MCP
+transport, not a new message sent to the Watson chat. English iCloud topic
+views remain scoped to source 1.
+
+Native live receipts are private under
+`/var/lib/msgvault-backup/gmail-connection-20261011/`: `connected.json`,
+`complete-readback.json` and `watson-mcp-proof.json`. Browser/protected-route
+evidence is private under the Mac directory named above.
+
+## Backup and recovery
+
+Encrypted NAS snapshot **`ba054dbc`**, captured at 15:16:34 UTC on 2026-10-11,
+completed successfully and passed the runner's Restic data check. An isolated
+Restic plus native restore reproduced sources 1/2 with **2,655 / 250**
+messages and SQLite integrity **ok**. The restored Google client and Gmail
+token matched the live credentials byte-for-byte, with mode 0600. The live
+archive was not replaced. Proof: private `restore-proof.json` in the NUC
+receipt directory. Vectors are rebuilt after restoration, following the
+existing [backup procedure](msgvault.md).
+
+To reauthorize, reuse this Cloud project/client and run the native CLI as
+`msgvault`, from `/var/lib/msgvault`, with `--home /var/lib/msgvault`:
+`add-account daswerklab@gmail.com`. Its normal scope set includes read/modify;
+do not use `--readonly` against an existing write grant and expect it to narrow
+Google permissions. After account verification, restore the exact source's
+15-minute schedule, sync it and build any missing embeddings. Credential
+entry, new grants and legal acceptance must follow the applicable browser
+handoff/confirmation policy.
 
 Sources: [Msgvault 0.21.0 OAuth setup](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/guides/oauth-setup.md),
 [native source setup](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/setup.md),
-[vector sync triggers](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/vector-search.md),
-the installed CLI's `add-account`, `sync-full` and `export-token` help, and
-the authenticated native source/settings readback on 2026-10-11.
+installed CLI help and the authenticated runtime evidence above.

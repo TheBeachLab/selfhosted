@@ -20,9 +20,11 @@ the independent read-only IMAP UID inventory, and MCP `get_stats` / `query_sql`.
 
 The [subsequent English topic filing](msgvault-mail-organization.md) organizes
 the iCloud history and provides a source-specific Inbox view. The separate
-[`daswerklab@gmail.com` Gmail connection](msgvault-gmail.md) is requested but
-still awaits Google OAuth authorization; the current connected source remains
-`daswerklab@icloud.com` on Apple's IMAP server.
+[`daswerklab@gmail.com` Gmail connection](msgvault-gmail.md) is now active as
+source 2, with 250 messages imported and semantically indexed at the verified
+2026-10-11 readback. Both accounts sync every 15 minutes. The Google grant
+includes the owner's requested ability to move approved junk to Gmail Trash;
+the MCP transports retain read-only tools.
 
 ## Files
 
@@ -36,6 +38,7 @@ still awaits Google OAuth authorization; the current connected source remains
 /var/lib/msgvault/msgvault.db
 /var/lib/msgvault/attachments/
 /var/lib/msgvault/analytics/
+/var/www/msgvault-info/index.html
 /etc/systemd/system/msgvault.service
 /etc/systemd/system/msgvault-mcp.service
 /etc/systemd/system/msgvault-backup.service
