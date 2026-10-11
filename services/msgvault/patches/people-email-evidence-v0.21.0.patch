@@ -269,3 +269,61 @@
 @@ -1063 +1069 @@
 -		ProgramFingerprint: "c9f200223106e7ae9ec07d3407fecf3fcd094cf183273c187a0e75b9aebecb43",
 +		ProgramFingerprint: "aec55744d0e78a39529cb59330a0e3d9a51bf5d348529882c359c4dd4faeab0e",
+--- a/internal/personfacts/normalize.go
++++ b/internal/personfacts/normalize.go
+@@ -153,0 +154,22 @@
++	// Models commonly return an organization name as a scalar. Convert only
++	// that equivalent spelling before the same exact-field and value checks;
++	// retain the original submitted JSON in the claim's audit record.
++	var fields map[string]jsontext.Value
++	if err := decodeJSONValue(submitted, &fields); err != nil {
++		return nil, fmt.Errorf("decode employment fields: %w", err)
++	}
++	if organization, ok := fields["organization"]; ok && organization.Kind() == '"' {
++		var name string
++		if err := decodeJSONValue(organization, &name); err != nil {
++			return nil, fmt.Errorf("decode employment organization name: %w", err)
++		}
++		encoded, err := json.Marshal(map[string]string{"name": name}, json.Deterministic(true))
++		if err != nil {
++			return nil, err
++		}
++		fields["organization"] = encoded
++		submitted, err = json.Marshal(fields, json.Deterministic(true))
++		if err != nil {
++			return nil, err
++		}
++	}
+--- a/internal/personfacts/normalize_test.go
++++ b/internal/personfacts/normalize_test.go
+@@ -350,0 +351,30 @@
++
++func TestNormalizeEmploymentScalarOrganizationRetainsCanonicalIdentity(t *testing.T) {
++	target := employmentDescriptor()
++	scalar, failure, err := NormalizeClaimValue(target, json.RawMessage(`{"organization":"  Example   Ltd  ","title":"Advisor"}`))
++	require.NoError(t, err)
++	require.Nil(t, failure)
++	canonical, failure, err := NormalizeClaimValue(target, json.RawMessage(`{"organization":{"name":"Example Ltd"},"title":"Advisor"}`))
++	require.NoError(t, err)
++	require.Nil(t, failure)
++	assert.JSONEq(t, string(canonical.JSON), string(scalar.JSON))
++	assert.Equal(t, canonical.Fingerprint, scalar.Fingerprint)
++}
++
++func TestNormalizeEmploymentScalarOrganizationKeepsValidation(t *testing.T) {
++	for _, raw := range []string{
++		`{"organization":" ","title":"Advisor"}`,
++		`{"organization":"Example Ltd","unexpected":true}`,
++		`{"organization":42,"title":"Advisor"}`,
++		`{"organization":"Example Ltd","title":42}`,
++		`{"organization":"Example Ltd","organization":"Different Ltd"}`,
++	} {
++		t.Run(raw, func(t *testing.T) {
++			normalized, failure, err := NormalizeClaimValue(employmentDescriptor(), json.RawMessage(raw))
++			require.NoError(t, err)
++			assert.Nil(t, normalized)
++			require.NotNil(t, failure)
++			assert.Equal(t, ReasonMalformedValue, failure.Reason)
++		})
++	}
++}

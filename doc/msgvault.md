@@ -157,8 +157,8 @@ match. The initial vector generation was created against an empty archive,
 and a synthetic MCP hybrid query completed successfully with zero results.
 The subsequent iCloud import completed with 2,974 messages. The populated
 index checks are recorded under [Embedding input limits and recovery](#embedding-input-limits-and-recovery).
-Retrieval quality and real-person inference have not been evaluated against
-the imported corpus.
+Email profile inference is evaluated separately under Automatic profiles from
+email below.
 
 The personal OpenAI key is `msgvault-restricted`, owned by Francisco Sanchez
 in `Default project`, with **Restricted** permissions and expiration on
@@ -223,7 +223,7 @@ This restriction is implemented in
 [sender attribution](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/store/person_sweep_evidence.go)
 and the [exact-subject gate](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/peoplesweep/assembler.go).
 
-The local native build `v0.21.0-email-1` adds explicit email support through
+The local native build `v0.21.0-email-2` adds explicit email support through
 [people-email-evidence-v0.21.0.patch](../services/msgvault/patches/people-email-evidence-v0.21.0.patch).
 The systemd drop-in
 [people-email-evidence.conf](../services/msgvault/people-email-evidence.conf) sets
@@ -243,6 +243,16 @@ messages; they cannot reconstruct owner replies or prove an old request is
 still pending. The extraction and brief programs have new fingerprints, so
 the configured provider must be checked and consented again after deployment.
 
+The configured OpenAI profile uses `json_object`. OpenAI rejected the stock
+extraction schema's untyped `claims.items.value` during the live check. JSON
+object mode is supported by the
+[native driver](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/peoplesweep/openai_chat.go);
+the local parser still validates the closed output schema, typed values and
+evidence. The patch also accepts an organization name supplied as a string,
+normalizing it to the existing organization object before the same validation.
+It preserves the original model output in the claim audit. Empty names,
+wrong field types, duplicate fields and unknown fields remain rejected.
+
 Build on Linux x86_64 with
 [build-email-profiles.sh](../services/msgvault/build-email-profiles.sh), passing
 a new output directory. It verifies the pinned upstream, Go and Bun archives,
@@ -251,16 +261,18 @@ and compiles the embedded browser UI. Temporary build dependencies are removed
 on exit. It does not modify the live installation.
 
 Deploy with [activate-email-profiles.py](../services/msgvault/activate-email-profiles.py)
-beside the drop-in. It requires the verified stock binary, validates the built
+beside the drop-in. It requires the verified stock or previous local binary, validates the built
 checksums, completes the existing encrypted NAS backup, records a private
-checkpoint, switches the binary symlink and starts both services. Failed health
+checkpoint, sets only the provider's date bound and JSON object mode while the
+daemon is stopped, switches the binary symlink and starts both services. Failed health
 or credential checks restore the original binary and remove only its own
-drop-in. The original release remains at `/opt/msgvault/0.21.0/msgvault`.
+drop-in and its configuration changes. It preserves an already installed,
+matching drop-in when upgrading the local build. The original release remains
+at `/opt/msgvault/0.21.0/msgvault`.
 
 After activation, use the native CLI wrapper described under Maintain:
 
 ```bash
-msgvault_cli person provider set openai --source-since 2023-01-01 --yes --json
 msgvault_cli person provider reverify openai --yes --json
 sudo systemctl restart msgvault.service msgvault-mcp.service
 msgvault_cli person brief enroll PERSON_ID --track --json

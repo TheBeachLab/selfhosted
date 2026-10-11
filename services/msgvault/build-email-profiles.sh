@@ -47,7 +47,7 @@ go test -p 2 -tags 'fts5 sqlite_vec' -timeout 20m \
     -run 'Test(PersonSweep|LoadPersonSweep|ListPersonSweep|SearchPersonSweep|HydratePersonSweep|BuildBrief)' ./internal/store
 go test -p 2 -tags 'fts5 sqlite_vec' -timeout 20m \
     ./internal/peoplesweep ./internal/personfacts ./internal/vector/preprocess
-make build VERSION=v0.21.0-email-1 COMMIT=598ca5cc-email-optin-1
+make build VERSION=v0.21.0-email-2 COMMIT=598ca5cc-email-optin-2
 mkdir -m 0755 "$MSGVAULT_OUTPUT"
 install -m 0755 msgvault msgvault-codex-bridge "$MSGVAULT_OUTPUT/"
 sha256sum "$MSGVAULT_OUTPUT/msgvault" "$MSGVAULT_OUTPUT/msgvault-codex-bridge" \
