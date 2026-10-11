@@ -280,13 +280,30 @@ msgvault_cli person sweep run --backstop --limit 8 --json
 msgvault_cli person sweep status --json
 ```
 
-Enroll each selected profile separately. The daily 02:15 Europe/Madrid sweep
-maintains tracked facts and enrolled briefs with the existing request/token
-budgets. A run marked successful can still have no facts: check native request
+Enroll profiles with sender-authored evidence separately. Keep recipient-only
+profiles tracked without brief enrollment: this release's manual idle-brief
+path can otherwise leave a retry for a profile with nothing to summarize.
+The daily 02:15 Europe/Madrid sweep maintains tracked facts and eligible briefs
+with the existing request/token budgets. Briefs retain the configured minimum
+interval of 168 hours. A run marked successful can still have no facts: check native request
 counts, evidence, claim decisions and the saved profile. A contact present only
 as a recipient has no self-authored evidence and retains its existing fields.
 Upstream upgrades require reviewing and rebasing the patch; a stock replacement
 does not inherit this email support from the drop-in alone.
+
+Verified on 2026-10-12: eight profiles remain tracked, seven have generated
+briefs, and the native model has projected six employment records across three
+profiles with `source = extraction`. The recipient-only profile stays tracked
+without a brief. The incremental run completed with zero provider requests;
+the queue has no dirty, leased or retrying work. The original 2,827 message
+content hashes matched after inference. Later imports continued normally,
+and live semantic coverage reached 2,831/2,831 messages, generation 3, ready.
+Private primary evidence is retained under
+`/var/lib/msgvault-backup/email-profiles-first-run-20261011T220915Z/` and
+`/var/lib/msgvault-backup/email-profiles-reprocess-20261011T222857Z/`;
+activation checkpoints record the binary and credential hashes. The four
+native test packages and embedded UI asset validation passed on the deployed
+build. Registered MCP reads confirmed the saved briefs and employment records.
 
 MCP discovers the daemon's vector capabilities at startup; its separate
 client-facing configuration does not need a copy of the vector settings.
