@@ -88,6 +88,52 @@ The official Linux guide recommends holding the package to avoid accidental
 upgrades. Check the target release notes and Java requirements before removing
 that hold.
 
+## File hashes for backup verification
+
+The NUC's system Python is 3.10.12 (read from `python3` on 2026-10-11).
+`hashlib.file_digest` was added in Python 3.11; see the official
+[Python file-hashing reference](https://docs.python.org/3/library/hashlib.html#hashlib.file_digest).
+Use the checked-in [SHA-256 helper](../services/openhab/selfhosted_hash.py)
+for backup verification on this host. It reads binary files in 1 MiB chunks
+using `hashlib.sha256` and supports Python 3.10.
+
+Install the module into the server interpreter's local module directory from
+a checkout containing this source:
+
+```bash
+sudo install -m 0644 services/openhab/selfhosted_hash.py "$(python3 -c 'import sysconfig; print(sysconfig.get_path("purelib"))')/selfhosted_hash.py"
+```
+
+On the NUC this directory is `/usr/local/lib/python3.10/dist-packages`.
+Installation was verified on 2026-10-11: the three checked-in tests passed
+under Python 3.10.12, and the function, its CLI and system `sha256sum` agreed
+on an existing 160 MB openHAB backup. The HomeKit state/configuration files
+retained their SHA-256 values and `openhab.service` retained its active PID.
+Sources: `tests/test_selfhosted_hash.py`, the installed module, the native
+checksum command and `systemctl show openhab.service`; the detailed private
+verification manifest is stored alongside the backup.
+
+Verify a backup from the terminal, replacing `backup.zip` with its filename:
+
+```bash
+sudo python3 -m selfhosted_hash /var/lib/openhab/backups/backup.zip
+```
+
+The command prints the SHA-256 and filename. An unreadable or missing file
+returns a nonzero exit code without printing a checksum. Python scripts can
+reuse the same function:
+
+```python
+from selfhosted_hash import file_sha256
+
+checksum = file_sha256("/path/to/backup.zip")
+```
+
+Compare checksums on the server and on the copied archive. Separately check
+the ZIP's integrity and required configuration files: a checksum alone does
+not establish that a backup contains the required data. Keep the resulting
+private backup manifests outside this public repository.
+
 ## Operational checks
 
 ```bash
