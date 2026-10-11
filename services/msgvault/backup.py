@@ -6,22 +6,26 @@ Restic contracts: restic.readthedocs.io/en/v0.12.1/{040_backup,060_forget}.html.
 """
 import datetime
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
-import pwd
+import re
 import shutil
 import socket
+import stat
 import subprocess
 from zoneinfo import ZoneInfo
 
 HOME_DIR = Path('/var/lib/msgvault')
 STATE = Path('/var/lib/msgvault-backup')
-STAGE = HOME_DIR / 'backup-staging/payload'
 NAS = Path('/mnt/nas-downloads')
+STAGE = NAS / 'backups/msgvault-staging/payload'
+LEGACY_STAGE = HOME_DIR / 'backup-staging/payload'
 REPOSITORY = NAS / 'backups/msgvault-restic'
 PASSWORD = Path('/root/.config/thebeachlab-backup/restic-password')
 RESERVE = 10 * 1024**3
+GC_NAME = re.compile(r'msgvault\.db\.gc-backup-[0-9]{8}-[0-9]{6}\Z')
 
 
 def save_json(path, value):
@@ -84,8 +88,86 @@ def size_of(path):
 
 
 def guard_capacity(estimate, local_free, nas_free):
-    if local_free < estimate + RESERVE or nas_free < estimate + RESERVE:
-        raise RuntimeError('Not enough space for a complete capture plus a 10 GiB reserve.')
+    # Both the temporary capture and its encrypted backup now live on the NAS.
+    if local_free < RESERVE or nas_free < 2 * estimate + RESERVE:
+        raise RuntimeError('Not enough space for NAS capture and backup plus a 10 GiB reserve.')
+
+
+def file_hash(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024**2), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def gc_identity(path):
+    guard_paths((path,))
+    info = path.stat()
+    if not stat.S_ISREG(info.st_mode):
+        raise RuntimeError('GC recovery copy is not a regular file: ' + str(path))
+    return [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns]
+
+
+def capture_gc_backups():
+    # v0.21.0 cmd/msgvault/cmd/gc.go fixes this filename beside the live DB;
+    # internal/store/backup_test.go documents atomic publication of the backup.
+    # These immutable recovery copies are distinct from the current native capture.
+    entries = []
+    for source in sorted(HOME_DIR.glob('msgvault.db.gc-backup-*')):
+        if not GC_NAME.fullmatch(source.name):
+            continue
+        identity = gc_identity(source)
+        directory = STAGE / 'gc-backups'
+        directory.mkdir(mode=0o700, exist_ok=True)
+        target = directory / source.name
+        shutil.copyfile(source, target)
+        target.chmod(0o600)
+        digest = file_hash(target)
+        if gc_identity(source) != identity or file_hash(source) != digest:
+            raise RuntimeError('GC recovery copy changed during capture; preserving it: ' + str(source))
+        entries.append({'name': source.name, 'sha256': digest,
+                        'size_bytes': identity[2], 'source_identity': identity})
+    return entries
+
+
+def verify_gc_restore(snapshot, entry, env):
+    # Stream every recovered byte; do not trust only a snapshot ID or sampled check.
+    target = STAGE / 'gc-backups' / entry['name']
+    digest = hashlib.sha256()
+    size = 0
+    with subprocess.Popen(['restic', 'dump', snapshot, str(target)], env=env,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+        for chunk in iter(lambda: process.stdout.read(1024**2), b''):
+            digest.update(chunk)
+            size += len(chunk)
+        diagnostic = process.stderr.read()
+        code = process.wait()
+    if code:
+        (STATE / 'last-command-error.txt').write_bytes(diagnostic)
+        raise RuntimeError('Restic recovery failed; preserving GC copy: ' + entry['name'])
+    if size != entry['size_bytes'] or digest.hexdigest() != entry['sha256']:
+        raise RuntimeError('Recovered GC copy differs; preserving local original: ' + entry['name'])
+
+
+def cleanup_gc_backups(pending, env):
+    results = []
+    for entry in pending.get('gc_backups', []):
+        if not GC_NAME.fullmatch(entry['name']):
+            raise RuntimeError('Invalid GC recovery filename; refusing cleanup.')
+        source = HOME_DIR / entry['name']
+        verify_gc_restore(pending['gc_restic_snapshot'], entry, env)
+        if source.exists() or source.is_symlink():
+            if (gc_identity(source) != entry['source_identity']
+                    or file_hash(source) != entry['sha256']
+                    or gc_identity(source) != entry['source_identity']):
+                raise RuntimeError('Local GC copy changed; preserving it: ' + str(source))
+            source.unlink()
+            outcome = 'removed'
+        else:
+            outcome = 'already_absent'
+        results.append(dict(entry, restore_sha256_matches=True, cleanup=outcome))
+    return results
 
 
 def msgvault(*args):
@@ -97,12 +179,15 @@ def capture():
     # Full temporary capture: compression is not assumed when checking capacity.
     source_bytes = sum(size_of(HOME_DIR / name) for name in
                        ('msgvault.db', 'msgvault.db-wal', 'attachments', 'tokens', 'deletions', 'config.toml', 'mcp.toml'))
+    source_bytes += sum(size_of(path) for path in HOME_DIR.glob('msgvault.db.gc-backup-*')
+                        if GC_NAME.fullmatch(path.name))
     estimate = int(source_bytes * 1.05) + 256 * 1024**2
     guard_capacity(estimate, shutil.disk_usage(HOME_DIR).free, shutil.disk_usage(NAS).free)
     STAGE.mkdir(mode=0o700)
-    user = pwd.getpwnam('msgvault')
-    os.chown(STAGE, user.pw_uid, user.pw_gid)
-    pending = {'phase': 'capturing', 'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    # NAS staging uses the export's ownership; the installer verifies actual
+    # service-account access instead of assuming local chown semantics.
+    pending = {'phase': 'capturing', 'stage': str(STAGE),
+               'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat()}
     save_json(STATE / 'pending.json', pending)
     archive = str(STAGE / 'archive')
     msgvault('backup', 'init', '--repo', archive)
@@ -119,6 +204,7 @@ def capture():
         destination.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         shutil.copyfile(name, destination)
         destination.chmod(0o600)
+    pending['gc_backups'] = capture_gc_backups()
     save_json(STAGE / 'capture.json', dict(pending, version=msgvault('version').strip(),
                                           estimated_capture_bytes=estimate))
     pending['phase'] = 'captured'
@@ -126,13 +212,17 @@ def capture():
     return pending
 
 
-def cleanup_uploaded(pending):
+def cleanup_uploaded(pending, env=None):
     if pending.get('phase') != 'uploaded':
         raise RuntimeError('Refusing to remove a capture without a verified encrypted snapshot.')
+    check_mount()
+    check_repository(env)
+    pending['gc_backup_cleanup'] = cleanup_gc_backups(pending, env)
     if STAGE.exists():
-        if STAGE.is_symlink() or STAGE.parent.is_symlink():
-            raise RuntimeError('Unexpected staging symlink; preserving it.')
+        guard_paths((STAGE.parent, STAGE))
         shutil.rmtree(STAGE)
+    pending['temporary_cleanup_completed_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    save_json(STATE / 'last-success.json', pending)
     (STATE / 'pending.json').unlink()
 
 
@@ -146,10 +236,14 @@ def main():
         check_mount()
         env = environment()
         check_repository(env)
+        if LEGACY_STAGE.exists() or LEGACY_STAGE.is_symlink():
+            raise RuntimeError('Legacy local staging data preserved; migrate it before continuing.')
         marker = STATE / 'pending.json'
         pending = json.loads(marker.read_text()) if marker.exists() else None
+        if pending and pending.get('stage') != str(STAGE):
+            raise RuntimeError('Pending capture uses another staging path; preserving it.')
         if pending and pending.get('phase') == 'uploaded':
-            cleanup_uploaded(pending)
+            cleanup_uploaded(pending, env)
             pending = None
         if pending:
             if pending.get('phase') != 'captured' or not STAGE.is_dir():
@@ -160,6 +254,15 @@ def main():
             if STAGE.exists():
                 raise RuntimeError('Unowned staging data preserved; refusing to overwrite it.')
             pending = capture()
+        if pending.get('gc_backups') and not pending.get('gc_restic_snapshot'):
+            # Keep recovery copies outside daily-current-state retention: a later
+            # backup on the same day must not remove the only pre-GC database.
+            result = run(['restic', 'backup', str(STAGE / 'gc-backups'),
+                          '--tag', 'msgvault-gc-recovery', '--json'], env)
+            summaries = [json.loads(line) for line in result.splitlines() if line.startswith('{')]
+            pending['gc_restic_snapshot'] = next(item['snapshot_id'] for item in summaries
+                                                if item.get('message_type') == 'summary')
+            save_json(marker, pending)
         result = run(['restic', 'backup', str(STAGE), '--tag', 'msgvault', '--json'], env)
         summaries = [json.loads(line) for line in result.splitlines() if line.startswith('{')]
         snapshot = next(item['snapshot_id'] for item in summaries if item.get('message_type') == 'summary')
@@ -175,7 +278,7 @@ def main():
                        completed_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
         save_json(STATE / 'last-success.json', pending)
         save_json(marker, pending)
-        cleanup_uploaded(pending)
+        cleanup_uploaded(pending, env)
         print('Verified encrypted Msgvault snapshot ' + snapshot + '; temporary capture removed.')
 
 

@@ -20,5 +20,5 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/var/lib/msgvault /var/lib/msgvault-backup /mnt/nas-downloads/backups/msgvault-restic
+ReadWritePaths=/var/lib/msgvault /var/lib/msgvault-backup /mnt/nas-downloads/backups/msgvault-restic /mnt/nas-downloads/backups/msgvault-staging
 RestrictSUIDSGID=true

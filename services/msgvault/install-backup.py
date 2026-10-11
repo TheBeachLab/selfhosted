@@ -6,7 +6,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import pwd
 import re
 import shutil
 import stat
@@ -65,8 +64,8 @@ def main():
     backup.STATE.mkdir(mode=0o700)
     (backup.STATE / 'restic-cache').mkdir(mode=0o700)
     backup.STAGE.parent.mkdir(mode=0o700)
-    user = pwd.getpwnam('msgvault')
-    os.chown(backup.STAGE.parent, user.pw_uid, user.pw_gid)
+    subprocess.run(['/usr/sbin/runuser', '-u', 'msgvault', '--',
+                    'test', '-w', str(backup.STAGE.parent)], check=True)
     backup.REPOSITORY.mkdir(mode=0o700)
     env = backup.environment()
     backup.run(['restic', 'init'], env)

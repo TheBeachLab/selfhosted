@@ -22,6 +22,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true
 ProtectSystem=strict
+ReadWritePaths=-/mnt/nas-downloads/backups/msgvault-staging
 ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true

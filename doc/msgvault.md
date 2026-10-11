@@ -342,8 +342,8 @@ and [media policy](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configu
 minutes of random delay and catch-up after downtime. Its separate encrypted
 Restic repository is `/mnt/nas-downloads/backups/msgvault-restic`; the existing
 server backup's script, timer, repository and retention were left intact.
-This repository keeps **7 daily, 4 weekly and 6 monthly** snapshots. The job
-checks 5% of repository data nightly and all data on Sundays. Sources:
+Daily snapshots tagged `msgvault` keep **7 daily, 4 weekly and 6 monthly** copies.
+The job checks 5% of repository data nightly and all data on Sundays. Sources:
 [service](../services/msgvault/msgvault-backup.service),
 [timer](../services/msgvault/msgvault-backup.timer),
 [runner](../services/msgvault/backup.py), and
@@ -351,21 +351,45 @@ checks 5% of repository data nightly and all data on Sundays. Sources:
 
 Each run first uses `msgvault backup create` to capture a coherent database,
 attachments, deletion audit, configuration and OAuth tokens while the daemon
-continues serving. It adds `mcp.toml`, service units and Nginx access files,
-then encrypts this temporary capture with Restic before writing it to the NAS.
+continues serving. The temporary capture is now created directly on the NAS at
+`/mnt/nas-downloads/backups/msgvault-staging/payload`, mode 0700. It adds
+`mcp.toml`, service units and Nginx access files, then encrypts the capture into
+the separate `msgvault-restic` repository on the same NAS.
 Msgvault 0.21.0's native repository has no encryption or retention; its temporary
-capture stays under the private (0700) local data directory. The explicit
-plaintext-secrets flag applies only to that local capture. The stage is removed
-after the encrypted snapshot, checks and retention succeed.
+repository contains private plaintext, including the selected credentials. The
+explicit plaintext-secrets flag applies only to this private NAS capture. The
+stage is removed after the encrypted snapshot, checks and retention succeed.
 Source: [0.21.0 capture and restore contract](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/backup.md).
 
-The capture temporarily needs space for another complete archive. The runner
-estimates that space without relying on compression and requires another
-**10 GiB free** on both disks. This is a backup preflight, not a total archive
-quota. It refuses a missing/wrong NFS mount or a changed repository identity.
-An upload failure retains the completed local capture for retry; an incomplete
-capture is preserved for operator inspection rather than deleted automatically.
-The five guard tests are in [test_msgvault_backup.py](../tests/test_msgvault_backup.py).
+The runner estimates space without assuming compression: the NAS must have room
+for both the temporary capture and its encrypted backup, plus **10 GiB free**;
+the NUC retains a **10 GiB** reserve for the live service and its caches. This is
+a backup preflight, not a total archive quota. It refuses a missing/wrong NFS mount
+or a changed repository identity. An upload failure retains the completed NAS
+capture for retry; an incomplete capture is preserved for operator inspection
+rather than deleted automatically.
+An uploaded capture whose cleanup fails is retried before any new capture.
+The guards and recovery-before-deletion tests are in
+[test_msgvault_backup.py](../tests/test_msgvault_backup.py).
+
+Native `msgvault gc` fixes its pre-delete database backup beside the live DB;
+there is no destination flag in [v0.21.0 gc.go](https://github.com/kenn-io/msgvault/blob/v0.21.0/cmd/msgvault/cmd/gc.go).
+Each daily backup collects exact `msgvault.db.gc-backup-YYYYMMDD-HHMMSS` recovery
+files into the NAS stage and preserves them in a separate encrypted snapshot
+tagged `msgvault-gc-recovery`. This tag is excluded from daily-current-state
+retention so a later run on the same day cannot erase the sole pre-GC database.
+These recovery snapshots remain until explicitly retired. Before deleting a
+local GC file, the runner recovers every byte from that exact NAS snapshot and
+compares size and SHA-256, then checks that the original file has not changed.
+The temporary NAS stage is deleted after verification; a failed check preserves
+the local original and the stage. Proof and per-file cleanup results are in
+`/var/lib/msgvault-backup/last-success.json`. Source: [runner](../services/msgvault/backup.py).
+
+The daemon can write only the staging directory on the NAS; the root backup
+service also writes the encrypted repository. The staging parent is created
+before restarting these units, and service-account write access is checked.
+Upgrades must preserve any existing `pending.json` or old local payload:
+the runner refuses an unexplained legacy capture instead of deleting it.
 
 The job reuses the existing root-only Restic password file. Its private NAS
 recovery copy was compared successfully before installation; locations and
@@ -399,13 +423,13 @@ For a restore test, run in a root shell and restore into a new private directory
 
 ```bash
 umask 077
-backup_restore_dir=$(mktemp -d /var/lib/msgvault-backup/restore-XXXXXX)
+backup_restore_dir=$(mktemp -d /mnt/nas-downloads/backups/msgvault-staging/restore-XXXXXX)
 restic -r /mnt/nas-downloads/backups/msgvault-restic \
   --password-file /root/.config/thebeachlab-backup/restic-password \
   --cache-dir /var/lib/msgvault-backup/restic-cache \
-  restore latest --target "$backup_restore_dir/restic"
+  restore latest --tag msgvault --target "$backup_restore_dir/restic"
 msgvault --home /var/lib/msgvault --no-log-file backup restore \
-  --repo "$backup_restore_dir/restic/var/lib/msgvault/backup-staging/payload/archive" \
+  --repo "$backup_restore_dir/restic/mnt/nas-downloads/backups/msgvault-staging/payload/archive" \
   --target "$backup_restore_dir/archive" --jobs 1 --integrity-check
 ```
 
@@ -413,6 +437,8 @@ Review machine-specific paths in the restored `config.toml` before starting
 any daemon from it. The live archive is not overwritten by these commands.
 The separate `host-files` tree contains MCP and Nginx configuration for recovery.
 Keep test directories private and remove only the test directory after review.
+Snapshots from the previous staging layout contain the native repository under
+`restic/var/lib/msgvault/backup-staging/payload/archive` instead.
 See [Restic restore](https://restic.readthedocs.io/en/v0.12.1/050_restore.html)
 and the native restore contract above.
 
