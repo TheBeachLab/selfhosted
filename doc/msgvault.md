@@ -391,6 +391,19 @@ before restarting these units, and service-account write access is checked.
 Upgrades must preserve any existing `pending.json` or old local payload:
 the runner refuses an unexplained legacy capture instead of deleting it.
 
+Verified on 2026-10-11 after moving staging to the NAS: daily snapshot
+**03827d7c** and separate GC recovery snapshot **39dc8ca5** both exist.
+The two local GC files (602,353,664 and 570,032,128 bytes) were removed only
+after full recovery from the encrypted snapshot matched their SHA-256 and size.
+A NAS-only restore using `dump`/`tar --no-same-owner`, full native repository
+verification and native restore recovered **2 accounts, 2,825 messages/raw-MIME
+rows and 898 attachment parts**. SQLite integrity was `ok`; configuration and
+both OpenAI credential files matched the live SHA-256 hashes. The temporary
+capture and both restore attempts were removed. Primary private receipt:
+`/var/lib/msgvault-backup/nas-staging-restore-proof-20261011.json`.
+Deployment and unchanged-configuration evidence:
+`/var/lib/msgvault-backup/nas-staging-deployment-20261011.json`.
+
 The job reuses the existing root-only Restic password file. Its private NAS
 recovery copy was compared successfully before installation; locations and
 access are in [Backups](backups.md). No key values enter Git or command arguments.
@@ -419,15 +432,25 @@ systemctl show msgvault-backup.service -p Result -p ExecMainStatus
 sudo journalctl -u msgvault-backup.service -n 30 --no-pager
 ```
 
-For a restore test, run in a root shell and restore into a new private directory:
+For a restore test, run in a root Bash shell and restore into a new private NAS
+directory. This Synology export rejects Restic's `Lchown` with `operation not
+permitted`; use `dump` and extract with NAS ownership, then verify every native
+pack before restoring the database. This does not change export permissions.
 
 ```bash
+set -euo pipefail
 umask 077
 backup_restore_dir=$(mktemp -d /mnt/nas-downloads/backups/msgvault-staging/restore-XXXXXX)
+mkdir -m 700 "$backup_restore_dir/restic"
 restic -r /mnt/nas-downloads/backups/msgvault-restic \
   --password-file /root/.config/thebeachlab-backup/restic-password \
   --cache-dir /var/lib/msgvault-backup/restic-cache \
-  restore latest --tag msgvault --target "$backup_restore_dir/restic"
+  dump latest --tag msgvault /mnt/nas-downloads/backups/msgvault-staging/payload \
+  | tar --extract --file - --directory "$backup_restore_dir/restic" \
+      --no-same-owner --no-same-permissions
+msgvault --home /var/lib/msgvault --no-log-file backup verify \
+  --repo "$backup_restore_dir/restic/mnt/nas-downloads/backups/msgvault-staging/payload/archive" \
+  --all --jobs 1
 msgvault --home /var/lib/msgvault --no-log-file backup restore \
   --repo "$backup_restore_dir/restic/mnt/nas-downloads/backups/msgvault-staging/payload/archive" \
   --target "$backup_restore_dir/archive" --jobs 1 --integrity-check
@@ -437,8 +460,9 @@ Review machine-specific paths in the restored `config.toml` before starting
 any daemon from it. The live archive is not overwritten by these commands.
 The separate `host-files` tree contains MCP and Nginx configuration for recovery.
 Keep test directories private and remove only the test directory after review.
-Snapshots from the previous staging layout contain the native repository under
-`restic/var/lib/msgvault/backup-staging/payload/archive` instead.
+Snapshots from the previous staging layout require dumping their old
+`/var/lib/msgvault/backup-staging/payload` path and contain the native repository
+under `restic/var/lib/msgvault/backup-staging/payload/archive` instead.
 See [Restic restore](https://restic.readthedocs.io/en/v0.12.1/050_restore.html)
 and the native restore contract above.
 
