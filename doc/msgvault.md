@@ -304,6 +304,8 @@ Private primary evidence is retained under
 activation checkpoints record the binary and credential hashes. The four
 native test packages and embedded UI asset validation passed on the deployed
 build. Registered MCP reads confirmed the saved briefs and employment records.
+Encrypted backups also capture the daemon's regular systemd drop-ins, including
+the email evidence opt-in, so restoring host configuration preserves it.
 
 MCP discovers the daemon's vector capabilities at startup; its separate
 client-facing configuration does not need a copy of the vector settings.

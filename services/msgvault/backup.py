@@ -199,7 +199,12 @@ def capture():
              '/etc/systemd/system/msgvault-mcp.service', '/etc/systemd/system/msgvault-backup.service',
              '/etc/systemd/system/msgvault-backup.timer', '/etc/nginx/sites-available/msgvault.beachlab.org',
              '/etc/nginx/snippets/msgvault-api-key.conf')
-    for name in files:
+    # Runtime opt-ins live in service drop-ins, so recovery must include them.
+    dropins = tuple(sorted(Path('/etc/systemd/system/msgvault.service.d').glob('*.conf')))
+    for path in dropins:
+        if path.is_symlink() or not path.is_file():
+            raise RuntimeError('Preserving non-regular service drop-in: ' + str(path))
+    for name in (*files, *(str(path) for path in dropins)):
         destination = STAGE / 'host-files' / name.lstrip('/')
         destination.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         shutil.copyfile(name, destination)
