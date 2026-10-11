@@ -1,0 +1,14 @@
+{
+  "updates": [
+    {"key": "vector.enabled", "value": {"boolean": false}},
+    {"key": "vector.embeddings.api_format", "value": {"string": "openai"}},
+    {"key": "vector.embeddings.endpoint", "value": {"string": "https://api.openai.com/v1"}},
+    {"key": "vector.embeddings.model", "value": {"string": "text-embedding-3-small"}},
+    {"key": "vector.embeddings.dimension", "value": {"integer": 1536}},
+    {"key": "vector.embed.schedule.cron", "value": {"string": ""}},
+    {"key": "vector.embed.schedule.run_after_sync", "value": {"boolean": false}},
+    {"key": "vector.people.enabled", "value": {"boolean": false}},
+    {"key": "vector.people.retention_posture", "value": {"string": "provider-declared"}},
+    {"key": "vector.people.training_posture", "value": {"string": "provider-declared"}}
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "preset_id": "openai",
+  "model": "gpt-6-luna",
+  "retention_posture": "provider-declared",
+  "training_posture": "provider-declared",
+  "allowed_sources": ["conversation_text", "meeting_text"],
+  "source_since": "2025-01-01",
+  "allow_sensitive": true
+}
