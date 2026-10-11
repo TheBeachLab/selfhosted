@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "source_id": 2,
+  "account": "daswerklab@gmail.com",
+  "organize_existing_only": true,
+  "inbox_policy": "Keep reviewed new messages and unresolved items in Inbox; leave all unreviewed arrivals untouched. Add Action Required to pending items.",
+  "attribution_policy": "Company ownership needs explicit content evidence. An address or application identifier using beachlab.org alone does not establish Beach Lab LTD ownership.",
+  "topics": [
+    {
+      "name": "Beach Lab LTD/Administration",
+      "description": "UK company filings and administration explicitly identifying Beach Lab LTD."
+    },
+    {
+      "name": "Beach Lab LTD/Apps & Development",
+      "description": "App and developer correspondence explicitly identifying Beach Lab LTD."
+    },
+    {
+      "name": "Beach Lab LTD/Finance",
+      "description": "Finance and accounting explicitly identifying Beach Lab LTD."
+    },
+    {
+      "name": "Fab Academy",
+      "description": "Fab Academy and the Fab network."
+    },
+    {
+      "name": "Finance & Subscriptions",
+      "description": "Receipts and paid services without confirmed UK or German business attribution."
+    },
+    {
+      "name": "Germany/Das Werklab Store",
+      "description": "Das Werklab store and Etsy correspondence."
+    },
+    {
+      "name": "Germany/Developer Accounts",
+      "description": "Apple and Google developer correspondence identifying the German individual or Das Werklab."
+    },
+    {
+      "name": "Germany/Finance & Taxes",
+      "description": "German financial and tax correspondence with explicit German attribution."
+    },
+    {
+      "name": "Personal/Family & Shared Notes",
+      "description": "Family correspondence and personal shared notes, including language notes."
+    },
+    {
+      "name": "Projects/AI & Audio",
+      "description": "AI, music and audio project correspondence."
+    },
+    {
+      "name": "Projects/Apps & Development",
+      "description": "App transfers, licenses and software work without confirmed UK or German business ownership."
+    },
+    {
+      "name": "Projects/Lidexgroup Salesforce",
+      "description": "Lidexgroup Salesforce application setup and related project work."
+    },
+    {
+      "name": "Purchases & Insurance/AppleCare",
+      "description": "AppleCare coverage and related purchase records."
+    },
+    {
+      "name": "Purchases & Insurance/Bicycle",
+      "description": "Bicycle purchase, payment, accessories and insurance correspondence."
+    },
+    {
+      "name": "Review/Company Attribution",
+      "description": "Messages that need company ownership clarified before filing under a business."
+    },
+    {
+      "name": "Services & Security",
+      "description": "Infrastructure, account access, security alerts and privacy requests."
+    }
+  ]
+}
