@@ -12,10 +12,11 @@ The downloaded archive's SHA-256 matched
 The binary includes the browser application; no separate Node process is needed
 ([0.21.0 Web UI](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/web-ui.md)).
 
-Installation on 2026-10-10 initialized an empty archive: no accounts, messages
-or attachments. Connecting a source or importing an export is still pending.
-Source: NUC `msgvault version`, daemon-backed `list-accounts` and `stats`, and
-authenticated `/api/v1/stats`.
+Installation on 2026-10-10 initialized an empty archive. On 2026-10-11,
+the [German iCloud account](msgvault-icloud.md) was connected and its first
+full sync completed: **2,974 messages and 868 attachments**, with automatic
+sync every 15 minutes. Source: NUC daemon-backed sync and source status,
+the independent read-only IMAP UID inventory, and MCP `get_stats` / `query_sql`.
 
 ## Files
 
@@ -340,8 +341,9 @@ native repository verification, temporary restore and SQLite `integrity_check`
 all passed. Restored configuration and MCP access configuration matched the
 originals by SHA-256; a wrong repository password was rejected. Restored
 `sources`, `messages` and `attachments` each contained zero rows. This checks
-the initial empty archive, not populated message/attachment recovery. Repeat
-the restore check after the first import. Both test and capture directories
+the initial empty archive. A [populated iCloud restore](msgvault-icloud.md#verification)
+passed on 2026-10-11 from encrypted snapshot **35144baa**, including all
+2,974 messages and 868 attachments. Both test and capture directories
 were removed. Live proof: `/var/lib/msgvault-backup/restore-proof.json`, service
 readback, authenticated `/health`, the MCP `get_stats` call and public HTTPS
 302 into Authentik from the Mac.
