@@ -18,6 +18,12 @@ full sync completed: **2,974 messages and 868 attachments**, with automatic
 sync every 15 minutes. Source: NUC daemon-backed sync and source status,
 the independent read-only IMAP UID inventory, and MCP `get_stats` / `query_sql`.
 
+The [subsequent English topic filing](msgvault-mail-organization.md) organizes
+the iCloud history and provides a source-specific Inbox view. The separate
+[`daswerklab@gmail.com` Gmail connection](msgvault-gmail.md) is requested but
+still awaits Google OAuth authorization; the current connected source remains
+`daswerklab@icloud.com` on Apple's IMAP server.
+
 ## Files
 
 ```text

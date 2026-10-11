@@ -10,6 +10,41 @@ This applies to source 1, `daswerklab@icloud.com`. It does not change the Spanis
 mailbox or the ownership of the custom domain. The folder organization is a
 one-time filing of existing mail; it is not an automatic classifier for new mail.
 
+## Inbox and account identity
+
+The organized mailbox is **`daswerklab@icloud.com`**, source 1, connected to
+Apple's `imap.mail.me.com:993`. The Apple sign-in identifier is
+`daswerklab@gmail.com`, which Apple Mail also uses as this Internet Account's
+display name. The Gmail mailbox at that address requires its own connection;
+an Apple login does not authorize Gmail access. Check the source type and
+server in `GET /api/v1/sources/status`, rather than inferring the provider from
+the account name in Mail.
+
+Apple Mail's `All Inboxes` combines the inboxes of several accounts. Select
+the child account `daswerklab@gmail.com` to inspect this iCloud inbox alone.
+The preserved Spanish inbox and the other accounts are outside this filing.
+
+On 2026-10-11 at 15:22 Europe/Madrid, the requested follow-up filing moved the
+one pending club newsletter to `Newsletters`. Its destination MIME SHA-256,
+size, Message-ID, internal date and flags matched the source before the exact
+source UID was expunged. The live iCloud inbox then contained zero messages.
+Native sync run 23 completed with one membership update, zero new messages
+and zero errors; the archive retained 2,651 messages and 870 attachment parts.
+The active semantic generation still covered all 2,651 messages.
+
+Saved View **`iCloud Germany / Inbox`**, ID 19, uses `label:INBOX` and an
+explicit source-1 filter. Its owner API and registered MCP executions both
+returned zero entries after reconciliation. The 18 topic views remain scoped
+to the same iCloud source. The new Inbox view does not install future-mail
+classification or a phishing rule.
+
+Private evidence: `/var/lib/msgvault-backup/gmail-connection-20261011/`,
+including `icloud-inbox-before.json`, `icloud-inbox-move.json` and
+`icloud-after.json`. These are live IMAP and native daemon readbacks, rather
+than evidence derived from this document.
+The native backup service subsequently completed successfully and verified
+encrypted NAS snapshot **4efb6189** with the updated folders and Inbox view.
+
 ## Completed deletion
 
 | Selection | Archived messages |
