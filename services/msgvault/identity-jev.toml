@@ -1,0 +1,10 @@
+# Native 0.21.0 identity scorer; no provider or model adapter.
+# https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#people-identity-scoring
+[people.identity_scoring]
+enabled = true
+model_id = "jev-1.13.0"
+minimum_probability = 0.80
+credential_env = "TYPESAFE_API_KEY"
+batch_size = 20
+# Standard hosted terms, reviewed 2026-10-12. Zero retention is not asserted.
+retention_declaration = "TypeSafe standard hosted API terms: https://typesafe.ai/legal/mca and https://typesafe.ai/legal/privacy-policy (reviewed 2026-10-12). Inputs are not used for model training; provider retention applies."

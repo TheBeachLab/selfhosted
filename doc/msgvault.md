@@ -215,6 +215,70 @@ Profile automation requires choosing people to track; conversation briefs
 require their own enrollment. Eight profiles are selected for maintenance.
 See the [0.21.0 policy boundary](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people-automation.md#understand-and-correct-automatic-facts).
 
+### Identity scoring with Jev
+
+The native 0.21.0 identity scorer uses TypeSafe Jev at the fixed HTTPS endpoint
+`https://api.typesafe.ai/v1/systemone` and the pinned model `jev-1.13.0`.
+Its configuration is separate from the existing OpenAI profile provider.
+Source: [identity scoring configuration](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#people-identity-scoring)
+and [native review workflow](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/usage/people.md#optional-identity-scoring).
+
+The provider receives a bounded pair of observed participants: names, email
+addresses, phones, up to eight typed identifiers each, and identity evidence
+classes, values and source counts. Message bodies and private Notes are outside
+this packet. The native worker applies local blockers before a provider request.
+Scoring records suggestions and judgments; accepting a participant link remains
+a separate operation with a current review token. Each batch is operator-started.
+Enabling scoring does not enable recurring runs or automatic merges.
+
+[identity-jev.toml](../services/msgvault/identity-jev.toml) sets a batch limit of
+20 and the native threshold of 0.80. Its exact retention declaration references
+the TypeSafe [hosted terms](https://typesafe.ai/legal/mca) and
+[privacy policy](https://typesafe.ai/legal/privacy-policy), reviewed 2026-10-12.
+The provider states it does not train models on inputs and retains personal data
+as reasonably necessary for its stated purposes; this setup does not assert
+zero retention.
+
+Local credential entry uses `/Users/Papi/.config/typesafe/jev.env`, mode 0600,
+with one `TYPESAFE_API_KEY=` assignment. The deployment copy is
+`/var/lib/msgvault/tokens/identity-jev.env`, owned by `msgvault`, mode 0600.
+[identity-jev.conf](../services/msgvault/identity-jev.conf) supplies it only to
+the serving daemon as an EnvironmentFile. The existing encrypted NAS backup
+captures both this token file and the daemon drop-in. Credentials never enter Git.
+The upstream [extras selection](https://github.com/kenn-io/msgvault/blob/v0.21.0/cmd/msgvault/cmd/backup.go)
+includes the complete `tokens` directory when `--include-tokens` is set.
+
+After securely installing the private env file on the NUC, place these three
+deployment files together in a private directory and run:
+
+```bash
+sudo python3 install-identity-jev.py
+```
+
+[install-identity-jev.py](../services/msgvault/install-identity-jev.py) rejects
+conflicting configuration or drop-ins, verifies the pinned model and a synthetic
+Noul response, completes an encrypted NAS backup, preserves a private checkpoint,
+activates the configuration and records native consent to its exact disclosure.
+It checks live readiness and unchanged existing provider credential hashes;
+activation failure restores its own configuration changes and service drop-in.
+It neither changes the binary nor runs archive scoring by itself.
+
+Use the `msgvault_cli` wrapper under Maintain for the native bounded batch:
+
+```bash
+msgvault_cli person scoring status --json
+msgvault_cli person scoring run --limit 20 --json
+msgvault_cli person scoring history --limit 20 --json
+msgvault_cli identity matches list --json
+```
+
+No scored candidate can replace missing identity evidence or overcome local
+blockers for a shared contact point. The Geier professional address and the
+GMX mailbox with a joint `Edwin Geier & Thomas Happel` signature were observed
+as separate participants on 2026-10-12 (MCP `search_people`, and messages 2378
+and 2707). Activating the scorer alone does not establish an exclusive-person
+binding for that shared mailbox.
+
 ### Automatic profiles from email
 
 The stock 0.21.0 extractor excludes Gmail and IMAP as subject-authored evidence.
