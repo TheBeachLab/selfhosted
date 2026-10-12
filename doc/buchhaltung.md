@@ -168,8 +168,11 @@ preserves the already reconciled business portion.
 
 ## Backup / recovery
 
-The dedicated service runs as **buchhaltung**, including SQLite access, to avoid
-root-owned WAL files. The installer must create/chown its NAS directory first.
+The dedicated job invokes SQLite capture/restore as **buchhaltung**, to avoid
+root-owned WAL files. Root transfers only the resulting encrypted archive onto
+the NAS. On 2026-10-12 the NFS server returned `EINVAL` for chown to the new
+service UID; the NAS directory keeps its existing NFS ownership mapping. No
+global mount/identity or other backup configuration is changed.
 It verifies the existing NFS mount source before writing; it refuses fallback
 to an unmounted local directory. The daily timer is 03:00 UTC with a short delay.
 
@@ -181,6 +184,9 @@ copy. `last-backup.json` records the result. No unrelated NAS directory or backu
 is pruned. The encryption recovery key is kept separately in the Mac login
 Keychain under service `buchhaltung.beachlab.org.document-encryption`, account
 `fran`; `store-recovery-key.swift` never overwrites a different existing key.
+The NAS copy is independently hashed before removing this job's exact local
+encrypted staging duplicate. Plaintext financial files and keys are not staged
+on the NAS by this job.
 
 To restore, recover the key into a restricted environment through a private
 operator channel, then use CLI `restore --archive <file> --destination <new-dir>`.

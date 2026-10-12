@@ -6,8 +6,7 @@ OnFailure=service-failure-notify@%n.service
 
 [Service]
 Type=oneshot
-User=buchhaltung
-Group=buchhaltung
+User=root
 EnvironmentFile=/etc/buchhaltung/private.env
 Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStart=/opt/buchhaltung/venv/bin/python /opt/buchhaltung/current/backup.py

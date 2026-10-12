@@ -6,6 +6,7 @@ Only manages its dedicated buchhaltung-encrypted directory; no retention deletio
 """
 from datetime import datetime, timezone
 import fcntl
+import hashlib
 import json
 import os
 import pwd
@@ -21,8 +22,7 @@ from buchhaltung.documents import Documents
 
 
 def main():
-    if pwd.getpwuid(os.geteuid()).pw_name!='buchhaltung':
-        raise SystemExit('Run as buchhaltung to preserve SQLite/WAL ownership.')
+    if os.geteuid()!=0:raise SystemExit('Root orchestrates the NAS transfer; SQLite capture runs as buchhaltung.')
     os.umask(0o077)
     lock=open('/var/lib/buchhaltung/backup.lock','a')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -36,11 +36,31 @@ def main():
     target.chmod(0o700)
     free=os.statvfs(target)
     if free.f_bavail*free.f_frsize<2*1024**3:raise SystemExit('Less than 2 GiB free on the NAS.')
-    config=Config.environment();database=Database(config.data);documents=Documents(config,database)
+    account=pwd.getpwnam('buchhaltung')
+    staging=Path('/var/lib/buchhaltung/backup-staging')
+    if staging.is_symlink():raise SystemExit('Unexpected staging path.')
+    staging.mkdir(mode=0o700,exist_ok=True);staging.chmod(0o700);os.chown(staging,account.pw_uid,account.pw_gid)
     name='buchhaltung-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.blenc'
-    result=backup(config,database,documents,target/name)
+    local=staging/name
+    capture=subprocess.run(['/usr/sbin/runuser','-u','buchhaltung','--','/opt/buchhaltung/venv/bin/python',
+                            '-m','buchhaltung.cli','--env-file','/etc/buchhaltung/private.env',
+                            'backup','--output',str(local)],cwd='/opt/buchhaltung/current',text=True,capture_output=True,check=True)
+    result=json.loads(capture.stdout)
+    destination=target/name
+    descriptor=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    digest=hashlib.sha256()
+    with local.open('rb') as source,os.fdopen(descriptor,'wb') as output:
+        while chunk:=source.read(1024*1024):output.write(chunk);digest.update(chunk)
+        output.flush();os.fsync(output.fileno())
+    copied=hashlib.sha256()
+    with destination.open('rb') as source:
+        while chunk:=source.read(1024*1024):copied.update(chunk)
+    if copied.hexdigest()!=result['sha256'] or digest.hexdigest()!=result['sha256']:
+        raise SystemExit('NAS bytes differ; local verified backup preserved.')
+    result['path']=str(destination);result['nas_sha256_verified']=True
     last=Path('/var/lib/buchhaltung/last-backup.json')
-    temporary=last.with_suffix('.tmp');temporary.write_text(json.dumps(result,sort_keys=True));temporary.chmod(0o600);temporary.replace(last)
+    temporary=last.with_suffix('.tmp');temporary.write_text(json.dumps(result,sort_keys=True));temporary.chmod(0o600);os.chown(temporary,account.pw_uid,account.pw_gid);temporary.replace(last)
+    local.unlink()  # This exact newly created encrypted file has an independently hashed NAS copy.
     print(json.dumps({"backup":name,"verified":True,"restored_records":result['restore']['records'],"restored_documents":result['restore']['documents']}))
 
 
