@@ -228,8 +228,10 @@ addresses, phones, up to eight typed identifiers each, and identity evidence
 classes, values and source counts. Message bodies and private Notes are outside
 this packet. The native worker applies local blockers before a provider request.
 Scoring records suggestions and judgments; accepting a participant link remains
-a separate operation with a current review token. Each batch is operator-started.
-Enabling scoring does not enable recurring runs or automatic merges.
+a separate operation with a current review token. This upstream scorer evaluates
+already seeded candidates when invoked. The
+automatic mailbox discovery extension below handles names and phones in email
+signatures; neither path accepts participant merges automatically.
 
 [identity-jev.toml](../services/msgvault/identity-jev.toml) sets a batch limit of
 20 and the native threshold of 0.80. Its exact retention declaration references
@@ -263,7 +265,8 @@ It checks live readiness and unchanged existing provider credential hashes;
 activation failure restores its own configuration changes and service drop-in.
 It neither changes the binary nor runs archive scoring by itself.
 
-Use the `msgvault_cli` wrapper under Maintain for the native bounded batch:
+For diagnosis of the upstream candidate scorer, use the `msgvault_cli` wrapper
+under Maintain (the unattended discovery worker does not need these commands):
 
 ```bash
 msgvault_cli person scoring status --json
@@ -279,23 +282,111 @@ as separate participants on 2026-10-12 (MCP `search_people`, and messages 2378
 and 2707). Activating the scorer alone does not establish an exclusive-person
 binding for that shared mailbox.
 
-Verified on 2026-10-12: the native scorer reports `enabled`,
+At initial Jev activation on 2026-10-12, the native scorer reported `enabled`,
 `credential_available`, `consent_active` and `ready` as true, using
 `jev-1.13.0`, threshold 0.80 and batch limit 20. Both Msgvault services are
-active and the existing `0.21.0-email-2` binary is unchanged. The synthetic
+active and the then-current `0.21.0-email-2` binary was unchanged. The synthetic
 provider request returned the exact pinned model and a valid Noul answer;
 the model-list endpoint exposed only `jev-latest` and `jev-preview`, so the
 installer verifies the exact-version request instead of substituting an alias.
 The first native batch completed without errors with `processed = 0`; the
-participant-link count stayed at one, and Geier's profile still contains only
-his professional address. This is enabled scoring with no current candidate
-to evaluate, not a completed discovery of his other mailbox. Primary private
+participant-link count stayed at one, and Geier's profile then contained only
+his professional address. That first activation enabled scoring with no current
+candidate to evaluate; it did not discover the other mailbox. Primary private
 receipts: `/var/lib/msgvault-backup/identity-jev-20261012T080947Z/activation.json`
 and `first-batch-summary.json`; registered MCP status, judgment history and
 profile reads confirmed the saved state.
 The final encrypted NAS snapshot is `ca9e56bc`; restoring the Jev service
 drop-in matched its live SHA-256, and the NAS staging payload was removed.
 Receipt: `nas-final-proof.json` in the same private checkpoint directory.
+
+### Automatic mailbox discovery with Jev
+
+The local native build `v0.21.0-discovery-3` retains the email extraction patch
+and adds [mailbox-discovery-v0.21.0.patch](../services/msgvault/patches/mailbox-discovery-v0.21.0.patch)
+on pinned upstream commit `598ca5cc89042ded95e484b5315cc29b9342fa42`.
+The implementation lives in the Msgvault daemon (`internal/mailboxdiscovery`,
+Store operations and `/api/v1/identity/discovery/*`); it is not a Codex task.
+
+The native worker finds another sender's own footer containing a tracked
+person's complete name and phone digits that match the person's known sender
+signature. It examines Gmail/IMAP only, excludes owner-sent/deleted/forwarded
+messages, strips quoted replies (including decorated GMX *Gesendet:*/*Von:* headers)
+and requires a signature name line, not a name
+mentioned in prose. Body hydration is by message primary key; list queries do
+not join `message_bodies`. A maximum of 5,000 metadata rows are read per run;
+a persistent cursor rotates larger archives and holds a page when the provider
+request limit is reached. Anchors use the last 16 own messages per bound sender.
+The initial scope is the existing tracked profiles (at most 1,000 per scan).
+A missing own signature, complete name or matching phone is left unresolved.
+
+Jev `jev-1.13.0` receives a separate `mailbox-signature-packet-v2`: tracked name,
+known/candidate sender emails, one own signature each (768 characters maximum),
+matching phone digits and evidence message IDs. Private message prose and quoted
+threads do not enter this packet. This broader signature disclosure has its own
+native consent fingerprint, independently revocable at
+`POST /api/v1/identity/discovery/revoke`; it keeps the existing TypeSafe retention
+declaration. The consent gate runs again immediately before the provider request
+and before publishing a contact point. API calls reject redirects and validate
+the exact returned model and both probabilities.
+
+An ordinary related contact requires probability >= 0.95. A possible shared
+contact instead requires related probability >= 0.50, shared probability >= 0.80
+and an independently matching mobile number in both own signatures, in addition
+to the complete-name match. This is a possible contact point, not an exclusive
+identity judgment. The native transaction saves `source=extraction`, the actual
+related confidence and an audit reference; it labels shared contacts
+**posiblemente compartido**. It does not bind the
+candidate participant, merge identities, replace the preferred address or assign
+all messages from a household mailbox to one person's profile. Existing curated
+values and superseded addresses win; changed/deleted evidence, untracking or a
+profile revision during scoring prevents publication. A shared address is a
+possible contact for this person, not proof of who authored a particular email.
+
+[msgvault-mailbox-discovery.timer](../services/msgvault/msgvault-mailbox-discovery.timer)
+runs on the NUC shortly after activation/boot and every 15 minutes, with up to
+30 seconds of jitter.
+[mailbox-discovery.py](../services/msgvault/mailbox-discovery.py) only calls the
+native daemon over loopback and logs counts. It does not read email or call Jev.
+It supports the NUC system Python 3.10 without extra dependencies.
+Each run permits eight provider requests, with a durable ceiling of 40 per UTC
+day across all profiles. Successful and inconclusive judgments are cached by
+person/evidence/disclosure fingerprint. Provider errors retry after 24 hours;
+an interrupted pending claim becomes eligible after five minutes. More evidence
+or a policy change can produce a new fingerprint. No manual batches are needed.
+
+The setup requires the already configured private Jev key and a tested native
+build. [build-mailbox-discovery.sh](../services/msgvault/build-mailbox-discovery.sh)
+verifies upstream, Go and Bun archive hashes, applies both patches without fuzz,
+runs `go fmt`, `go vet`, native regression tests (including the serving adapter)
+and builds on Linux amd64.
+[install-mailbox-discovery.py](../services/msgvault/install-mailbox-discovery.py)
+requires the verified previous daemon and backup hashes, performs an encrypted
+NAS backup first, preserves a private activation checkpoint, switches the binary,
+records the separately authorized signature consent and enables the timer. It
+preserves the existing config and credential files and rolls back its own runtime
+files if activation fails. [backup.py](../services/msgvault/backup.py) also captures
+the runner, timer/service, drop-in and complete recovery sources on the NAS, then
+removes its temporary staging only after a verified encrypted snapshot.
+
+Verified on 2026-10-12: `v0.21.0-discovery-3` is serving on the NUC;
+its SHA-256 is `f4b5b18271d014b2310a6b297206b0c77d858c4d84c2ce23ecb23e1426daab95`.
+The timer triggered the native worker at 09:40:16 UTC and finished successfully:
+2,825 scanned messages, one candidate, one Jev request and one shared contact
+saved. MCP `get_person_profile(person_id=8)` returned both mailboxes; the new
+point has `source=extraction` and `type_label=posiblemente compartido`, while
+the professional address remains preferred. The native journal retained actual
+related/shared probabilities 0.76/0.91 and evidence IDs 2232/2707. Confidence is
+not upgraded to a confirmed identity. Participant 9 remains separate; person 8
+is still bound only to participant 54, and the existing participant-link count
+stays one. All 2,837 original archived message/body hashes were unchanged.
+The v2 packet contains only the own footer, with the GMX quoted reply removed.
+Primary private receipts are `activation.json`, `verified-history.json` and
+`runtime-proof.json` under
+`/var/lib/msgvault-backup/mailbox-discovery-20261012T094014Z/`.
+The previous v1 discovery consent was revoked after v2 activation; its audit
+was retained. These observations are deployment evidence, not guarantees about
+unseen signatures or who authored mail from a shared address.
 
 ### Automatic profiles from email
 

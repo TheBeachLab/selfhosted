@@ -1,0 +1,18 @@
+[Unit]
+Description=Msgvault native Jev mailbox discovery
+Requires=msgvault.service
+After=msgvault.service
+
+[Service]
+Type=oneshot
+User=msgvault
+Group=msgvault
+WorkingDirectory=/var/lib/msgvault
+ExecStart=/usr/bin/python3 /usr/local/sbin/msgvault-mailbox-discovery
+TimeoutStartSec=10min
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX

@@ -1,0 +1,13 @@
+[Unit]
+Description=Discover related mailboxes automatically every 15 minutes
+
+[Timer]
+OnActiveSec=30s
+OnBootSec=2min
+OnCalendar=*-*-* *:00/15:00
+RandomizedDelaySec=30
+Persistent=true
+Unit=msgvault-mailbox-discovery.service
+
+[Install]
+WantedBy=timers.target

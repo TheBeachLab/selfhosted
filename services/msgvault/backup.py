@@ -204,7 +204,24 @@ def capture():
     for path in dropins:
         if path.is_symlink() or not path.is_file():
             raise RuntimeError('Preserving non-regular service drop-in: ' + str(path))
-    for name in (*files, *(str(path) for path in dropins)):
+    # Unattended discovery must be recoverable with its native patch, runner and
+    # timer. Earlier installations legitimately have none of these files.
+    optional = (
+        '/usr/local/sbin/msgvault-mailbox-discovery',
+        '/etc/systemd/system/msgvault-mailbox-discovery.service',
+        '/etc/systemd/system/msgvault-mailbox-discovery.timer',
+    )
+    discovery_sources = Path('/opt/msgvault/deployment/mailbox-discovery')
+    extra = [Path(name) for name in optional if Path(name).exists() or Path(name).is_symlink()]
+    if discovery_sources.exists():
+        if discovery_sources.is_symlink() or not discovery_sources.is_dir():
+            raise RuntimeError('Preserving redirected discovery recovery sources')
+        extra.extend(path for path in sorted(discovery_sources.rglob('*'))
+                     if not path.is_dir() or path.is_symlink())
+    for path in extra:
+        if path.is_symlink() or not path.is_file():
+            raise RuntimeError('Preserving non-regular discovery recovery file: ' + str(path))
+    for name in (*files, *(str(path) for path in (*dropins, *extra))):
         destination = STAGE / 'host-files' / name.lstrip('/')
         destination.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         shutil.copyfile(name, destination)
