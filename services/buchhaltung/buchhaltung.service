@@ -1,0 +1,35 @@
+[Unit]
+Description=Beach Lab private bookkeeping
+After=network.target
+OnFailure=service-failure-notify@%n.service
+
+[Service]
+Type=simple
+User=buchhaltung
+Group=buchhaltung
+WorkingDirectory=/opt/buchhaltung/current
+EnvironmentFile=/etc/buchhaltung/private.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/buchhaltung/venv/bin/uvicorn buchhaltung.api:app_factory --factory --host 127.0.0.1 --port 8098 --no-access-log
+Restart=on-failure
+RestartSec=5
+UMask=0077
+StateDirectory=buchhaltung
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/buchhaltung
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryHigh=512M
+MemoryMax=768M
+CPUQuota=100%
+TasksMax=96
+
+[Install]
+WantedBy=multi-user.target

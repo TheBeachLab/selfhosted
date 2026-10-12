@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily encrypted Buchhaltung backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+Unit=buchhaltung-backup.service
+
+[Install]
+WantedBy=timers.target

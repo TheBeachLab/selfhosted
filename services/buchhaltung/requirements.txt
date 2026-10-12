@@ -1,0 +1,8 @@
+fastapi==0.143.0
+uvicorn==0.54.0
+pydantic==2.14.1
+cryptography==50.0.2
+defusedxml==0.7.1
+reportlab==5.0.1
+python-multipart==0.0.32
+httpx==0.28.1
