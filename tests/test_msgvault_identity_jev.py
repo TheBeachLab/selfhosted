@@ -71,20 +71,19 @@ class JevSetupGuards(unittest.TestCase):
             with self.subTest(existing=existing), self.assertRaises(ValueError):
                 jev.scoring_config(existing, TEMPLATE)
 
-    def test_preflight_rejects_unavailable_pinned_model_before_post(self):
-        with mock.patch.object(jev, "request_json", return_value={
-                "models": [{"name": "jev-latest"}]}) as request:
+    def test_preflight_targets_pinned_model_and_propagates_failure(self):
+        with mock.patch.object(jev, "request_json", side_effect=RuntimeError("API returned HTTP 422")) as request:
             with self.assertRaises(RuntimeError):
                 jev.provider_preflight("synthetic_key_123456")
             self.assertEqual(1, request.call_count)
+            self.assertEqual(jev.MODEL, request.call_args.args[2]["model"])
 
     def test_preflight_uses_synthetic_data_and_accepts_native_noul(self):
-        with mock.patch.object(jev, "request_json", side_effect=[
-                {"models": [{"name": jev.MODEL}]},
-                {"model": jev.MODEL, "answers": {"same_person": {"type": "noul", "noul": 0.9}}},
-        ]) as request:
+        with mock.patch.object(jev, "request_json", return_value={
+                "model": jev.MODEL, "answers": {"same_person": {"type": "noul", "noul": 0.9}},
+        }) as request:
             self.assertTrue(jev.provider_preflight("synthetic_key_123456")["synthetic_check_passed"])
-            body = request.call_args_list[1].args[2]
+            body = request.call_args.args[2]
             self.assertEqual("setup@example.invalid", body["state"]["left"]["email"])
             self.assertEqual(jev.MODEL, body["model"])
             self.assertEqual({"left", "right"}, set(body["state"]))
@@ -92,10 +91,9 @@ class JevSetupGuards(unittest.TestCase):
     def test_preflight_rejects_malformed_probabilities(self):
         invalid = [True, None, float("nan"), float("inf"), -0.1, 1.1, "0.9"]
         for probability in invalid:
-            with self.subTest(probability=probability), mock.patch.object(jev, "request_json", side_effect=[
-                    {"models": [{"name": jev.MODEL}]},
-                    {"model": jev.MODEL, "answers": {"same_person": {"type": "noul", "noul": probability}}},
-            ]), self.assertRaises(RuntimeError):
+            with self.subTest(probability=probability), mock.patch.object(jev, "request_json", return_value={
+                    "model": jev.MODEL, "answers": {"same_person": {"type": "noul", "noul": probability}},
+            }), self.assertRaises(RuntimeError):
                 jev.provider_preflight("synthetic_key_123456")
 
     def test_authenticated_requests_do_not_follow_redirects(self):

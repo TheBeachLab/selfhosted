@@ -144,9 +144,8 @@ def request_json(url, key, body=None):
 
 
 def provider_preflight(key):
-    models = request_json(ORIGIN + "/v1/models", key)
-    if not any(row.get("name") == MODEL for row in models.get("models", [])):
-        raise RuntimeError("TypeSafe account does not expose the native pinned Jev model")
+    # /v1/models lists aliases; a successful exact-version request and response
+    # is the readiness proof. Never substitute jev-latest or jev-preview.
     # Synthetic fixture only; no archive identities leave the host in preflight.
     result = request_json(ORIGIN + "/v1/systemone", key, {
         "model": MODEL,
