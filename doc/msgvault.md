@@ -446,6 +446,10 @@ the preferred professional address and the GMX `posiblemente compartido` label.
 Primary private receipts: `/var/lib/msgvault-backup/signed-brief-20261012T183418Z/`
 (`activation.json`, `archive-before.json`, `runtime-proof.json`). These are
 runtime observations, not conclusions from a Codex-written profile.
+The final encrypted NAS snapshot is `777aaeb7`, completed at 18:38:48 UTC.
+Eight restored runtime/recovery files matched their live SHA-256, including the
+new builder, installer, native patch and build manifest. Temporary NAS staging
+was removed. Receipt: `nas-final-proof.json` in that checkpoint.
 
 ### Automatic profiles from email
 
