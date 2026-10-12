@@ -71,10 +71,43 @@ def scoring_config(original, template):
     if expected is None:
         raise ValueError("Identity scoring template has no section")
     if matches:
-        if len(matches) != 1 or matches[0].group(0).strip() != expected.group(0).strip():
+        if len(matches) != 1:
             raise ValueError("Preserving an existing identity scoring configuration")
-        return original
+        current = section_fields(matches[0].group(1))
+        desired = section_fields(expected.group(1))
+        if current == desired:
+            return original
+        # Native TOML serialization writes this inactive default section,
+        # including indentation and single-quoted empty strings.
+        inactive_defaults = {"enabled": False, "model_id": MODEL,
+                             "minimum_probability": 0.8, "credential_env": "",
+                             "batch_size": 20, "retention_declaration": ""}
+        if current != inactive_defaults:
+            raise ValueError("Preserving an existing identity scoring configuration")
+        found = matches[0]
+        return (text[:found.start()] + expected.group(0) + text[found.end():]).encode()
     return original + (b"" if original.endswith(b"\n\n") else b"\n\n") + template
+
+
+def section_fields(body):
+    fields = {}
+    for line in body.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        match = re.fullmatch(r"([a-z_]+)\s*=\s*(.+)", line)
+        if match is None or match.group(1) in fields:
+            raise ValueError("Preserving unsupported or duplicate identity scoring fields")
+        raw = match.group(2)
+        if raw.startswith("'") and raw.endswith("'") and "'" not in raw[1:-1]:
+            value = raw[1:-1]
+        else:
+            try:
+                value = json.loads(raw)
+            except ValueError:
+                raise ValueError("Preserving unsupported identity scoring field syntax") from None
+        fields[match.group(1)] = value
+    return fields
 
 
 def atomic_config(content):

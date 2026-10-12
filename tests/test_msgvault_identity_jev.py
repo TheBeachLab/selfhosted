@@ -49,6 +49,28 @@ class JevSetupGuards(unittest.TestCase):
             with self.subTest(original=original), self.assertRaises(ValueError):
                 jev.scoring_config(original, TEMPLATE)
 
+    def test_native_indented_inactive_defaults_can_be_enabled(self):
+        prefix = b"[server]\napi_key = 'synthetic'\n\n"
+        suffix = b"[people.sweep]\nprovider = 'openai'\n"
+        defaults = (b"  [people.identity_scoring]\n    enabled = false\n"
+                    b"    model_id = 'jev-1.13.0'\n    minimum_probability = 0.8\n"
+                    b"    credential_env = ''\n    batch_size = 20\n"
+                    b"    retention_declaration = ''\n\n")
+        updated = jev.scoring_config(prefix + defaults + suffix, TEMPLATE)
+        self.assertTrue(updated.startswith(prefix))
+        self.assertTrue(updated.endswith(suffix))
+        self.assertIn(b"enabled = true", updated)
+        self.assertEqual(updated, jev.scoring_config(updated, TEMPLATE))
+
+    def test_nondefault_inactive_settings_and_duplicate_fields_are_preserved(self):
+        defaults = (b"[people.identity_scoring]\nenabled = false\n"
+                    b"model_id = 'jev-1.13.0'\nminimum_probability = 0.8\n"
+                    b"credential_env = ''\nbatch_size = 20\nretention_declaration = ''\n")
+        for existing in [defaults.replace(b"batch_size = 20", b"batch_size = 10"),
+                         defaults + b"enabled = true\n"]:
+            with self.subTest(existing=existing), self.assertRaises(ValueError):
+                jev.scoring_config(existing, TEMPLATE)
+
     def test_preflight_rejects_unavailable_pinned_model_before_post(self):
         with mock.patch.object(jev, "request_json", return_value={
                 "models": [{"name": "jev-latest"}]}) as request:
