@@ -388,6 +388,65 @@ The previous v1 discovery consent was revoked after v2 activation; its audit
 was retained. These observations are deployment evidence, not guarantees about
 unseen signatures or who authored mail from a shared address.
 
+### Automatic briefs from signed messages in a related mailbox
+
+The native `v0.21.0-signed-brief-1` extension uses the existing Jev-discovered
+contact as a candidate mailbox. It requires a personal closing in each message's
+own text, naming the tracked person alone or together with another signer. A
+joint address footer by itself, another person's closing, quoted/forwarded
+replies, owner mail and unsigned messages do not qualify. A first name qualifies
+only at a personal closing in this already related mailbox. This is signing
+text evidence, not cryptographic authentication.
+
+[The native patch](../services/msgvault/patches/signed-mail-brief-v0.21.0.patch)
+indexes eligible message IDs, their body hashes and individual/joint authorship.
+The daemon rechecks current text, tracking, brief enrollment, the active contact
+and its consented Jev judgment before hydration and citation alignment. Body
+edits, removals and membership changes wake the native brief journal. An edit
+fails closed before the next index pass. This read scope exists only during
+brief assembly: shared-mail evidence cannot become extraction claims or a
+participant binding. The primary address and shared label retain their existing
+meaning. Joint authorship is supplied to the brief model explicitly.
+
+The existing NUC discovery timer also wakes this native brief worker every
+15 minutes, after archive ingestion. Changed signed mail publishes work for
+tracked and enrolled people. The watched scope uses a one-minute minimum brief
+interval; other people's configured cadence stays in place. Unchanged evidence
+makes no new model call. Existing provider consent, leases, retry backoff and
+usage caps still apply. Jev handles mailbox relations; the configured OpenAI
+profile provider continues generating prose. Python only sends the loopback
+wake-up and logs counts; Codex and the Mac are not required for ongoing work.
+
+[build-signed-mail-brief.sh](../services/msgvault/build-signed-mail-brief.sh)
+applies the email, discovery and signed-brief patches to the pinned upstream
+source and runs native checks on Linux amd64.
+[install-signed-mail-brief.py](../services/msgvault/install-signed-mail-brief.py)
+requires the verified discovery-3 binary and previous runner, takes an encrypted
+NAS backup, preserves configuration/credentials and a rollback checkpoint,
+then enables the same timer. Recovery sources stay under the already backed-up
+`/opt/msgvault/deployment/mailbox-discovery` tree.
+
+Verified on 2026-10-12: the NUC is serving `v0.21.0-signed-brief-1`, binary SHA-256
+`1624c33470cfc51d2b845b344b58d9da5b596ce1cd649236618225c5779cf3f0`.
+The timer fired at 18:35:20 UTC and the native worker generated Geier's brief
+version 2 at 18:35:38 UTC using `openai_chat`, `gpt-6-luna`, program
+`v1-signed-mail-1`. The input held 34 messages: 16 from the professional sender
+and 18 signed GMX messages (15 individual, three joint), 55,827 input bytes.
+The new brief cites GMX message 2695 for the September 20 meeting and professional
+message 2707 for the Phase 2 discussion. Unsigned GMX message 2829 is excluded.
+The first timer response reported 18 signed changes and one brief, with zero
+new Jev requests because the mailbox judgment was cached. A separate validation
+wake-up with unchanged mail reported zero signed changes, zero Jev requests and
+zero briefs; the next calendar trigger was observed at 18:45:13 UTC.
+
+All 2,840 pre-upgrade message/header/body/raw-content hashes matched after the
+native update. Person 8 still has only participant 54, participant 9 remains
+unbound, and the global participant-link count remains one. MCP readback kept
+the preferred professional address and the GMX `posiblemente compartido` label.
+Primary private receipts: `/var/lib/msgvault-backup/signed-brief-20261012T183418Z/`
+(`activation.json`, `archive-before.json`, `runtime-proof.json`). These are
+runtime observations, not conclusions from a Codex-written profile.
+
 ### Automatic profiles from email
 
 The stock 0.21.0 extractor excludes Gmail and IMAP as subject-authored evidence.

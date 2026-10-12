@@ -47,7 +47,8 @@ def run():
     with urllib.request.build_opener(NoRedirect()).open(request, timeout=540) as response:
         result = json.loads(response.read(1 << 20))
     counts = {name: result[name] for name in
-              ("scanned_messages", "candidates", "provider_requests", "next_cursor")}
+              ("scanned_messages", "candidates", "provider_requests", "next_cursor",
+               "signed_message_changes", "briefs_generated")}
     counts["saved_results"] = len(result["results"])
     counts["shared"] = sum(item["status"] == "shared" for item in result["results"])
     counts["error"] = result.get("error", "")

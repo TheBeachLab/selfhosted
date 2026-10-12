@@ -41,6 +41,7 @@ class RunnerContract(unittest.TestCase):
     def test_timer_calls_native_worker_and_logs_counts_only(self):
         server, calls = self.serve({"scanned_messages": 20, "candidates": 1,
                                    "provider_requests": 1, "next_cursor": 0,
+                               "signed_message_changes": 7, "briefs_generated": 1,
                                    "results": [{"status": "shared", "email": "private@example.test",
                                                 "own_signature": "private text"}]})
         with tempfile.TemporaryDirectory() as folder:
@@ -54,12 +55,15 @@ class RunnerContract(unittest.TestCase):
         self.assertEqual(calls, [("/api/v1/identity/discovery/run", "Bearer " + "f" * 64, b'{"limit":8}')])
         counts = json.loads(output.getvalue())
         self.assertEqual(counts["shared"], 1)
+        self.assertEqual(counts["signed_message_changes"], 7)
+        self.assertEqual(counts["briefs_generated"], 1)
         self.assertNotIn("private", output.getvalue())
         self.assertNotIn("f" * 64, output.getvalue())
 
     def test_partial_failure_is_a_failed_service_run(self):
         server, _ = self.serve({"scanned_messages": 20, "candidates": 1,
                                "provider_requests": 1, "next_cursor": 0,
+                               "signed_message_changes": 0, "briefs_generated": 0,
                                "results": [], "error": "provider_request_failed"})
         with tempfile.TemporaryDirectory() as folder:
             config = Path(folder) / "config.toml"
