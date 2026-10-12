@@ -189,10 +189,33 @@ are evidence of what the provider returned, not independent proof of the exact
 bytes present when an old invoice was originally sent.
 
 Migration is locked and idempotent. A retry reuses original source IDs and file
-hashes. A changed source snapshot is archived and reported, never silently
-overwritten. Incomplete originals, ambiguous payment reversals or source drift
-produce `needs_attention`/`failed`, never a false "complete". Fiscal classification
-remains a separate review even after a technically complete copy.
+hashes. **The latest sevdesk version is the source of truth**, as instructed by
+the owner on 2026-10-12. Each source document has one current local record. The
+normal import command refreshes changed amounts, dates, source references,
+centres, tax metadata, contacts, bank data and current payment links; there is
+no per-change approval switch and no parallel active copy of an older version.
+
+Old JSON/original bytes and superseded cash rows are audit evidence only. The
+record view selects only current originals and payment links. An unchanged
+bank/date/amount tuple reuses its cash row when sevdesk generates a new log ID;
+a correction or removal supersedes the old payment and counts only the current
+one. Reused source log IDs map to their latest cash revision. Complete source
+inventories remove absent entries from current lists without deleting audit.
+Locally created records, original bank imports and issued invoices stay protected.
+
+Source financial fields cannot be edited locally. Corrections must be made in
+sevdesk and then refreshed. Reviewed local tax mappings remain valid only while
+their source facts/originals are unchanged. A changed basis reopens the local
+review; source tax identifiers/comments are copied without guessing a legal tax
+mapping. An owner-confirmed private/refund annotation is kept only when its source
+classification basis remains the same. Fiscal review remains separate from a
+technically complete copy.
+
+Incomplete originals, ambiguous payment histories, position/paid totals that do
+not match, or overallocated bank movements produce `needs_attention`/`failed`.
+The current source amounts remain visible with the discrepancy. No old amount or
+payment is substituted as if current, and no return can be prepared using a prior
+successful import while the latest import is running or incomplete.
 
 Bank imports preserve same-day identical entries by multiplicity. Without stable
 bank references, partial overlapping exports of identical rows cannot always be
@@ -214,23 +237,12 @@ API source: https://api.sevdesk.de/, operations `updateVoucher`,
 `voucherResetToOpen`, `voucherResetToDraft`, `voucherFactorySaveVoucher` and
 `bookVoucher`, read and exercised against the user's authorized records 2026-10-12.
 
-`import-sevdesk --accept-cost-centre VOUCHER_ID:CENTRE_ID` accepts only that
-explicit centre and only when all other source fields/positions and the cash
-payment amounts, dates and bank references match the accepted snapshot.
-Provider-generated creation/update timestamps and new payment-log IDs may differ.
-New log IDs become append-only aliases of the original local payment; payment
-IDs, amounts and original references are retained, without a second cash entry.
-Other source changes remain blocked across retries, including when their rejected
-raw revision was already archived. Keep this importer version when resuming a
-source rebooking: earlier versions do not interpret payment aliases.
-
-For an independently changed source tax rule/comment,
-`--accept-source-metadata VOUCHER_ID:SHA256` requires the exact inspected raw-bundle
-hash. Only `taxRule`, position `comment`, generated timestamps and financially
-identical replacement payment-log IDs may differ. It preserves the accepted
-amounts, document dates, booking accounts, originals, centre and cash entries.
-It copies the source rule identifier/comment and marks the local tax code
-unclassified; copying source metadata is not verification of its legal treatment.
+The read-only import automatically follows the latest version after a source
+rebooking. Provider-generated creation/update timestamps and new payment-log
+IDs may differ without creating another cash entry. `payment_source_current`
+is the current mapping; `payment_source_aliases` and superseded rows are audit
+references. Original financial history is retained but excluded from live sums.
+There are no `--accept-cost-centre` or `--accept-source-metadata` gates.
 
 `classify-imported --record-id ID --classification private|tax_refund --reason TEXT`
 records an explicit owner decision with before/after audit snapshots. A private
@@ -248,9 +260,11 @@ https://www.elster.de/elsterweb/helpGlobal?themaGlobal=help_euer_ufa_77_2025,
 read 2026-10-12. This confirms the nature/separation, not a 2026 schema field or
 a method for splitting a combined refund. No percentage allocation is inferred.
 
-Synthetic tests cover unchanged cash IDs after a source rebooking, retry
-idempotency, persistent rejection of financial drift, private portions of shared
-payments and a VAT refund blocked until its activity allocation is verified.
+Synthetic tests cover automatic centre/tax changes, reuse of unchanged cash IDs,
+changed amounts/dates with reused log IDs, removed/reinstated source payments,
+retry idempotency, source disappearance/reappearance, current-only originals,
+duplicate/inconsistent logs, blocked local financial edits, private portions of
+shared payments and a VAT refund pending verified activity allocation.
 
 ## Backup / recovery
 

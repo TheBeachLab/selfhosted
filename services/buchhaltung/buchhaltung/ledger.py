@@ -15,12 +15,16 @@ def sign(kind):
 def record_view(db, row):
     value = dict(row)
     value["data"] = json.loads(value["data"])
-    value["total"] = total(value["data"])
+    value["total"] = value["data"].get("source_expected_gross", total(value["data"])) if row["source"] else total(value["data"])
     value["net"] = sum(line["net_cents"] for line in value["data"]["lines"])
     value["tax"] = sum(line["tax_cents"] for line in value["data"]["lines"])
-    value["paid"] = db.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE record_id=? AND reversed_by IS NULL", (row["id"],)).fetchone()[0]
+    value["reconciled_paid"] = db.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE record_id=? AND reversed_by IS NULL", (row["id"],)).fetchone()[0]
+    value["paid"] = value["data"].get("source_paid_amount", value["reconciled_paid"]) if row["source"] else value["reconciled_paid"]
     value["documents"] = [dict(item) for item in db.execute(
         "SELECT d.id,d.filename,d.media_type,rd.role FROM documents d JOIN record_documents rd ON rd.document_id=d.id WHERE rd.record_id=?", (row["id"],))]
+    if row["source"] and "source_documents" in value["data"]:
+        current = set(value["data"]["source_documents"]) | {value["data"].get("source_snapshot_document")}
+        value["documents"] = [doc for doc in value["documents"] if doc["id"] in current]
     return value
 
 
@@ -40,7 +44,7 @@ class Ledger:
 
     def list(self, kind=None, start="0000", end="9999"):
         with self.database.connect() as db:
-            query = "SELECT * FROM records WHERE date BETWEEN ? AND ?"
+            query = "SELECT * FROM records WHERE date BETWEEN ? AND ? AND COALESCE(json_extract(data,'$.source_missing'),0)=0"
             params = [start, end]
             if kind == "expenses":
                 query += " AND kind IN ('expense','income','credit_note','asset','tax_payment','tax_refund')"
@@ -66,15 +70,14 @@ class Ledger:
                 if current["paid"] > total(data):
                     raise ValueError("El total no puede quedar por debajo de los pagos importados. Revisa el reparto profesional mediante porcentajes.")
                 if current["source"]:
-                    # An imported issued invoice is never rewritten as if it had
-                    # been newly issued here. Only its local fiscal classification
-                    # may be reviewed; the original PDF/XML/raw snapshot is fixed.
-                    if current["kind"] == "invoice":
-                        old = current["data"]
-                        if (data["date"] != old["date"] or data["party_id"] != old["party_id"]
-                                or len(data["lines"]) != len(old["lines"])
-                                or any((new["net_cents"],new["tax_cents"],new["description"]) != (prior["net_cents"],prior["tax_cents"],prior["description"]) for new,prior in zip(data["lines"],old["lines"]))):
-                            raise ValueError("La factura original de sevdesk es inmutable. Revisa solo actividad y tratamiento fiscal.")
+                    old = current["data"]
+                    fixed = ("date", "due_date", "service_date", "party_id", "party_name", "reference", "buyer_reference")
+                    if (any(data.get(key) != old.get(key) for key in fixed) or len(data["lines"]) != len(old["lines"])
+                            or any((new["net_cents"],new["tax_cents"],new["description"]) != (prior["net_cents"],prior["tax_cents"],prior["description"])
+                                   for new,prior in zip(data["lines"],old["lines"]))):
+                        raise ValueError("Actualiza importes, fechas y referencias en sevdesk y sincroniza su última versión.")
+                    if old.get("source_cost_centre_id") and any(new["activity"] != prior["activity"] for new,prior in zip(data["lines"],old["lines"])):
+                        raise ValueError("Actualiza el centro de coste en sevdesk y sincroniza su última versión.")
                     data.update({key: value for key,value in current["data"].items() if key.startswith("source_")})
                     if data.get("source_unsupported") == "Centro de coste sin actividad reconocida.":
                         # Explicit local activity choices resolve this one issue;
@@ -113,6 +116,8 @@ class Ledger:
                 raise ValueError("Falta el justificante original.")
             if source.get("source_unsupported"):
                 raise ValueError("El origen contiene un caso no soportado; revisa su rectificación antes de cerrar.")
+            if source.get("source_sync_error") or current["reconciled_paid"] != current["paid"]:
+                raise ValueError("La copia aún no cuadra con la última versión de sevdesk.")
             db.execute("UPDATE records SET state='reviewed',updated=? WHERE id=?", (now(), record_id))
             self.database.audit(db, "record.reviewed", record_id, {"revision": current["revision"]})
             return self.get(record_id, db)
@@ -171,11 +176,13 @@ class Ledger:
             with self.database.transaction() as connection:
                 return self.payment(record_id, payload, bank_id, source, connection)
         current = self.get(record_id, db)
+        if current["source"] and not source:
+            raise ValueError("Actualiza los pagos en sevdesk y sincroniza su última versión.")
         if current["state"] not in ("issued", "reviewed", "needs_review", "private"):
             raise ValueError("Cierra el documento antes de registrar el pago.")
         if current["state"] in ("needs_review", "private") and not source:
             raise ValueError("Revisa el documento importado antes de conciliar.")
-        if current["paid"] + payload.amount > current["total"]:
+        if current["reconciled_paid"] + payload.amount > current["total"]:
             raise ValueError("El pago supera el saldo pendiente del documento.")
         bank_id = bank_id or payload.bank_id
         if bank_id:
@@ -202,6 +209,9 @@ class Ledger:
             row = db.execute("SELECT * FROM payments WHERE id=? AND reversed_by IS NULL", (payment_id,)).fetchone()
             if not row:
                 raise ValueError("El pago no existe o ya se revirtió.")
+            record = db.execute("SELECT source FROM records WHERE id=?", (row["record_id"],)).fetchone()
+            if record["source"]:
+                raise ValueError("Revierte el pago en sevdesk y sincroniza su última versión.")
             reversal = identity("reversal")
             db.execute("UPDATE payments SET reversed_by=? WHERE id=?", (reversal, payment_id))
             self.database.audit(db, "payment.reversed", reversal, {"payment": payment_id})

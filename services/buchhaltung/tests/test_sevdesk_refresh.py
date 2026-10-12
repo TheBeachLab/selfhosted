@@ -1,8 +1,8 @@
 """Synthetic tests; no credentials, production data or network calls."""
 import base64
 import copy
-import hashlib
 import json
+import sqlite3
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,7 +11,7 @@ from buchhaltung.config import Config
 from buchhaltung.db import Database, canonical
 from buchhaltung.documents import Documents
 from buchhaltung.ledger import Ledger
-from buchhaltung.models import RecordInput
+from buchhaltung.models import RecordInput, PaymentInput
 from buchhaltung.reports import eur, vat
 from buchhaltung.sevdesk import Importer
 
@@ -21,12 +21,14 @@ class SourceFixture:
         self.income, self.shared = income, shared
         self.centre, self.log_id, self.amount = None, "1", "100"
         self.tax_rule, self.comment = "1", "QA Leistung"
+        self.date, self.bank_amount, self.paid, self.pdf = "2026-09-01", None, None, b"QA original"
+        self.deleted, self.logs_override = False, None
 
     def object(self, sid="1"):
-        return {"id": sid, "voucherDate": "2026-09-01", "description": "QA Beleg " + sid,
+        return {"id": sid, "voucherDate": self.date, "description": "QA Beleg " + sid,
                 "supplierName": "QA Supplier", "costCentre": self.centre if sid == "1" else {"id": "1"},
                 "creditDebit": "D" if self.income else "C", "status": "1000", "currency": "EUR",
-                "sumGross": self.amount, "sumNet": self.amount, "sumTax": "0", "paidAmount": self.amount,
+                "sumGross": self.amount, "sumNet": self.amount, "sumTax": "0", "paidAmount": self.amount if self.paid is None else self.paid,
                 "taxRule": {"id": "15" if self.income else self.tax_rule}, "document": {"id": sid}}
 
     def list(self, model, params=None):
@@ -34,8 +36,8 @@ class SourceFixture:
                 "CostCentre": [{"id": "1", "name": "Ingenieur Freiberufler"}, {"id": "2", "name": "Gewerbe Software"}],
                 "SevClient": [{"id": "1", "defaultCurrency": "EUR"}],
                 "CheckAccount": [{"id": "1", "name": "QA Bank", "currency": "EUR"}],
-                "CheckAccountTransaction": [{"id": "1", "entryDate": "2026-09-01", "amount": "200" if self.income and self.shared else "100" if self.income else "-200" if self.shared else "-100", "checkAccount": {"id": "1"}, "status": "400"}],
-                "Voucher": [self.object()] + ([self.object("2")] if self.shared else [])}
+                "CheckAccountTransaction": [{"id": "1", "entryDate": self.date, "amount": self.bank_amount or (("" if self.income else "-") + ("200" if self.shared else self.amount)), "checkAccount": {"id": "1"}, "status": "400"}],
+                "Voucher": [] if self.deleted else [self.object()] + ([self.object("2")] if self.shared else [])}
         if model == "VoucherPos":
             sid = str(params["voucher[id]"])
             return [{"id": sid, "comment": self.comment, "sumNetAccounting": self.amount,
@@ -45,13 +47,17 @@ class SourceFixture:
     def get(self, path, params=None):
         sid = path.split("/")[1]
         if path.endswith("getCheckAccountTransactionLogs"):
+            if self.logs_override is not None:
+                return {"objects": copy.deepcopy(self.logs_override)}
+            if self.paid == "0":
+                return {"objects": []}
             return {"objects": [{"id": self.log_id if sid == "1" else "other", "amountPaid": self.amount if self.income else "-" + self.amount,
-                                  "bookingDate": "2026-09-01", "checkAccountTransaction": {"id": "1"},
+                                  "bookingDate": self.date, "checkAccountTransaction": {"id": "1"},
                                   "object": {"id": sid}, "fromStatus": "100", "toStatus": "400"}]}
         if path.endswith("getCheckAccountTransactions"):
             return {"objects": self.list("CheckAccountTransaction")}
         if path.endswith("download"):
-            return {"objects": {"base64Encoded": True, "content": base64.b64encode(b"%PDF-1.4\nQA original " + sid.encode()).decode(), "filename": "qa.pdf"}}
+            return {"objects": {"base64Encoded": True, "content": base64.b64encode(b"%PDF-1.4\n" + self.pdf + sid.encode()).decode(), "filename": "qa.pdf"}}
         if path.startswith("Document/"):
             return {"objects": [{"id": sid, "filename": "qa.pdf"}]}
         raise AssertionError(path)
@@ -70,17 +76,16 @@ class RefreshTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_import(self, fixture, approved=False):
-        return Importer(self.config, self.db, self.docs, self.ledger, fixture,
-                        {"sevdesk/Voucher/1": "1"} if approved else {}).run(2026)
+    def run_import(self, fixture):
+        return Importer(self.config, self.db, self.docs, self.ledger, fixture).run(2026)
 
-    def test_authorized_centre_rebooking_preserves_cash_ids_and_retries(self):
+    def test_automatic_centre_rebooking_preserves_cash_ids_and_retries(self):
         source = SourceFixture()
         self.assertEqual(self.run_import(source)["state"], "complete")
         with self.db.connect() as db:
             original_payment = dict(db.execute("SELECT * FROM payments").fetchone())
         source.centre, source.log_id = {"id": "1"}, "new-log"
-        refreshed = self.run_import(source, approved=True)
+        refreshed = self.run_import(source)
         self.assertEqual(refreshed["state"], "complete", refreshed)
         with self.db.connect() as db:
             self.assertEqual(original_payment, dict(db.execute("SELECT * FROM payments").fetchone()))
@@ -96,20 +101,56 @@ class RefreshTests(unittest.TestCase):
         with self.db.connect() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM payments").fetchone()[0], 1)
 
-    def test_unapproved_and_financial_changes_stay_blocked_on_retries(self):
+    def test_latest_financial_revision_replaces_current_amount_date_and_same_log_id(self):
         source = SourceFixture()
         self.assertEqual(self.run_import(source)["state"], "complete")
-        source.centre, source.log_id = {"id": "1"}, "new-log"
+        with self.db.connect() as db:
+            original = dict(db.execute("SELECT * FROM payments").fetchone())
+        source.amount, source.date = "80", "2026-10-02"
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "complete", result)
+        current = self.ledger.get("sev_voucher_1")
+        self.assertEqual((current["total"], current["paid"], current["reconciled_paid"], current["date"]), (8000, 8000, 8000, source.date))
+        with self.db.connect() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM records").fetchone()[0], 1)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM payments WHERE reversed_by IS NULL").fetchone()[0], 1)
+            previous = dict(db.execute("SELECT * FROM payments WHERE id=?", (original["id"],)).fetchone())
+            self.assertTrue(previous.pop("reversed_by"))
+            original.pop("reversed_by")
+            self.assertEqual(previous, original)
+            self.assertEqual(db.execute("SELECT payment_id FROM payment_source_current").fetchone()[0], db.execute("SELECT id FROM payments WHERE reversed_by IS NULL").fetchone()[0])
+            self.assertEqual(tuple(db.execute("SELECT date,amount FROM bank_transactions").fetchone()), (source.date, -8000))
+        revision = current["revision"]
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(self.ledger.get(current["id"])["revision"], revision)
+
+    def test_inconsistent_latest_source_never_falls_back_to_old_cash_on_retry(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        source.amount, source.bank_amount = "101", "-100"
         for _ in range(2):
             result = self.run_import(source)
-            self.assertEqual(result["state"], "needs_attention")
+            self.assertEqual(result["state"], "needs_attention", result)
+            current = self.ledger.get("sev_voucher_1")
+            self.assertEqual((current["total"], current["paid"], current["reconciled_paid"]), (10100, 10100, 0))
+            self.assertTrue(current["data"]["source_sync_error"])
             self.assertEqual(result["source_drift"], ["sevdesk/Voucher/1"])
-        source.amount = "101"
-        self.assertEqual(self.run_import(source, approved=True)["state"], "needs_attention")
+        self.assertFalse(eur(self.db, 2026)["ready"])
+
+    def test_source_payment_removed_and_restored_is_never_counted_twice(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        source.paid = "0"
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(self.ledger.get("sev_voucher_1")["paid"], 0)
         with self.db.connect() as db:
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM payments").fetchone()[0], 1)
-            self.assertEqual(db.execute("SELECT COUNT(*) FROM payment_source_aliases").fetchone()[0], 0)
-        self.assertEqual(self.ledger.get("sev_voucher_1")["total"], 10000)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM payments WHERE reversed_by IS NULL").fetchone()[0], 0)
+        source.paid = None
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        with self.db.connect() as db:
+            self.assertEqual(db.execute("SELECT SUM(amount) FROM payments WHERE reversed_by IS NULL").fetchone()[0], 10000)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM payments").fetchone()[0], 2)
 
     def test_private_part_of_shared_bank_payment_never_enters_eur_or_vat(self):
         source = SourceFixture(shared=True)
@@ -158,25 +199,91 @@ class RefreshTests(unittest.TestCase):
             self.ledger.classify_imported(record["id"], "private", "Synthetic user request requiring further asset review.")
         self.assertEqual(self.ledger.get(record["id"])["state"], "needs_review")
 
-    def test_exact_source_metadata_revision_never_guesses_a_tax_code(self):
+    def test_latest_source_tax_metadata_invalidates_review_without_guessing_tax_code(self):
         source = SourceFixture()
         source.centre = {"id": "1"}
         self.assertEqual(self.run_import(source)["state"], "complete")
-        source.tax_rule, source.comment, source.log_id = "12", "Updated source comment; legal review pending.", "new-log"
-        bundle = {"object": source.object(), "positions": source.list("VoucherPos", {"voucher[id]": "1"}),
-                  "payment_logs": source.get("Voucher/1/getCheckAccountTransactionLogs")["objects"]}
-        digest = hashlib.sha256(canonical(bundle).encode()).hexdigest()
-        wrong = Importer(self.config, self.db, self.docs, self.ledger, source, {}, {"sevdesk/Voucher/1": "0" * 64}).run(2026)
-        self.assertEqual(wrong["state"], "needs_attention")
-        result = Importer(self.config, self.db, self.docs, self.ledger, source, {}, {"sevdesk/Voucher/1": digest}).run(2026)
-        self.assertEqual(result["state"], "complete", result)
-        self.assertEqual(result["cost_centres_refreshed"], [])
-        self.assertEqual(result["source_metadata_refreshed"], ["sevdesk/Voucher/1"])
         record = self.ledger.get("sev_voucher_1")
+        payload = {k: v for k, v in record["data"].items() if not k.startswith("source_")}
+        payload["lines"][0].update(tax_code="none", category="software")
+        payload["revision"] = record["revision"]
+        reviewed = self.ledger.save(RecordInput.model_validate(payload), record["id"])
+        self.ledger.review(record["id"], reviewed["revision"])
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(self.ledger.get(record["id"])["state"], "reviewed")
+        source.tax_rule, source.comment, source.log_id, source.centre = "12", "Updated source comment; legal review pending.", "new-log", {"id": "2"}
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "complete", result)
+        record = self.ledger.get("sev_voucher_1")
+        self.assertEqual(record["state"], "needs_review")
         self.assertEqual(record["data"]["source_tax_rule"], "12")
         self.assertEqual(record["data"]["lines"][0]["tax_code"], "unclassified")
+        self.assertEqual(record["data"]["lines"][0]["activity"], "gewerbe")
         self.assertEqual((record["total"], record["paid"]), (10000, 10000))
         self.assertEqual(self.run_import(source)["state"], "complete")
+
+    def test_latest_original_is_the_only_document_shown_and_old_bytes_are_audit(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        old = self.ledger.get("sev_voucher_1")["data"]["source_documents"]
+        source.pdf = b"CORRECTED source original"
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        current = self.ledger.get("sev_voucher_1")
+        self.assertFalse(set(old) & {doc["id"] for doc in current["documents"]})
+        self.assertEqual(len([doc for doc in current["documents"] if doc["role"] == "original"]), 1)
+        for doc in old:
+            self.assertIn(b"QA original", self.docs.read(doc)[1])
+        self.assertIn(b"CORRECTED", self.docs.read(current["data"]["source_documents"][0])[1])
+
+    def test_missing_source_record_is_removed_from_current_lists_and_reappears_once(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        source.deleted = True
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "complete", result)
+        self.assertEqual(result["source_removed"], ["sevdesk/Voucher/1"])
+        self.assertEqual(self.ledger.list(), [])
+        self.assertEqual(self.ledger.get("sev_voucher_1")["reconciled_paid"], 0)
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        source.deleted = False
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(len(self.ledger.list()), 1)
+        self.assertEqual(self.ledger.get("sev_voucher_1")["reconciled_paid"], 10000)
+
+    def test_original_manual_bank_row_stays_immutable(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        with self.db.transaction() as db:
+            db.execute("INSERT INTO bank_transactions(id,account_id,date,amount,purpose,party,reference,data) VALUES('manual','sev_account_1','2026-09-01',-100,'QA','QA','manual','{}')")
+        with self.assertRaises(sqlite3.IntegrityError), self.db.transaction() as db:
+            db.execute("UPDATE bank_transactions SET amount=-200 WHERE id='manual'")
+
+    def test_duplicate_source_payment_ids_are_an_error_not_extra_cash(self):
+        source = SourceFixture()
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        log = source.get("Voucher/1/getCheckAccountTransactionLogs")["objects"][0]
+        source.logs_override = [log, log]
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "needs_attention", result)
+        self.assertEqual(self.ledger.get("sev_voucher_1")["reconciled_paid"], 0)
+
+    def test_imported_financial_fields_and_payments_cannot_be_edited_locally(self):
+        source = SourceFixture()
+        source.centre = {"id": "1"}
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        current = self.ledger.get("sev_voucher_1")
+        payload = {k: v for k, v in current["data"].items() if not k.startswith("source_")}
+        payload["revision"] = current["revision"]
+        payload["lines"][0]["net_cents"] += 100
+        with self.assertRaisesRegex(ValueError, "sevdesk"):
+            self.ledger.save(RecordInput.model_validate(payload), current["id"])
+        with self.assertRaisesRegex(ValueError, "sevdesk"):
+            self.ledger.payment(current["id"], PaymentInput(date=source.date, amount=1))
+        with self.db.connect() as db:
+            payment_id = db.execute("SELECT id FROM payments").fetchone()[0]
+        with self.assertRaisesRegex(ValueError, "sevdesk"):
+            self.ledger.reverse_payment(payment_id)
+
 
 
 if __name__ == "__main__":

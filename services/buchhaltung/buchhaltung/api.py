@@ -143,6 +143,9 @@ def create_app(config=None):
     @app.put("/api/contacts/{contact_id}")
     def edit_contact(contact_id: str, payload: Party):
         with database.transaction() as db:
+            original = db.execute("SELECT source FROM contacts WHERE id=?", (contact_id,)).fetchone()
+            if original and original["source"]:
+                raise ValueError("Actualiza el contacto en sevdesk y sincroniza su última versión.")
             if not db.execute("UPDATE contacts SET data=? WHERE id=?", (canonical(payload.model_dump(mode="json")), contact_id)).rowcount:
                 raise KeyError("Cliente no encontrado.")
             database.audit(db, "contact.updated", contact_id, payload.model_dump(mode="json"))
@@ -158,7 +161,11 @@ def create_app(config=None):
     def get_record(record_id: str):
         value = ledger.get(record_id)
         with database.connect() as db:
-            value["payments"] = [dict(row) for row in db.execute("SELECT * FROM payments WHERE record_id=? ORDER BY date", (record_id,))]
+            if value["source"]:
+                value["payments"] = [{**dict(row), "source": row["current_source"] or row["source"]} for row in db.execute(
+                    "SELECT p.*,c.source AS current_source FROM payments p LEFT JOIN payment_source_current c ON c.payment_id=p.id WHERE p.record_id=? AND p.reversed_by IS NULL ORDER BY p.date", (record_id,))]
+            else:
+                value["payments"] = [dict(row) for row in db.execute("SELECT * FROM payments WHERE record_id=? ORDER BY date", (record_id,))]
         return value
 
     @app.post("/api/records", status_code=201)
@@ -216,7 +223,7 @@ def create_app(config=None):
     @app.get("/api/bank")
     def bank(start: date = date(2026, 10, 1), end: date = date(2026, 12, 31)):
         with database.connect() as db:
-            return [dict(row) for row in db.execute("SELECT b.id,b.account_id,b.date,b.amount,b.purpose,b.party,b.reference,b.classification,a.name AS account, (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.bank_id=b.id AND reversed_by IS NULL) AS matched FROM bank_transactions b JOIN bank_accounts a ON a.id=b.account_id WHERE b.date BETWEEN ? AND ? ORDER BY b.date DESC,b.id LIMIT 20000", (str(start), str(end)))]
+            return [dict(row) for row in db.execute("SELECT b.id,b.account_id,b.date,b.amount,b.purpose,b.party,b.reference,b.classification,a.name AS account, (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.bank_id=b.id AND reversed_by IS NULL) AS matched FROM bank_transactions b JOIN bank_accounts a ON a.id=b.account_id WHERE b.date BETWEEN ? AND ? AND COALESCE(json_extract(b.data,'$.source_missing'),0)=0 ORDER BY b.date DESC,b.id LIMIT 20000", (str(start), str(end)))]
 
     @app.post("/api/bank/accounts", status_code=201)
     def create_account(payload: BankAccountInput):

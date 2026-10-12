@@ -31,11 +31,11 @@ def blockers(database, db, start, end, annual=False):
     settings = database.setting(db=db)
     if not settings.get("fiscal_reviewed"):
         issues.append("Confirma la configuración fiscal en Configuración.")
-    last = db.execute("SELECT * FROM imports WHERE state='complete' AND year=? ORDER BY finished DESC LIMIT 1", (int(start[:4]),)).fetchone()
-    if not last:
+    last = db.execute("SELECT * FROM imports WHERE year=? ORDER BY started DESC LIMIT 1", (int(start[:4]),)).fetchone()
+    if not last or last["state"] != "complete":
         issues.append("Falta importar y verificar el histórico de sevdesk de este año.")
     if database.setting("source_drift", db):
-        issues.append("Hay cambios en sevdesk posteriores a la importación que requieren comparar los originales.")
+        issues.append("La última copia de sevdesk tiene discrepancias pendientes de verificar.")
     rows = db.execute("SELECT id,kind,state,data FROM records WHERE date>=? AND date<? AND state NOT IN ('void','cancelled','private')", (start, end)).fetchall()
     for row in rows:
         if row["state"] not in ("issued", "reviewed"):
@@ -45,6 +45,8 @@ def blockers(database, db, start, end, annual=False):
             issues.append(f"{row['id']}: clasificación fiscal o actividad pendiente.")
         if data.get("source_unsupported"):
             issues.append(f"{row['id']}: {data['source_unsupported']}")
+        if data.get("source_sync_error"):
+            issues.append(f"{row['id']}: {data['source_sync_error']}")
     unresolved = db.execute("SELECT COUNT(*) FROM bank_transactions b WHERE b.date>=? AND b.date<? AND classification='unreviewed' AND ABS(amount)>(SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.bank_id=b.id AND reversed_by IS NULL)", (start, end)).fetchone()[0]
     if unresolved:
         issues.append(f"{unresolved} movimientos bancarios pendientes de conciliación o clasificación.")

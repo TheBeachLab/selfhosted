@@ -55,6 +55,10 @@ CREATE TRIGGER IF NOT EXISTS payment_alias_no_update BEFORE UPDATE ON payment_so
  BEGIN SELECT RAISE(ABORT,'payment source aliases are append-only'); END;
 CREATE TRIGGER IF NOT EXISTS payment_alias_no_delete BEFORE DELETE ON payment_source_aliases
  BEGIN SELECT RAISE(ABORT,'payment source aliases are append-only'); END;
+CREATE TABLE IF NOT EXISTS payment_source_current (
+ source TEXT PRIMARY KEY, payment_id TEXT NOT NULL UNIQUE REFERENCES payments(id),
+ snapshot_sha256 TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS documents (
  id TEXT PRIMARY KEY, sha256 TEXT NOT NULL UNIQUE, filename TEXT NOT NULL,
  media_type TEXT NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL
@@ -94,7 +98,11 @@ CREATE TRIGGER IF NOT EXISTS documents_no_delete BEFORE DELETE ON documents BEGI
 CREATE TRIGGER IF NOT EXISTS payments_no_delete BEFORE DELETE ON payments BEGIN SELECT RAISE(ABORT,'reverse the payment'); END;
 CREATE TRIGGER IF NOT EXISTS payment_snapshot BEFORE UPDATE OF record_id,bank_id,date,amount,source ON payments
  BEGIN SELECT RAISE(ABORT,'payment is immutable'); END;
-CREATE TRIGGER IF NOT EXISTS bank_snapshot BEFORE UPDATE OF account_id,date,amount,purpose,party,reference,source,data ON bank_transactions
+-- Imported bank rows are a current projection. Their original provider JSON
+-- stays immutable in source_revisions; locally imported bank originals stay fixed.
+DROP TRIGGER IF EXISTS bank_snapshot;
+CREATE TRIGGER bank_snapshot BEFORE UPDATE OF account_id,date,amount,purpose,party,reference,source,data ON bank_transactions
+ WHEN OLD.source IS NULL OR OLD.source NOT LIKE 'sevdesk/CheckAccountTransaction/%' OR NEW.source IS NOT OLD.source
  BEGIN SELECT RAISE(ABORT,'bank original is immutable'); END;
 """
 

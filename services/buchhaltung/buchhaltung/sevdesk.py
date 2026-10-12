@@ -6,12 +6,10 @@ authenticated GET requests on 2026-10-12; these legacy endpoints are not listed
 in the current public OpenAPI file. Preserve raw responses; refuse silent guesses.
 """
 import base64
-from collections import Counter
 from datetime import datetime, timezone
 import fcntl
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import time
@@ -21,7 +19,7 @@ import httpx
 from .bank import bank_date
 from .db import canonical, identity, now
 from .documents import media_type
-from .models import ACTIVITIES, PaymentInput, cents
+from .models import ACTIVITIES, cents
 
 BASE = "https://my.sevdesk.de/api/v1/"
 MODELS = {"Invoice", "InvoicePos", "Voucher", "VoucherPos", "CreditNote", "CreditNotePos", "Contact",
@@ -116,98 +114,145 @@ def download_bytes(result):
 
 
 class Importer:
-    def __init__(self, config, database, documents, ledger, client, approved_cost_centres=None, approved_source_metadata=None):
+    def __init__(self, config, database, documents, ledger, client):
         self.config, self.database, self.documents, self.ledger, self.client = config, database, documents, ledger, client
         self.summary = {"counts": {}, "documents": 0, "payments": 0, "errors": [], "source_drift": []}
         self.countries, self.activities, self.contacts = {}, {}, {}
-        self.approved_cost_centres = approved_cost_centres or {}
-        self.approved_source_metadata = approved_source_metadata or {}
         self.resolved_sources = set()
-        self.refreshed_centres, self.refreshed_metadata = set(), set()
+        self.refreshed_centres, self.refreshed_metadata, self.refreshed_sources = set(), set(), set()
 
-    def accept_cost_centre(self, db, existing, bundle, digest, prior):
-        """Accept only an explicitly named centre and financially identical rebooking.
+    @staticmethod
+    def classification_basis(bundle):
+        """Evidence supporting an owner classification, without amount guesses."""
+        obj = bundle["object"]
+        return (obj.get("creditDebit"), object_id(obj.get("taxRule")),
+                [(object_id(p.get("accountDatev")), p.get("taxRate"), p.get("isAsset"))
+                 for p in bundle["positions"]])
 
-        sevdesk requires draft status for metadata edits. Its documented resets
-        unlink payments; new log IDs are aliases of the SAME local cash payment.
-        https://api.sevdesk.de/ operations voucherResetToDraft/bookVoucher,
-        read 2026-10-12. Preserve prior raw versions and original payment IDs.
+    @staticmethod
+    def source_facts(bundle):
+        # Generated timestamps and replacement log IDs do not create a second
+        # current version of the same financial facts.
+        clean = lambda obj: {k: v for k, v in obj.items() if k not in ("create", "update")}
+        logs = sorted((object_id(log.get("checkAccountTransaction")), cents(log.get("amountPaid") or 0),
+                       source_date(log.get("bookingDate") or log.get("create")))
+                      for log in bundle["payment_logs"] if cents(log.get("amountPaid") or 0))
+        return {"object": clean(bundle["object"]), "positions": [clean(p) for p in bundle["positions"]], "payments": logs}
+
+    def sync_payments(self, db, record_id, kind, bundle, digest):
+        """One current payment projection; superseded cash rows are audit only.
+
+        Latest sevdesk logs are authoritative. Unchanged bank/date/amount tuples
+        reuse the same cash row, even when sevdesk generated a different log ID.
+        Changed or removed payments are superseded, never counted twice.
         """
-        expected = self.approved_cost_centres.get(existing["source"])
-        metadata = self.approved_source_metadata.get(existing["source"]) == digest
-        if (not expected and not metadata) or existing["state"] != "needs_review":
-            return False
-        centre = object_id(bundle["object"].get("costCentre"))
-        if expected and centre != expected:
-            return False
-        if metadata and not expected and centre != object_id(prior["object"].get("costCentre")):
-            return False
-        if self.activities.get(centre) is None:
-            return False
-        def without_timestamps(obj, centre=False):
-            omitted = {"update", "create"} | ({"costCentre"} if centre else set())
-            if metadata:
-                omitted |= {"taxRule"} if centre else {"comment"}
-            return {key: value for key, value in obj.items() if key not in omitted}
-        if without_timestamps(prior["object"], True) != without_timestamps(bundle["object"], True):
-            return False
-        if [without_timestamps(p) for p in prior["positions"]] != [without_timestamps(p) for p in bundle["positions"]]:
-            return False
-        def log_key(log):
-            return (object_id(log.get("checkAccountTransaction")), cents(log.get("amountPaid") or 0),
-                    source_date(log.get("bookingDate") or log.get("create")),
-                    object_id(log.get("object")), str(log.get("fromStatus")), str(log.get("toStatus")))
-        old_logs = sorted((log for log in prior["payment_logs"] if cents(log.get("amountPaid") or 0)), key=log_key)
-        new_logs = sorted((log for log in bundle["payment_logs"] if cents(log.get("amountPaid") or 0)), key=log_key)
-        if [log_key(log) for log in old_logs] != [log_key(log) for log in new_logs]:
-            return False
-        paid = db.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE record_id=? AND reversed_by IS NULL", (existing["id"],)).fetchone()[0]
-        if paid != abs(cents(bundle["object"].get("paidAmount") or 0)):
-            return False
-        aliases = []
-        for old, new in zip(old_logs, new_logs):
-            old_source = "sevdesk/CheckAccountTransactionLog/" + str(old["id"])
-            new_source = "sevdesk/CheckAccountTransactionLog/" + str(new["id"])
-            payment = db.execute("SELECT * FROM payments WHERE source=?", (old_source,)).fetchone()
-            if payment is None:
-                payment = db.execute("SELECT p.* FROM payments p JOIN payment_source_aliases a ON a.payment_id=p.id WHERE a.source=?", (old_source,)).fetchone()
-            if (payment is None or payment["reversed_by"] or payment["record_id"] != existing["id"]
-                    or payment["bank_id"] != "sev_bank_" + log_key(new)[0]
-                    or payment["date"] != log_key(new)[2] or payment["amount"] != abs(log_key(new)[1])):
-                return False
-            known = db.execute("SELECT id FROM payments WHERE source=? UNION SELECT payment_id FROM payment_source_aliases WHERE source=?", (new_source, new_source)).fetchone()
-            if known and known[0] != payment["id"]:
-                return False
-            if new_source != old_source and not known:
-                aliases.append((new_source, payment["id"], payment["source"], digest, now()))
-        data = json.loads(existing["data"])
-        if metadata and len(data["lines"]) != len(bundle["positions"]):
-            return False
-        for index, line in enumerate(data["lines"]):
-            line["activity"] = self.activities[centre]
-            if metadata:
-                position = bundle["positions"][index]
-                old = prior["positions"][index]
-                # Do not overwrite an independently edited local description.
-                if line["description"] != (old.get("name") or old.get("comment") or prior["object"].get("description") or "Leistung / Beleg"):
-                    return False
-                line["description"] = position.get("name") or position.get("comment") or bundle["object"].get("description") or "Leistung / Beleg"
-                # Copy source metadata, never infer its legal tax treatment.
-                line["tax_code"] = "unclassified"
-        if metadata:
-            data["source_tax_rule"] = object_id(bundle["object"].get("taxRule"))
-            data["source_classification_changed"] = True
-        issue = "Centro de coste sin actividad reconocida."
-        data["source_unsupported"] = data.get("source_unsupported", "").replace(issue, "").strip("; ")
-        data["source_bundle_sha256"], data["source_cost_centre_id"] = digest, centre
-        db.executemany("INSERT INTO payment_source_aliases VALUES(?,?,?,?,?)", aliases)
-        db.execute("UPDATE records SET data=?,revision=revision+1,updated=? WHERE id=?", (canonical(data), now(), existing["id"]))
-        self.database.audit(db, "record.source_metadata_refreshed" if metadata else "record.source_cost_centre_refreshed", existing["id"],
-                            {"source": existing["source"], "centre_id": centre, "accepted_sha256": digest,
-                             "payment_aliases": [row[0] for row in aliases], "cash_payments_unchanged": True})
-        self.resolved_sources.add(existing["source"])
-        (self.refreshed_metadata if metadata else self.refreshed_centres).add(existing["source"])
-        return True
+        obj, logs = bundle["object"], bundle["payment_logs"]
+        paid = abs(cents(obj.get("paidAmount") or 0))
+        direction = 1 if kind in ("invoice", "income", "tax_refund") else -1
+        expected, issues, seen = [], [], set()
+        for log in logs:
+            amount = cents(log.get("amountPaid") or 0)
+            if not amount:
+                continue
+            source = "sevdesk/CheckAccountTransactionLog/" + str(log["id"])
+            self.archive(db, source, log, record_id)
+            bank_id = "sev_bank_" + object_id(log.get("checkAccountTransaction"))
+            bank = db.execute("SELECT * FROM bank_transactions WHERE id=?", (bank_id,)).fetchone()
+            if source in seen or amount * direction < 0:
+                issues.append("Historial de pagos/reversiones ambiguo en sevdesk.")
+            elif not bank or bank["amount"] * direction <= 0 or bank["classification"] == "excluded" or abs(amount)>abs(bank["amount"]):
+                issues.append("El movimiento del pago falta o tiene un sentido incompatible.")
+            elif source_date(log.get("bookingDate") or log.get("create")) != bank["date"]:
+                issues.append("La fecha del pago no coincide con la del movimiento original.")
+            else:
+                expected.append((source, bank_id, bank["date"], abs(amount)))
+            seen.add(source)
+        if sum(abs(cents(log.get("amountPaid") or 0)) for log in logs) != paid:
+            issues.append("Los logs no cuadran con paidAmount de sevdesk.")
+        if paid > source_amount(obj, "sumGross"):
+            issues.append("El importe pagado supera el total de sevdesk.")
+        if issues:
+            expected = []  # Never retain stale reconciliation as current evidence.
+        current = [dict(p) for p in db.execute("SELECT * FROM payments WHERE record_id=? AND reversed_by IS NULL", (record_id,))]
+        old_mapping = {p["source"]: p["payment_id"] for p in db.execute(
+            "SELECT c.* FROM payment_source_current c JOIN payments p ON p.id=c.payment_id WHERE p.record_id=?", (record_id,))}
+        db.execute("DELETE FROM payment_source_current WHERE payment_id IN (SELECT id FROM payments WHERE record_id=?)", (record_id,))
+        used, mapped, aliases = set(), [], []
+        for source, bank_id, date, amount in expected:
+            matching = [p for p in current if p["id"] not in used and (p["bank_id"], p["date"], p["amount"]) == (bank_id, date, amount)]
+            matching.sort(key=lambda p: (p["id"] != old_mapping.get(source), p["source"] != source, p["id"]))
+            if matching:
+                payment = matching[0]
+                payment_id = payment["id"]
+                known = db.execute("SELECT id FROM payments WHERE source=? UNION SELECT payment_id FROM payment_source_aliases WHERE source=?", (source, source)).fetchone()
+                if payment["source"] != source and not known:
+                    db.execute("INSERT INTO payment_source_aliases VALUES(?,?,?,?,?)", (source, payment_id, payment["source"], digest, now()))
+                    aliases.append(source)
+            else:
+                payment_id = identity("pay")
+                # Reused provider IDs may carry corrected amounts/dates. Keep the
+                # immutable old row, and map that ID only to its current revision.
+                original_source = source
+                if db.execute("SELECT 1 FROM payments WHERE source=?", (source,)).fetchone():
+                    original_source += "@" + digest + ":" + payment_id
+                db.execute("INSERT INTO payments(id,record_id,bank_id,date,amount,source,created) VALUES(?,?,?,?,?,?,?)",
+                           (payment_id, record_id, bank_id, date, amount, original_source, now()))
+                self.database.audit(db, "payment.source_imported", payment_id,
+                                    {"record": record_id, "source": source, "bank": bank_id, "date": date, "amount": amount, "snapshot": digest}, "sevdesk-import")
+                self.summary["payments"] += 1
+            used.add(payment_id)
+            db.execute("INSERT INTO payment_source_current VALUES(?,?,?)", (source, payment_id, digest))
+            mapped.append([source, payment_id])
+        superseded = [p["id"] for p in current if p["id"] not in used]
+        for payment_id in superseded:
+            db.execute("UPDATE payments SET reversed_by=? WHERE id=?", (identity("source_superseded"), payment_id))
+        if superseded or aliases or old_mapping != dict(mapped):
+            self.database.audit(db, "payment.source_projection_refreshed", record_id,
+                                {"snapshot": digest, "current": mapped, "superseded": superseded, "aliases": aliases}, "sevdesk-import")
+        return sorted(set(issues))
+
+    def originals(self, model, obj, record_id):
+        """Select only documents returned by this read as current originals."""
+        source = "sevdesk/" + model + "/" + str(obj["id"])
+        selected, errors = [], []
+        def save(raw, filename, media, role):
+            with self.database.transaction() as db:
+                doc = self.documents.store(db, raw, filename, media, record_id, role)
+            selected.append(doc)
+            self.summary["documents"] += 1
+        if model in ("Invoice", "CreditNote"):
+            try:
+                pdf, filename = download_bytes(self.client.get(model + "/" + str(obj["id"]) + "/getPdf", {"preventSendBy": "true"}))
+                if media_type(pdf) != "application/pdf":
+                    raise SourceError("No se obtuvo un PDF original.")
+                save(pdf, filename, "application/pdf", "invoice_pdf")
+            except (SourceError, ValueError) as error:
+                errors.append(str(error))
+            if model == "Invoice":
+                try:
+                    xml = self.client.get("Invoice/" + str(obj["id"]) + "/getXml")["objects"]
+                    if not isinstance(xml, str) or media_type(xml.encode()) != "application/xml":
+                        raise SourceError("No se obtuvo XML válido.")
+                    save(xml.encode(), (obj.get("invoiceNumber") or str(obj["id"])) + ".xml", "application/xml", "invoice_xml")
+                except SourceError as error:
+                    if not str(error).endswith(("HTTP 400", "HTTP 404")):
+                        errors.append(str(error))
+                except ValueError as error:
+                    errors.append(str(error))
+        elif object_id(obj.get("document")):
+            try:
+                path = "Document/" + object_id(obj["document"])
+                metadata = self.client.get(path)
+                raw, filename = download_bytes(self.client.get(path + "/download"))
+                with self.database.transaction() as db:
+                    self.archive(db, "sevdesk/" + path, metadata)
+                save(raw, filename, media_type(raw), "original")
+            except (SourceError, ValueError) as error:
+                errors.append(str(error))
+        else:
+            errors.append("Justificante ausente en sevdesk.")
+        self.summary["errors"].extend(source + ": " + error for error in errors)
+        return sorted(set(selected)), errors
 
     def archive(self, db, source, payload, record_id=None):
         raw = canonical(payload).encode()
@@ -215,6 +260,30 @@ class Importer:
         doc_id = self.documents.store(db, raw, source.replace("/", "-") + ".json", "application/json", record_id, "source_json")
         db.execute("INSERT OR IGNORE INTO source_revisions VALUES(?,?,?,?)", (source, digest, doc_id, now()))
         return digest
+
+    def retire_missing(self, model, present):
+        """Remove absent source entries from the current projection, not audit."""
+        prefix = "sevdesk/" + model + "/"
+        with self.database.transaction() as db:
+            for record in db.execute("SELECT * FROM records WHERE source LIKE ?", (prefix + "%",)).fetchall():
+                if record["source"] in present:
+                    continue
+                old = json.loads(record["data"])
+                if old.get("source_missing"):
+                    self.resolved_sources.add(record["source"])
+                    continue
+                data = {**old, "lines": [], "source_expected_gross": 0, "source_paid_amount": 0,
+                        "source_documents": [], "source_snapshot_document": None, "source_missing": True,
+                        "source_status": "missing", "source_sync_error": "No aparece en el inventario completo actual de sevdesk."}
+                if record["state"] in ("reviewed", "issued", "cancelled"):
+                    db.execute("UPDATE records SET state='needs_review' WHERE id=?", (record["id"],))
+                db.execute("UPDATE records SET data=?,state='void',number=NULL,revision=revision+1,updated=? WHERE id=?",
+                           (canonical(data), now(), record["id"]))
+                self.sync_payments(db, record["id"], record["kind"], {"object": {"paidAmount": "0", "sumGross": "0"}, "payment_logs": []}, "missing-from-source")
+                self.database.audit(db, "record.absent_from_source", record["id"],
+                                    {"source": record["source"], "before": old, "current": "absent"}, "sevdesk-import")
+                self.summary.setdefault("source_removed", []).append(record["source"])
+                self.resolved_sources.add(record["source"])
 
     def country(self, source):
         country = self.countries.get(object_id(source), {})
@@ -254,10 +323,10 @@ class Importer:
                          "vat_id": row.get("vatNumber") or "", "tax_number": row.get("taxNumber") or "", "phone": "", "iban": "",
                          "buyer_reference": row.get("buyerReference") or ""}
                 self.contacts[str(row["id"])] = party
-                # Do not overwrite a locally edited contact on a second import.
-                db.execute("INSERT OR IGNORE INTO contacts(id,data,source) VALUES(?,?,?)", ("sev_contact_" + str(row["id"]), canonical(party), source))
+                # Imported contacts always reflect the latest sevdesk version.
+                db.execute("INSERT INTO contacts(id,data,source) VALUES(?,?,?) ON CONFLICT(source) DO UPDATE SET data=excluded.data", ("sev_contact_" + str(row["id"]), canonical(party), source))
             for row in accounts:
-                db.execute("INSERT OR IGNORE INTO bank_accounts VALUES(?,?,?,?)", ("sev_account_" + str(row["id"]), row.get("name") or ("Cuenta sevdesk " + str(row["id"])), row.get("currency") or "EUR", "sevdesk/CheckAccount/" + str(row["id"])))
+                db.execute("INSERT INTO bank_accounts VALUES(?,?,?,?) ON CONFLICT(source) DO UPDATE SET name=excluded.name,currency=excluded.currency", ("sev_account_" + str(row["id"]), row.get("name") or ("Cuenta sevdesk " + str(row["id"])), row.get("currency") or "EUR", "sevdesk/CheckAccount/" + str(row["id"])))
             settings = self.database.setting(db=db)
             if clients and not settings.get("seller"):
                 row = clients[0]
@@ -279,14 +348,24 @@ class Importer:
         data = {"date": source_date(obj.get("entryDate") or obj.get("valueDate")), "amount": cents(obj["amount"]),
                 "purpose": obj.get("paymtPurpose") or "", "party": obj.get("payeePayerName") or "",
                 "reference": obj.get("externalId") or obj.get("primaNotaNo") or ""}
-        if existing:
-            if existing["date"] != data["date"] or existing["amount"] != data["amount"]:
-                self.summary["source_drift"].append(source)
-            return existing["id"]
-        transaction_id = "sev_bank_" + str(obj["id"])
         # Only explicit source private status is imported as private. Transfers,
         # deleted/zero transactions stay archived but cannot be booked as income.
         classification = "excluded" if obj.get("deletedAt") or not data["amount"] else "private" if str(obj.get("status")) == "300" else "unreviewed"
+        if existing:
+            old = json.loads(existing["data"])
+            material = lambda row: {k: v for k, v in row.items() if k not in ("update", "create")}
+            if material(old) == material(obj):
+                classification = existing["classification"]
+            projection = (account_id, data["date"], data["amount"], data["purpose"], data["party"], str(data["reference"]), classification, canonical(obj))
+            previous = tuple(existing[k] for k in ("account_id", "date", "amount", "purpose", "party", "reference", "classification", "data"))
+            if projection != previous:
+                db.execute("UPDATE bank_transactions SET account_id=?,date=?,amount=?,purpose=?,party=?,reference=?,classification=?,data=? WHERE id=?",
+                           (*projection, existing["id"]))
+                self.database.audit(db, "bank.source_refreshed", existing["id"],
+                                    {"source": source, "before": old, "after": obj}, "sevdesk-import")
+            self.resolved_sources.add(source)
+            return existing["id"]
+        transaction_id = "sev_bank_" + str(obj["id"])
         db.execute("INSERT INTO bank_transactions(id,account_id,date,amount,purpose,party,reference,source,classification,data) VALUES(?,?,?,?,?,?,?,?,?,?)",
                    (transaction_id, account_id, data["date"], data["amount"], data["purpose"], data["party"], str(data["reference"]), source, classification, canonical(obj)))
         self.database.audit(db, "bank.source_imported", transaction_id, {"source": source}, "sevdesk-import")
@@ -347,101 +426,105 @@ class Importer:
                 "asset_life_months": None, "asset_start": None, "source_status": str(obj.get("status")),
                 "source_currency": obj.get("currency") or "EUR", "source_tax_rule": rule,
                 "source_expected_gross": expected, "source_unsupported": "; ".join(sorted(set(unsupported)))}
+        data.update(source_cost_centre_id=object_id(obj.get("costCentre")), source_paid_amount=abs(cents(obj.get("paidAmount") or 0)),
+                    source_position_ids=[str(p["id"]) for p in positions], source_activity_pending=not bool(activity),
+                    source_booking_accounts=[object_id(p.get("accountDatev")) for p in positions])
+        digest = hashlib.sha256(canonical(bundle).encode()).hexdigest()
+        data["source_bundle_sha256"] = digest
         with self.database.transaction() as db:
-            digest = hashlib.sha256(canonical(bundle).encode()).hexdigest()
             existing = db.execute("SELECT * FROM records WHERE source=?", (source,)).fetchone()
             record_id = existing["id"] if existing else "sev_" + model.lower() + "_" + str(obj["id"])
-            unresolved_change = False
-            if existing:
-                accepted = json.loads(existing["data"]).get("source_bundle_sha256")
-                prior_row = db.execute("SELECT sha256,document_id FROM source_revisions WHERE source=? " +
-                                       ("AND sha256=?" if accepted else "ORDER BY imported ASC LIMIT 1"),
-                                       (source, accepted) if accepted else (source,)).fetchone()
-                # Compare the accepted baseline, not merely an already archived
-                # rejected revision: retries must keep reporting unresolved drift.
-                if prior_row is None or prior_row["sha256"] != digest:
-                    prior = json.loads(self.documents.read(prior_row["document_id"])[1]) if prior_row else None
-                    if prior is None or not self.accept_cost_centre(db, existing, bundle, digest, prior):
-                        self.summary["source_drift"].append(source)
-                        unresolved_change = True
             if not existing:
-                data["source_bundle_sha256"] = digest
-                state = "void" if str(obj.get("hidden", "0")) in ("1", "true") else "needs_review"
+                data["source_documents"] = []
                 db.execute("INSERT INTO records(id,kind,date,number,state,data,source,created,updated) VALUES(?,?,?,?,?,?,?,?,?)",
-                           (record_id, kind, record_date, obj.get("invoiceNumber") if model == "Invoice" else None, state, canonical(data), source, now(), now()))
-                self.database.audit(db, "record.source_imported", record_id, {"source": source}, "sevdesk-import")
+                           (record_id, kind, record_date, obj.get("invoiceNumber") if model == "Invoice" else None,
+                            "needs_review", canonical(data), source, now(), now()))
+        selected, document_errors = self.originals(model, obj, record_id)
+        data["source_documents"] = selected
+        with self.database.transaction() as db:
+            current = db.execute("SELECT * FROM records WHERE id=?", (record_id,)).fetchone()
+            old = json.loads(current["data"])
+            accepted = old.get("source_bundle_sha256")
+            prior_row = db.execute("SELECT sha256,document_id FROM source_revisions WHERE source=? " +
+                                   ("AND sha256=?" if accepted else "ORDER BY imported ASC LIMIT 1"),
+                                   (source, accepted) if accepted else (source,)).fetchone()
+            prior = json.loads(self.documents.read(prior_row["document_id"])[1]) if prior_row else None
+            changed = prior is None or self.source_facts(prior) != self.source_facts(bundle)
+            changed = changed or old.get("source_missing", False)
+            if "source_documents" in old and selected != old["source_documents"]:
+                changed = True
+            state = "void" if str(obj.get("hidden", "0")).lower() in ("1", "true") or str(obj.get("status")) == "750" else "needs_review"
+            if existing and not changed:
+                # Keep reviewed LOCAL tax mappings only while their source basis
+                # is unchanged. All money, dates, references and known centres
+                # below still come from the latest source, never local edits.
+                for new, previous in zip(data["lines"], old["lines"]):
+                    for key in ("tax_code", "category", "deduct_percent"):
+                        new[key] = previous[key]
+                    if not activity:
+                        new["activity"] = previous["activity"]
+                for key in ("note", "exemption_reason", "asset_life_months", "asset_start", "source_classification_reason", "source_private"):
+                    if key in old:
+                        data[key] = old[key]
+                kind = data["kind"] = current["kind"]
+                state = current["state"] if state != "void" else state
+                if old.get("source_unsupported") == "":
+                    data["source_unsupported"] = ""
+                    data["source_activity_pending"] = old.get("source_activity_pending", not bool(activity))
+            same_basis = prior is not None and self.classification_basis(prior) == self.classification_basis(bundle)
+            simple = all(not line["tax_cents"] and line["category"] != "asset" for line in data["lines"])
+            if existing and same_basis and simple and state != "void":
+                if current["state"] == "private" and kind == "expense":
+                    state, data["source_private"] = "private", True
+                    for line in data["lines"]:
+                        line["deduct_percent"] = 0
+                    if data["source_unsupported"] == "Centro de coste sin actividad reconocida.":
+                        data["source_unsupported"] = ""
+                if current["kind"] == "tax_refund" and kind in ("income", "tax_refund"):
+                    kind = data["kind"] = "tax_refund"
+                    for line in data["lines"]:
+                        line["tax_code"], line["category"] = "none", "vat_refund"
+                    if not activity:
+                        data["source_activity_pending"] = True
+                        data["source_unsupported"] = "Devolución de IVA: falta un reparto verificado entre actividades."
+                if "source_classification_reason" in old:
+                    data["source_classification_reason"] = old["source_classification_reason"]
+            if changed and prior:
+                if object_id(prior["object"].get("costCentre")) != data["source_cost_centre_id"]:
+                    self.refreshed_centres.add(source)
+                if (object_id(prior["object"].get("taxRule")) != rule or
+                        [p.get("comment") for p in prior["positions"]] != [p.get("comment") for p in positions]):
+                    self.refreshed_metadata.add(source)
             self.archive(db, source, bundle, record_id)
+            data["source_snapshot_document"] = db.execute("SELECT document_id FROM source_revisions WHERE source=? AND sha256=?", (source, digest)).fetchone()[0]
             for transaction in transactions:
                 self.transaction(transaction, db)
-        # Preserve all originals, not rendered previews, and attach immutable revisions.
-        if model in ("Invoice", "CreditNote"):
-            try:
-                pdf, filename = download_bytes(self.client.get(model + "/" + str(obj["id"]) + "/getPdf", {"preventSendBy": "true"}))
-                if media_type(pdf) != "application/pdf":
-                    raise SourceError("No se obtuvo un PDF original.")
-                with self.database.transaction() as db:
-                    self.documents.store(db, pdf, filename, "application/pdf", record_id, "invoice_pdf")
-                self.summary["documents"] += 1
-            except (SourceError, ValueError) as error:
-                self.summary["errors"].append(source + ": " + str(error))
-            if model == "Invoice":
-                try:
-                    xml = self.client.get("Invoice/" + str(obj["id"]) + "/getXml")["objects"]
-                    if not isinstance(xml, str) or media_type(xml.encode()) != "application/xml":
-                        raise SourceError("No se obtuvo XML válido.")
-                    with self.database.transaction() as db:
-                        self.documents.store(db, xml.encode(), (obj.get("invoiceNumber") or str(obj["id"])) + ".xml", "application/xml", record_id, "invoice_xml")
-                    self.summary["documents"] += 1
-                except SourceError as error:
-                    if not str(error).endswith("HTTP 400") and not str(error).endswith("HTTP 404"):
-                        self.summary["errors"].append(source + ": " + str(error))
-                except ValueError as error:
-                    self.summary["errors"].append(source + ": " + str(error))
-        elif object_id(obj.get("document")):
-            try:
-                doc_source = "Document/" + object_id(obj["document"])
-                metadata = self.client.get(doc_source)
-                raw, filename = download_bytes(self.client.get(doc_source + "/download"))
-                with self.database.transaction() as db:
-                    self.archive(db, "sevdesk/" + doc_source, metadata)
-                    self.documents.store(db, raw, filename, media_type(raw), record_id, "original")
-                self.summary["documents"] += 1
-            except (SourceError, ValueError) as error:
-                self.summary["errors"].append(source + ": " + str(error))
-        else:
-            self.summary["errors"].append(source + ": justificante ausente en sevdesk.")
-        # Booking logs contain signed amounts. A reset/reversal is not a new payment.
-        # Validate their sum against paidAmount; ambiguous histories stay unbooked.
-        if unresolved_change:
-            return record_id
-        paid = abs(cents(obj.get("paidAmount") or 0))
-        signed_sum = sum(cents(log.get("amountPaid") or 0) for log in logs)
-        expected_sign = 1 if kind in ("invoice", "income") else -1
-        valid_logs = all(cents(log.get("amountPaid") or 0) * expected_sign >= 0 for log in logs)
-        if logs and (not valid_logs or abs(signed_sum) != paid):
-            self.summary["errors"].append(source + ": historial de pagos/reversiones ambiguo; se conserva sin conciliar automáticamente.")
-        elif logs:
-            for log in logs:
-                amount = abs(cents(log.get("amountPaid") or 0))
-                if not amount:
-                    continue
-                payment_source = "sevdesk/CheckAccountTransactionLog/" + str(log["id"])
-                try:
-                    with self.database.transaction() as db:
-                        self.archive(db, payment_source, log, record_id)
-                        if db.execute("SELECT 1 FROM payments WHERE source=? UNION SELECT 1 FROM payment_source_aliases WHERE source=?", (payment_source, payment_source)).fetchone():
-                            continue
-                        bank_id = "sev_bank_" + object_id(log.get("checkAccountTransaction"))
-                        movement = db.execute("SELECT * FROM bank_transactions WHERE id=?", (bank_id,)).fetchone()
-                        if not movement:
-                            raise SourceError("El movimiento de un pago no aparece en la exportación.")
-                        payment = PaymentInput(bank_id=bank_id, date=movement["date"], amount=amount)
-                        self.ledger.payment(record_id, payment, source=payment_source, db=db)
-                    self.summary["payments"] += 1
-                except (SourceError, ValueError) as error:
-                    self.summary["errors"].append(source + ": " + str(error))
-        elif paid:
-            self.summary["errors"].append(source + ": importe pagado sin movimientos/logs; requiere reconstrucción verificada.")
+            payment_errors = self.sync_payments(db, record_id, kind, bundle, digest)
+            issues = document_errors + payment_errors
+            if sum(line["net_cents"] + line["tax_cents"] for line in data["lines"]) != expected:
+                issues.append("Las posiciones no cuadran con el total de sevdesk.")
+            data["source_sync_error"] = "; ".join(sorted(set(issues)))
+            if issues:
+                state = "needs_review" if state != "void" else state
+                self.summary["source_drift"].append(source)
+                self.summary["errors"].extend(source + ": " + error for error in payment_errors)
+            else:
+                self.resolved_sources.add(source)
+            number = obj.get("invoiceNumber") if model == "Invoice" else None
+            updated = old != data or (current["kind"], current["date"], current["number"], current["state"]) != (kind, record_date, number, state)
+            if updated:
+                # A source projection is reopened before replacing its reviewed
+                # local snapshot; the source original itself is never edited.
+                if current["state"] in ("reviewed", "issued", "cancelled"):
+                    db.execute("UPDATE records SET state='needs_review' WHERE id=?", (record_id,))
+                revision = current["revision"] + (1 if existing else 0)
+                db.execute("UPDATE records SET data=?,date=?,kind=?,number=?,state=?,revision=?,updated=? WHERE id=?",
+                           (canonical(data), record_date, kind, number, state, revision, now(), record_id))
+                self.database.audit(db, "record.source_refreshed" if existing else "record.source_imported", record_id,
+                                    {"source": source, "snapshot_sha256": digest, "before": old if existing else None, "after": data,
+                                     "review_invalidated": bool(changed and current["state"] == "reviewed")}, "sevdesk-import")
+                if existing:
+                    self.refreshed_sources.add(source)
         return record_id
 
     def run(self, year):
@@ -462,14 +545,28 @@ class Importer:
             self.context()
             all_bank = self.client.list("CheckAccountTransaction")
             year_bank = [row for row in all_bank if source_date(row.get("entryDate") or row.get("valueDate"))[:4] == str(year)]
+            year_bank_ids = {str(row["id"]) for row in year_bank}
             with self.database.transaction() as db:
-                for obj in year_bank:
+                known = {row[0] for row in db.execute("SELECT source FROM bank_transactions WHERE source LIKE 'sevdesk/CheckAccountTransaction/%'")}
+                for obj in all_bank:
+                    if str(obj["id"]) not in year_bank_ids and "sevdesk/CheckAccountTransaction/" + str(obj["id"]) not in known:
+                        continue
                     self.transaction(obj, db)
+                present = {"sevdesk/CheckAccountTransaction/" + str(obj["id"]) for obj in all_bank}
+                for source in known - present:
+                    old = db.execute("SELECT * FROM bank_transactions WHERE source=?", (source,)).fetchone()
+                    if json.loads(old["data"]).get("source_missing"):
+                        continue
+                    db.execute("UPDATE bank_transactions SET amount=0,classification='excluded',data=? WHERE source=?", (canonical({"source_missing": True}), source))
+                    self.database.audit(db, "bank.absent_from_source", old["id"], {"source": source, "before": json.loads(old["data"]), "current": "absent"}, "sevdesk-import")
+                    self.resolved_sources.add(source)
             self.summary["counts"]["CheckAccountTransaction"] = len(year_bank)
             for model, position_model, foreign_key, date_field in (("Invoice", "InvoicePos", "invoice", "invoiceDate"),
                                                                  ("Voucher", "VoucherPos", "voucher", "voucherDate"),
                                                                  ("CreditNote", "CreditNotePos", "creditNote", "creditNoteDate")):
                 rows = self.client.list(model)
+                with self.database.connect() as db:
+                    known = {row[0] for row in db.execute("SELECT source FROM records WHERE source LIKE ?", ("sevdesk/" + model + "/%",))}
                 chosen = 0
                 for obj in rows:
                     source = "sevdesk/" + model + "/" + str(obj["id"])
@@ -477,7 +574,7 @@ class Importer:
                         logs = self.client.get(model + "/" + str(obj["id"]) + "/getCheckAccountTransactionLogs")["objects"] or []
                         record_year = source_date(obj.get(date_field) or obj.get("create"))[:4]
                         relevant = record_year == str(year) or any(source_date(log.get("bookingDate") or log.get("create"))[:4] == str(year) for log in logs)
-                        if not relevant:
+                        if not relevant and source not in known:
                             continue
                         chosen += 1
                         positions = self.client.list(position_model, {foreign_key + "[id]": obj["id"], foreign_key + "[objectName]": model})
@@ -485,7 +582,15 @@ class Importer:
                         self.record(model, obj, positions, logs, transactions)
                     except (SourceError, ValueError) as error:
                         self.summary["errors"].append(source + ": " + str(error))
+                        self.summary["source_drift"].append(source)
                 self.summary["counts"][model] = chosen
+                self.retire_missing(model, {"sevdesk/" + model + "/" + str(obj["id"]) for obj in rows})
+            # Shared payments may be replaced in either order. Check the final
+            # projection, never reject a temporary intermediate bank allocation.
+            with self.database.connect() as db:
+                for row in db.execute("SELECT b.source,ABS(b.amount) AS amount,SUM(p.amount) AS matched FROM bank_transactions b JOIN payments p ON p.bank_id=b.id WHERE p.reversed_by IS NULL GROUP BY b.id HAVING matched>ABS(b.amount)"):
+                    self.summary["errors"].append(row["source"] + ": los pagos superan el movimiento actual de sevdesk.")
+                    self.summary["source_drift"].append(row["source"])
             self.summary["audit"] = self.database.verify_audit()
             self.summary["verified_documents"] = self.documents.verify_all()
             self.summary["source_drift"] = sorted(set(self.summary["source_drift"]))
@@ -493,6 +598,8 @@ class Importer:
             self.summary["source_drift"] = sorted(pending | set(self.summary["source_drift"]))
             self.summary["cost_centres_refreshed"] = sorted(self.refreshed_centres)
             self.summary["source_metadata_refreshed"] = sorted(self.refreshed_metadata)
+            self.summary["source_refreshed"] = sorted(self.refreshed_sources)
+            self.summary["authority"] = "latest_sevdesk"
             state = "needs_attention" if self.summary["errors"] or self.summary["source_drift"] else "complete"
         except BaseException as error:
             self.summary["errors"].append(type(error).__name__ + ": " + str(error)[:250])
