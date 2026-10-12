@@ -158,14 +158,16 @@ class Importer:
             self.archive(db, source, log, record_id)
             bank_id = "sev_bank_" + object_id(log.get("checkAccountTransaction"))
             bank = db.execute("SELECT * FROM bank_transactions WHERE id=?", (bank_id,)).fetchone()
-            if source in seen or amount * direction < 0:
+            if not log.get("bookingDate"):
+                issues.append("El log de sevdesk no incluye una fecha de pago verificable.")
+            elif source in seen or amount * direction < 0:
                 issues.append("Historial de pagos/reversiones ambiguo en sevdesk.")
             elif not bank or bank["amount"] * direction <= 0 or bank["classification"] == "excluded" or abs(amount)>abs(bank["amount"]):
                 issues.append("El movimiento del pago falta o tiene un sentido incompatible.")
-            elif source_date(log.get("bookingDate") or log.get("create")) != bank["date"]:
-                issues.append("La fecha del pago no coincide con la del movimiento original.")
             else:
-                expected.append((source, bank_id, bank["date"], abs(amount)))
+                # bookingDate, bank entryDate and valueDate are distinct source
+                # fields. Never force them equal or substitute the bank date.
+                expected.append((source, bank_id, source_date(log["bookingDate"]), abs(amount)))
             seen.add(source)
         if sum(abs(cents(log.get("amountPaid") or 0)) for log in logs) != paid:
             issues.append("Los logs no cuadran con paidAmount de sevdesk.")

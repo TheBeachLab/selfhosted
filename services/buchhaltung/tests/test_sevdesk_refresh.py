@@ -23,6 +23,7 @@ class SourceFixture:
         self.tax_rule, self.comment = "1", "QA Leistung"
         self.date, self.bank_amount, self.paid, self.pdf = "2026-09-01", None, None, b"QA original"
         self.deleted, self.logs_override = False, None
+        self.bank_date, self.value_date = None, None
 
     def object(self, sid="1"):
         return {"id": sid, "voucherDate": self.date, "description": "QA Beleg " + sid,
@@ -36,7 +37,7 @@ class SourceFixture:
                 "CostCentre": [{"id": "1", "name": "Ingenieur Freiberufler"}, {"id": "2", "name": "Gewerbe Software"}],
                 "SevClient": [{"id": "1", "defaultCurrency": "EUR"}],
                 "CheckAccount": [{"id": "1", "name": "QA Bank", "currency": "EUR"}],
-                "CheckAccountTransaction": [{"id": "1", "entryDate": self.date, "amount": self.bank_amount or (("" if self.income else "-") + ("200" if self.shared else self.amount)), "checkAccount": {"id": "1"}, "status": "400"}],
+                "CheckAccountTransaction": [{"id": "1", "entryDate": self.bank_date or self.date, "valueDate": self.value_date or self.date, "amount": self.bank_amount or (("" if self.income else "-") + ("200" if self.shared else self.amount)), "checkAccount": {"id": "1"}, "status": "400"}],
                 "Voucher": [] if self.deleted else [self.object()] + ([self.object("2")] if self.shared else [])}
         if model == "VoucherPos":
             sid = str(params["voucher[id]"])
@@ -249,6 +250,29 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(self.run_import(source)["state"], "complete")
         self.assertEqual(len(self.ledger.list()), 1)
         self.assertEqual(self.ledger.get("sev_voucher_1")["reconciled_paid"], 10000)
+
+    def test_source_payment_date_may_differ_from_bank_entry_date(self):
+        source = SourceFixture()
+        source.date, source.bank_date, source.value_date = "2026-09-30", "2026-10-02", "2026-09-30"
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "complete", result)
+        with self.db.connect() as db:
+            self.assertEqual(db.execute("SELECT date FROM payments WHERE reversed_by IS NULL").fetchone()[0], "2026-09-30")
+            bank = db.execute("SELECT * FROM bank_transactions").fetchone()
+            self.assertEqual(bank["date"], "2026-10-02")
+            self.assertEqual(json.loads(bank["data"])["valueDate"], "2026-09-30")
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        self.assertEqual(self.ledger.get("sev_voucher_1")["paid"], 10000)
+
+    def test_source_payment_without_booking_date_is_not_guessed_from_bank(self):
+        source = SourceFixture()
+        log = source.get("Voucher/1/getCheckAccountTransactionLogs")["objects"][0]
+        del log["bookingDate"]
+        log["create"] = "2026-09-30"
+        source.logs_override = [log]
+        result = self.run_import(source)
+        self.assertEqual(result["state"], "needs_attention", result)
+        self.assertEqual(self.ledger.get("sev_voucher_1")["reconciled_paid"], 0)
 
     def test_original_manual_bank_row_stays_immutable(self):
         source = SourceFixture()

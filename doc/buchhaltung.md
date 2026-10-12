@@ -244,6 +244,17 @@ is the current mapping; `payment_source_aliases` and superseded rows are audit
 references. Original financial history is retained but excluded from live sums.
 There are no `--accept-cost-centre` or `--accept-source-metadata` gates.
 
+Payment date comes from the current log's `bookingDate`. A bank transaction
+retains `entryDate` and `valueDate` separately; the adapter does not require them
+to equal the payment date. On 2026-10-12 three authenticated source examples had
+bookingDate equal to valueDate and one to three days before entryDate. This is
+an observed source shape, not a general fiscal timing rule. Missing bookingDate
+blocks automatic reconciliation rather than guessing it from the bank/create date.
+Sevdesk also documents an independently entered payment date for offline accounts:
+https://hilfe.sevdesk.de/de/articles/9064917-rechnung-als-bezahlt-markieren,
+read 2026-10-12. Synthetic coverage crosses a month/quarter boundary to prevent
+silently substituting the bank entry date.
+
 `classify-imported --record-id ID --classification private|tax_refund --reason TEXT`
 records an explicit owner decision with before/after audit snapshots. A private
 receipt stays visible with its original and payment links, contributes zero to
