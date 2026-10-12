@@ -1,6 +1,7 @@
 from datetime import date
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -29,7 +30,7 @@ class BookkeepingTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.config = Config(Path(self.temp.name), "http://127.0.0.1:8765", "test-only-" + "x"*40, b"t"*32,
-                             dist=ROOT / "frontend/dist", validator=ROOT / "vendor/xrechnung")
+                             dist=ROOT / "frontend/dist", validator=Path(os.environ.get("BUCHHALTUNG_TEST_VALIDATOR", str(ROOT / "vendor/xrechnung"))))
         self.app = create_app(self.config)
         self.db, self.docs, self.ledger = self.app.state.database, self.app.state.documents, self.app.state.ledger
         self.client = TestClient(self.app, headers={"X-Authentik-Username": "fran", "X-Buchhaltung-Proxy": self.config.proxy_secret,
@@ -162,8 +163,7 @@ class BookkeepingTests(unittest.TestCase):
         self.assertEqual(sum(apportion(119,[59,60])),119)
 
     def test_invoice_validation_number_lock_and_pdf_xml(self):
-        if not (self.config.validator/"validator.jar").is_file():
-            self.skipTest("Official validator missing; install it before deployment.")
+        self.assertTrue((self.config.validator/"validator.jar").is_file(),"Install the official validator before this required check.")
         record=self.record(kind="invoice",state="draft")
         preview=self.client.get("/api/records/"+record["id"]+"/invoice-preview")
         self.assertEqual(preview.status_code,200,preview.text)

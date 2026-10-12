@@ -203,6 +203,9 @@ separate annual review jobs, refused ELSTER submission, and an actual isolated
 encrypted-backup restore. Tests never use production data or sevdesk credentials.
 The QA server binds only loopback and uses a disposable empty database. It is
 not deployed and does not supply a production authentication bypass.
+For protected-target validation, set `BUCHHALTUNG_TEST_VALIDATOR` to the verified
+dependency directory in the isolated worktree (or `/opt/buchhaltung/vendor/xrechnung`
+on the NUC). The required invoice-validation test fails when it is unavailable.
 
 Design references/specification are in `services/buchhaltung/design/`.
 Browser evidence is outside Git in the operator's private Codex output directory.
