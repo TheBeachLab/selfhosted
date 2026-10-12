@@ -116,12 +116,14 @@ def download_bytes(result):
 
 
 class Importer:
-    def __init__(self, config, database, documents, ledger, client, approved_cost_centres=None):
+    def __init__(self, config, database, documents, ledger, client, approved_cost_centres=None, approved_source_metadata=None):
         self.config, self.database, self.documents, self.ledger, self.client = config, database, documents, ledger, client
         self.summary = {"counts": {}, "documents": 0, "payments": 0, "errors": [], "source_drift": []}
         self.countries, self.activities, self.contacts = {}, {}, {}
         self.approved_cost_centres = approved_cost_centres or {}
+        self.approved_source_metadata = approved_source_metadata or {}
         self.resolved_sources = set()
+        self.refreshed_centres, self.refreshed_metadata = set(), set()
 
     def accept_cost_centre(self, db, existing, bundle, digest, prior):
         """Accept only an explicitly named centre and financially identical rebooking.
@@ -132,12 +134,20 @@ class Importer:
         read 2026-10-12. Preserve prior raw versions and original payment IDs.
         """
         expected = self.approved_cost_centres.get(existing["source"])
-        if not expected or self.activities.get(expected) is None or existing["state"] != "needs_review":
+        metadata = self.approved_source_metadata.get(existing["source"]) == digest
+        if (not expected and not metadata) or existing["state"] != "needs_review":
             return False
-        if object_id(bundle["object"].get("costCentre")) != expected:
+        centre = object_id(bundle["object"].get("costCentre"))
+        if expected and centre != expected:
+            return False
+        if metadata and not expected and centre != object_id(prior["object"].get("costCentre")):
+            return False
+        if self.activities.get(centre) is None:
             return False
         def without_timestamps(obj, centre=False):
             omitted = {"update", "create"} | ({"costCentre"} if centre else set())
+            if metadata:
+                omitted |= {"taxRule"} if centre else {"comment"}
             return {key: value for key, value in obj.items() if key not in omitted}
         if without_timestamps(prior["object"], True) != without_timestamps(bundle["object"], True):
             return False
@@ -171,17 +181,32 @@ class Importer:
             if new_source != old_source and not known:
                 aliases.append((new_source, payment["id"], payment["source"], digest, now()))
         data = json.loads(existing["data"])
-        for line in data["lines"]:
-            line["activity"] = self.activities[expected]
+        if metadata and len(data["lines"]) != len(bundle["positions"]):
+            return False
+        for index, line in enumerate(data["lines"]):
+            line["activity"] = self.activities[centre]
+            if metadata:
+                position = bundle["positions"][index]
+                old = prior["positions"][index]
+                # Do not overwrite an independently edited local description.
+                if line["description"] != (old.get("name") or old.get("comment") or prior["object"].get("description") or "Leistung / Beleg"):
+                    return False
+                line["description"] = position.get("name") or position.get("comment") or bundle["object"].get("description") or "Leistung / Beleg"
+                # Copy source metadata, never infer its legal tax treatment.
+                line["tax_code"] = "unclassified"
+        if metadata:
+            data["source_tax_rule"] = object_id(bundle["object"].get("taxRule"))
+            data["source_classification_changed"] = True
         issue = "Centro de coste sin actividad reconocida."
         data["source_unsupported"] = data.get("source_unsupported", "").replace(issue, "").strip("; ")
-        data["source_bundle_sha256"], data["source_cost_centre_id"] = digest, expected
+        data["source_bundle_sha256"], data["source_cost_centre_id"] = digest, centre
         db.executemany("INSERT INTO payment_source_aliases VALUES(?,?,?,?,?)", aliases)
         db.execute("UPDATE records SET data=?,revision=revision+1,updated=? WHERE id=?", (canonical(data), now(), existing["id"]))
-        self.database.audit(db, "record.source_cost_centre_refreshed", existing["id"],
-                            {"source": existing["source"], "centre_id": expected, "accepted_sha256": digest,
+        self.database.audit(db, "record.source_metadata_refreshed" if metadata else "record.source_cost_centre_refreshed", existing["id"],
+                            {"source": existing["source"], "centre_id": centre, "accepted_sha256": digest,
                              "payment_aliases": [row[0] for row in aliases], "cash_payments_unchanged": True})
         self.resolved_sources.add(existing["source"])
+        (self.refreshed_metadata if metadata else self.refreshed_centres).add(existing["source"])
         return True
 
     def archive(self, db, source, payload, record_id=None):
@@ -466,7 +491,8 @@ class Importer:
             self.summary["source_drift"] = sorted(set(self.summary["source_drift"]))
             pending = set(self.database.setting("source_drift") or []) - self.resolved_sources
             self.summary["source_drift"] = sorted(pending | set(self.summary["source_drift"]))
-            self.summary["cost_centres_refreshed"] = sorted(self.resolved_sources)
+            self.summary["cost_centres_refreshed"] = sorted(self.refreshed_centres)
+            self.summary["source_metadata_refreshed"] = sorted(self.refreshed_metadata)
             state = "needs_attention" if self.summary["errors"] or self.summary["source_drift"] else "complete"
         except BaseException as error:
             self.summary["errors"].append(type(error).__name__ + ": " + str(error)[:250])

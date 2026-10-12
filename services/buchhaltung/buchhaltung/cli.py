@@ -123,6 +123,8 @@ def main():
     migration.add_argument("--year", type=int, default=2026)
     migration.add_argument("--accept-cost-centre", action="append", default=[], metavar="VOUCHER_ID:CENTRE_ID",
                            help="Accept an explicitly authorized centre change only when financial data/payments match.")
+    migration.add_argument("--accept-source-metadata", action="append", default=[], metavar="VOUCHER_ID:SHA256",
+                           help="Copy a verified source taxRule/comment revision; keep tax treatment unclassified and cash identical.")
     classification = commands.add_parser("classify-imported")
     classification.add_argument("--record-id", required=True)
     classification.add_argument("--classification", choices=("private", "tax_refund"), required=True)
@@ -168,14 +170,20 @@ def main():
     elif args.command == "import-sevdesk":
         import re
         approvals = {}
+        metadata_approvals = {}
         for value in args.accept_cost_centre:
             if not re.fullmatch(r"\d+:\d+", value):
                 raise ValueError("Usa --accept-cost-centre VOUCHER_ID:CENTRE_ID.")
             voucher, centre = value.split(":")
             approvals["sevdesk/Voucher/" + voucher] = centre
+        for value in args.accept_source_metadata:
+            if not re.fullmatch(r"\d+:[a-f0-9]{64}", value):
+                raise ValueError("Usa --accept-source-metadata VOUCHER_ID:SHA256 verificado.")
+            voucher, digest = value.split(":")
+            metadata_approvals["sevdesk/Voucher/" + voucher] = digest
         client = ReadOnlyClient(os.environ.get("SEVDESK_API_KEY"))
         try:
-            result = Importer(config, database, documents, Ledger(database, documents), client, approvals).run(args.year)
+            result = Importer(config, database, documents, Ledger(database, documents), client, approvals, metadata_approvals).run(args.year)
         finally:
             client.close()
         print(canonical(result))

@@ -1,6 +1,7 @@
 """Synthetic tests; no credentials, production data or network calls."""
 import base64
 import copy
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -19,13 +20,14 @@ class SourceFixture:
     def __init__(self, income=False, shared=False):
         self.income, self.shared = income, shared
         self.centre, self.log_id, self.amount = None, "1", "100"
+        self.tax_rule, self.comment = "1", "QA Leistung"
 
     def object(self, sid="1"):
         return {"id": sid, "voucherDate": "2026-09-01", "description": "QA Beleg " + sid,
                 "supplierName": "QA Supplier", "costCentre": self.centre if sid == "1" else {"id": "1"},
                 "creditDebit": "D" if self.income else "C", "status": "1000", "currency": "EUR",
                 "sumGross": self.amount, "sumNet": self.amount, "sumTax": "0", "paidAmount": self.amount,
-                "taxRule": {"id": "15" if self.income else "1"}, "document": {"id": sid}}
+                "taxRule": {"id": "15" if self.income else self.tax_rule}, "document": {"id": sid}}
 
     def list(self, model, params=None):
         data = {"StaticCountry": [{"id": "1", "code": "DE"}],
@@ -36,7 +38,7 @@ class SourceFixture:
                 "Voucher": [self.object()] + ([self.object("2")] if self.shared else [])}
         if model == "VoucherPos":
             sid = str(params["voucher[id]"])
-            return [{"id": sid, "comment": "QA Leistung", "sumNetAccounting": self.amount,
+            return [{"id": sid, "comment": self.comment, "sumNetAccounting": self.amount,
                      "sumTaxAccounting": "0", "taxRate": "0", "isAsset": "0"}]
         return copy.deepcopy(data.get(model, []))
 
@@ -155,6 +157,26 @@ class RefreshTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "activos"):
             self.ledger.classify_imported(record["id"], "private", "Synthetic user request requiring further asset review.")
         self.assertEqual(self.ledger.get(record["id"])["state"], "needs_review")
+
+    def test_exact_source_metadata_revision_never_guesses_a_tax_code(self):
+        source = SourceFixture()
+        source.centre = {"id": "1"}
+        self.assertEqual(self.run_import(source)["state"], "complete")
+        source.tax_rule, source.comment, source.log_id = "12", "Updated source comment; legal review pending.", "new-log"
+        bundle = {"object": source.object(), "positions": source.list("VoucherPos", {"voucher[id]": "1"}),
+                  "payment_logs": source.get("Voucher/1/getCheckAccountTransactionLogs")["objects"]}
+        digest = hashlib.sha256(canonical(bundle).encode()).hexdigest()
+        wrong = Importer(self.config, self.db, self.docs, self.ledger, source, {}, {"sevdesk/Voucher/1": "0" * 64}).run(2026)
+        self.assertEqual(wrong["state"], "needs_attention")
+        result = Importer(self.config, self.db, self.docs, self.ledger, source, {}, {"sevdesk/Voucher/1": digest}).run(2026)
+        self.assertEqual(result["state"], "complete", result)
+        self.assertEqual(result["cost_centres_refreshed"], [])
+        self.assertEqual(result["source_metadata_refreshed"], ["sevdesk/Voucher/1"])
+        record = self.ledger.get("sev_voucher_1")
+        self.assertEqual(record["data"]["source_tax_rule"], "12")
+        self.assertEqual(record["data"]["lines"][0]["tax_code"], "unclassified")
+        self.assertEqual((record["total"], record["paid"]), (10000, 10000))
+        self.assertEqual(self.run_import(source)["state"], "complete")
 
 
 if __name__ == "__main__":

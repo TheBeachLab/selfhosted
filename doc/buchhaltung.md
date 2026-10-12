@@ -224,6 +224,14 @@ Other source changes remain blocked across retries, including when their rejecte
 raw revision was already archived. Keep this importer version when resuming a
 source rebooking: earlier versions do not interpret payment aliases.
 
+For an independently changed source tax rule/comment,
+`--accept-source-metadata VOUCHER_ID:SHA256` requires the exact inspected raw-bundle
+hash. Only `taxRule`, position `comment`, generated timestamps and financially
+identical replacement payment-log IDs may differ. It preserves the accepted
+amounts, document dates, booking accounts, originals, centre and cash entries.
+It copies the source rule identifier/comment and marks the local tax code
+unclassified; copying source metadata is not verification of its legal treatment.
+
 `classify-imported --record-id ID --classification private|tax_refund --reason TEXT`
 records an explicit owner decision with before/after audit snapshots. A private
 receipt stays visible with its original and payment links, contributes zero to
