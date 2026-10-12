@@ -29,9 +29,9 @@ Mobile: new invoice form, activity selection, dates, concept, base, VAT and tota
 | Selection tint | #fff4ee |
 | Font | system sans-serif; no third-party font requests |
 | Radius | 5px controls, 0px page sections |
-| Desktop sidebar | 220px at 1440px viewport |
-| Main padding | 48px desktop; 24px tablet; 20px mobile |
-| Controls | 44px minimum; 14px body, 32px page headings |
+| Desktop sidebar | 244px at 1536px viewport |
+| Main padding | 34px desktop; 24px tablet; 20px mobile |
+| Controls | 43px mobile / 50px desktop fields; 28px mobile / 46px desktop headings |
 
 Families: page shell, section toolbar, form fields, flat data table, empty state,
 upload band, inline validation message, contextual details sheet, report table.
@@ -74,3 +74,33 @@ No actual invoice, tax return or email is issued/sent during implementation QA.
 Functional QA uses a separate temporary database and synthetic identities.
 Visual QA must compare native-size reference and screenshots at desktop and mobile,
 record at least five fidelity checks and an above-the-fold copy diff in QA.md.
+
+## Native-reference comparison, 2026-10-12
+
+References and implementation screenshots were viewed at native resolution.
+Desktop implementation was captured at 1536×1024; mobile at 390×844 (the generated
+854×1845 reference is compared at its intended phone proportions, excluding its
+illustrative OS status bar). Evidence is outside Git under
+`/Users/Papi/Documents/Codex/2026-10-12/buchhaltung-e3232674/`.
+
+| Reference element | Implemented evidence / outcome |
+| --- | --- |
+| Narrow white sidebar and orange Gastos selection | 244px rail, outline icons, full-width pale selection and orange edge; matched |
+| Flat header with period and Fran | 74px desktop divider/header; unintended desktop mobile-menu control fixed |
+| Large Gastos title and orange Nuevo gasto | Native-size hierarchy and placement compared; enlarged title/action from first draft |
+| Two filter fields and empty table | Wide paired filters, light header and open empty body; corrected the initial dense sizing |
+| Dashed centered upload band and history footer | 162px band, centered copy/button and divider/footer; corrected the initial horizontal band |
+| Mobile invoice form | Single column with paired dates/base/VAT, visible total and full-width orange save; no clipping at 390px |
+
+Above-the-fold desktop copy matches the reference. Intentional mobile differences:
+current date (12 October) and actual 14-day due date; native locale date formatting;
+German concept placeholder for the user's bookkeeping convention; a Volver control
+and an additional-line action below the primary save. No OS clock is fabricated.
+Secondary reference styling is implemented with real controls rather than pixels.
+
+Browser checks used CUA's in-app browser: identity/title, meaningful DOM, no error
+overlay, empty warning/error log, desktop/mobile screenshots. UI loop: synthetic
+client -> 100 EUR + 19 EUR draft -> official validation -> XML/PDF issuance;
+synthetic PDF expense -> review -> CSV import -> invoice/expense reconciliation.
+Both bank rows showed Conciliado. No QA data was copied to production. The final
+native Safari check of actual passkey login was blocked by the locked Mac.

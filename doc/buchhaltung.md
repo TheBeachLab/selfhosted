@@ -4,6 +4,42 @@ Requested 2026-10-12 for Q4 2026: electronic invoices, expenses, bank
 reconciliation, two separate annual EÜR and combined monthly UStVA.
 Address: https://buchhaltung.beachlab.org/. Source: `services/buchhaltung/`.
 
+## Live deployment readback: 2026-10-12
+
+Activated release `eaefe8135ac3` on the NUC; 32 packaged code/dist files matched
+the release manifest. `buchhaltung.service` and Nginx were active. The process
+listened only on `127.0.0.1:8098`; authenticated loopback health returned
+`ok / 0.1.0`. External HTTPS requests to the UI, bootstrap API and downloads,
+including a request with forged identity/proxy headers, all redirected to the
+Authentik outpost without serving financial data. Internal requests with a
+missing proxy credential, another username, or a foreign mutation Origin returned
+403. Scoped Authentik provisioning/readback confirmed the existing passkey flow
+and Fran's single-user binding; no shared-group access was added.
+
+The certificate was issued for this host, expires 2027-01-10 and uses the existing
+ACME webroot renewal. The NUC's Python 3.10 runtime passed all 13 isolated tests,
+including real KoSIT validation, without a skipped test.
+
+The issuer profile was initialized from current sevdesk metadata. Production
+contained **0 records, 0 bank transactions, 0 payments and 0 documents**;
+the history import remained scheduled for 20:00 Europe/Madrid. Fiscal confirmation
+was false and ELSTER sending was false. The registration draft existed and was
+not submitted. These are initialization facts, not a completed historical import.
+
+The first encrypted NAS backup finished at 10:40:46 UTC. Its isolated restore
+passed SQLite/audit checks and restored 0 financial records/documents, consistent
+with the new empty ledger. The encrypted NAS bytes matched the independently
+computed local hash. A populated one-record/one-document restore is separately
+covered by the isolated test suite. Daily backup timer: 03:00 UTC plus delay.
+The recovery key was saved in the Mac login Keychain without printing it.
+
+Real human passkey login could not be tested because native Safari reported the
+Mac locked. Do not infer successful Touch ID login from the internal proxy smoke.
+Original runtime state is in `/opt/buchhaltung/current/release.json` and private
+`/var/lib/buchhaltung/last-backup.json`; inspect current state before reusing these
+dated observations. No tax returns, customer messages or real invoices were sent
+during this deployment.
+
 ## Current capability and boundaries
 
 This first release implements invoice drafts, contacts, fixed invoice numbering,
