@@ -1,6 +1,7 @@
 """A return to official must preserve data and refuse an unsafe rollback."""
 import datetime
 import importlib.util
+import json
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -97,7 +98,7 @@ class OfficialReturnGuards(unittest.TestCase):
 
     def test_failed_official_start_restores_the_previous_runtime_without_restoring_old_data(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             data, state, source = root / 'data', root / 'state', root / 'source'
             for path in (data, state, source):
                 path.mkdir()
@@ -107,7 +108,7 @@ class OfficialReturnGuards(unittest.TestCase):
             old, stock, link = root / 'old', root / 'stock', root / 'msgvault'
             old.write_bytes(b'previous binary');stock.write_bytes(b'official binary');link.symlink_to(old)
             manifest = source / 'runtime-build.json'
-            manifest.write_text(__import__('json').dumps({'binary_sha256': official.digest(old)}))
+            manifest.write_text(json.dumps({'binary_sha256': official.digest(old)}))
             manifest_before = manifest.read_bytes()
             retired = root / 'extension.conf';retired.write_bytes(b'owned extension')
             (source / 'extension.conf').write_bytes(retired.read_bytes())
@@ -117,8 +118,8 @@ class OfficialReturnGuards(unittest.TestCase):
             proof = {'snapshot': 'abcdef01', 'official_backup_verify': 'all-packs-passed',
                      'official_restore_integrity': 'passed', 'temporary_dir_removed': True,
                      'verified_at': (now - datetime.timedelta(minutes=5)).isoformat()}
-            (state / 'last-success.json').write_text(__import__('json').dumps(last))
-            (state / 'official-pre-restore-proof-abcdef01.json').write_text(__import__('json').dumps(proof))
+            (state / 'last-success.json').write_text(json.dumps(last))
+            (state / 'official-pre-restore-proof-abcdef01.json').write_text(json.dumps(proof))
             db = sqlite3.connect(str(data / 'msgvault.db'))
             db.executescript('CREATE TABLE messages(id INTEGER PRIMARY KEY, body BLOB);'
                              'CREATE TABLE person_briefs(id INTEGER PRIMARY KEY, text TEXT);'
@@ -144,7 +145,7 @@ class OfficialReturnGuards(unittest.TestCase):
                 self.assertEqual(original, config.read_bytes())
                 self.assertEqual(manifest_before, manifest.read_bytes())
                 self.assertEqual(b'owned extension', retired.read_bytes())
-                receipt = __import__('json').loads(next(state.glob('official-return-*/activation.json')).read_text())
+                receipt = json.loads(next(state.glob('official-return-*/activation.json')).read_text())
                 self.assertEqual('rolled-back', receipt['status'])
                 self.assertIn(('systemctl', 'enable', '--now', official.TIMER), [x.args for x in command.call_args_list])
                 self.assertFalse(any('msgvault-backup.timer' in x.args and x.args[1] in ('stop', 'disable')
