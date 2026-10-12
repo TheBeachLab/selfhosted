@@ -12,6 +12,12 @@ The downloaded archive's SHA-256 matched
 The binary includes the browser application; no separate Node process is needed
 ([0.21.0 Web UI](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/web-ui.md)).
 
+On 2026-10-12 the NUC returned from the local email/discovery builds to this
+unmodified official executable. The existing archive, profiles and summaries
+were retained. See [the current runtime and return checkpoint](#official-runtime-and-preserved-data).
+The three local extension sections below are historical recovery information;
+their patches and activation commands are not part of the active installation.
+
 Installation on 2026-10-10 initialized an empty archive. On 2026-10-11,
 the [German iCloud account](msgvault-icloud.md) was connected and its first
 full sync completed: **2,974 messages and 868 attachments**, with automatic
@@ -179,7 +185,7 @@ owner-only stores:
 | Feature | Active configuration | Credential file on the NUC |
 | --- | --- | --- |
 | Message and people embeddings | `text-embedding-3-small`, 1536 dimensions, `https://api.openai.com/v1` | `/var/lib/msgvault/tokens/provider-credentials.json` |
-| People inference | Profile `openai`, model `gpt-6-luna`, `openai_chat`, native JSON schema | `/var/lib/msgvault/tokens/people-providers/openai.json` |
+| Historical people inference; automation disabled | Profile `openai`, model `gpt-6-luna`, `openai_chat`, `json_object` | `/var/lib/msgvault/tokens/people-providers/openai.json` |
 
 Both NUC files were compared with the approved local copy without displaying
 the secret and checked as mode 0600, owned by `msgvault`. The former service
@@ -194,7 +200,8 @@ and [people provider lifecycle](https://github.com/kenn-io/msgvault/blob/v0.21.0
 [ai-settings.json](../services/msgvault/ai-settings.json) is the applied,
 active settings profile. Message embeddings run every 15 minutes and after
 supported scheduled source syncs. The daemon timezone is `Europe/Madrid`;
-the native people sweep default is `15 2 * * *` (02:15). Native inference
+the native people sweep default is `15 2 * * *` (02:15), but the sweep and brief
+automation are now disabled after the return to official. Native inference
 budgets remain at their release defaults: up to 100 requests, one million
 input tokens and 160,000 output tokens per run; up to 500 requests, five
 million input tokens and 800,000 output tokens per day. No provider prices or
@@ -204,12 +211,14 @@ a local cost estimate is not an OpenAI billing cap. Sources:
 [sweep defaults](https://github.com/kenn-io/msgvault/blob/v0.21.0/internal/peoplesweep/config.go).
 
 [people-openai.json](../services/msgvault/people-openai.json) is the policy body
-used to create the selected people provider. Its sources are conversation and
+used to create the retained, inactive people provider. Its sources are conversation and
 meeting text from 2023-01-01 onward. This includes all archived correspondence
 currently linked to the eight selected profiles. `allow_sensitive` records the operator's
 choice to permit private archive text; this release uses the same flag for
-sensitive profile fields. The native exact-policy check and consent are active,
-as is the separate curated-person semantic embedding consent.
+sensitive profile fields. Its saved check and consent belong to the historical
+email-evidence program; reverify and consent to the official program before any
+future activation for supported sources. The separate curated-person semantic
+embedding consent and vector indexing remain active.
 `provider-declared` is a posture assertion, not verification of zero retention.
 Profile automation requires choosing people to track; conversation briefs
 require their own enrollment. Eight profiles are selected for maintenance.
@@ -230,8 +239,9 @@ this packet. The native worker applies local blockers before a provider request.
 Scoring records suggestions and judgments; accepting a participant link remains
 a separate operation with a current review token. This upstream scorer evaluates
 already seeded candidates when invoked. The
-automatic mailbox discovery extension below handles names and phones in email
-signatures; neither path accepts participant merges automatically.
+historical mailbox discovery extension below handled names and phones in email
+signatures. That extension is retired; the native candidate scorer remains
+configured and neither path accepts participant merges automatically.
 
 [identity-jev.toml](../services/msgvault/identity-jev.toml) sets a batch limit of
 20 and the native threshold of 0.80. Its exact retention declaration references
@@ -300,7 +310,12 @@ The final encrypted NAS snapshot is `ca9e56bc`; restoring the Jev service
 drop-in matched its live SHA-256, and the NAS staging payload was removed.
 Receipt: `nas-final-proof.json` in the same private checkpoint directory.
 
-### Automatic mailbox discovery with Jev
+### Historical: automatic mailbox discovery with Jev
+
+Retired on 2026-10-12. The discovery timer, service, runner and opt-in were
+removed from their active locations. The already recorded contacts, labels and
+auxiliary evidence tables remain in the archive; the official daemon does not
+run this extension.
 
 The local native build `v0.21.0-discovery-3` retains the email extraction patch
 and adds [mailbox-discovery-v0.21.0.patch](../services/msgvault/patches/mailbox-discovery-v0.21.0.patch)
@@ -388,7 +403,11 @@ The previous v1 discovery consent was revoked after v2 activation; its audit
 was retained. These observations are deployment evidence, not guarantees about
 unseen signatures or who authored mail from a shared address.
 
-### Automatic briefs from signed messages in a related mailbox
+### Historical: automatic briefs from signed messages in a related mailbox
+
+Retired on 2026-10-12. Existing brief versions and their citations remain
+readable through the official API/MCP. New shared-mail messages no longer
+trigger this specialized summary worker.
 
 The native `v0.21.0-signed-brief-1` extension uses the existing Jev-discovered
 contact as a candidate mailbox. It requires a personal closing in each message's
@@ -451,7 +470,12 @@ Eight restored runtime/recovery files matched their live SHA-256, including the
 new builder, installer, native patch and build manifest. Temporary NAS staging
 was removed. Receipt: `nas-final-proof.json` in that checkpoint.
 
-### Automatic profiles from email
+### Historical: automatic profiles from email
+
+Retired on 2026-10-12. Existing facts and summaries are preserved. The active
+official daemon has `people.sweep.enabled=false` and
+`people.sweep.brief.enabled=false`; its Gmail/IMAP evidence policy is unchanged
+from the official release.
 
 The stock 0.21.0 extractor excludes Gmail and IMAP as subject-authored evidence.
 Enabling the provider alone therefore produces no email-derived profile facts.
@@ -807,6 +831,75 @@ were removed. Live proof: `/var/lib/msgvault-backup/restore-proof.json`, service
 readback, authenticated `/health`, the MCP `get_stats` call and public HTTPS
 302 into Authentik from the Mac.
 
+## Official runtime and preserved data
+
+Verified on 2026-10-12 at 19:40 UTC: `/usr/local/bin/msgvault` selects
+`/opt/msgvault/0.21.0/msgvault`, SHA-256
+`2e00619b03f9914aaece4f6458299dc66bc9f6386856098ea9329c889d0a5a1e`.
+This matches the executable in the checksummed official release archive.
+
+The guarded [return-to-official.py](../services/msgvault/return-to-official.py)
+required a fresh encrypted NAS backup and a full official pack verification and
+restore before changing the executable. The current `msgvault.db`, attachments,
+`vectors.db`, configuration and credentials stayed in place; no old database
+was restored over the live archive. All 40 protected tables and official
+profile/brief API responses matched before/after. The archive retained **2,841
+messages, 901 attachment records, eight people, seven current briefs and eight
+total brief versions**. Geier retained both emails, the GMX shared label, brief
+version 2 and its citations.
+
+Only the two people automation booleans changed in `config.toml`. The two patch
+opt-in drop-ins and the discovery timer/service/runner were retired to the private
+checkpoint. The native Jev credential drop-in, both account schedules, all vector
+settings, the MCP bridge and encrypted NAS backup service/timer were retained.
+The five auxiliary extension tables were left intact for evidence and recovery.
+
+A real MCP vector query returned results from active generation **3** using
+`text-embedding-3-small`, 1536 dimensions and the exact accelerator. Native
+`embeddings list` reported **2,841 / 2,841 embedded, zero missing**, with the
+unchanged 2,000-character chunk policy.
+
+The pre-return snapshot was created and fully restored as `bd350a01`. It was
+then retagged to protected snapshot **`ddeff6ac`**, preserving exactly the same
+Restic tree, under `msgvault-official-return-before-20261012T193944Z`. This tag
+is outside the daily job's `--tag msgvault` retention filter, so a later backup
+on the same day cannot prune the return checkpoint. The temporary restore was
+removed. The original patched executable remains available for rollback.
+
+The supervised backup was then run again with the official executable. It
+completed at **19:44:25 UTC**, encrypted snapshot **`c744b924`**, with
+`Result=success` and `ExecMainStatus=0`. Its `capture.json`, read back from the
+encrypted snapshot, identifies
+`msgvault v0.21.0`. NAS staging and the pending-capture marker were removed;
+the protected pre-return snapshot still exists after normal retention/pruning.
+The existing daily 02:30 Europe/Madrid timer (up to five minutes of jitter)
+remains enabled and active. Native Jev candidate scoring also remains ready,
+with its existing consent and credential; the automatic signature scanner is
+retired.
+
+Primary private proofs on the NUC:
+
+```text
+/var/lib/msgvault-backup/official-pre-restore-proof-ddeff6ac.json
+/var/lib/msgvault-backup/official-return-20261012T193944Z/activation.json
+/var/lib/msgvault-backup/official-return-20261012T193944Z/protected-before.json
+/var/lib/msgvault-backup/official-return-20261012T193944Z/nas-checkpoints.json
+/var/lib/msgvault-backup/official-return-20261012T193944Z/live-readback.json
+```
+
+The checkpoint also retains the previous configuration, extension files and
+their ownership/modes. The encrypted pre-return snapshot contains the previous
+configuration and credentials. Do not run the historical patch installers as
+part of official updates. This one-off return helper only accepts the two
+audited executables; it is not a generic upgrade tool. Ordinary future updates
+should use official release checksums and a fresh verified NAS backup while
+preserving the current archive home.
+
+Sources: official release artifact comparison, full NAS restore, frozen SQLite
+row hashes, before/after profile API hashes and live native/MCP readback. Tests:
+seven official-return guards (including startup-failure rollback and concurrent
+file preservation), plus ten existing NAS-backup guards.
+
 ## Maintain
 
 On the NUC (`ssh pink-sudo`):
@@ -838,15 +931,20 @@ directory before executing the native CLI.
 Sources: installation readback and the
 [0.21.0 configuration reference](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/configuration.md#server).
 
-Before updating or restoring, keep a private backup of the complete data
-directory, including configuration, tokens and attachments. For a stopped
-archive:
+Before updating or restoring, complete and verify the existing encrypted NAS
+backup, including the database, attachments, configuration and tokens. Keep the
+live archive home and its vector database in place when switching executables.
+Run the supervised backup while the daemon is healthy:
 
 ```bash
-sudo systemctl stop msgvault
-sudo sh -c 'umask 077; tar -C /var/lib -czf /var/backups/msgvault-$(date +%Y%m%dT%H%M%S).tgz msgvault'
-sudo systemctl start msgvault
+sudo systemctl start msgvault-backup.service
+systemctl show msgvault-backup.service -p Result -p ExecMainStatus
+systemctl list-timers msgvault-backup.timer
 ```
+
+The supervised capture requires a healthy daemon. Recovery tests use new private
+NAS directories as documented under Backups; they never replace the live
+archive. Temporary capture and restore payloads are removed after verification.
 
 Read the selected release's migration notes before opening this archive with
 a newer binary. No automatic binary updates are configured.
