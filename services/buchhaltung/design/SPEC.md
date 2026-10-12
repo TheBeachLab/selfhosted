@@ -73,7 +73,7 @@ No actual invoice, tax return or email is issued/sent during implementation QA.
 
 Functional QA uses a separate temporary database and synthetic identities.
 Visual QA must compare native-size reference and screenshots at desktop and mobile,
-record at least five fidelity checks and an above-the-fold copy diff in QA.md.
+record at least five fidelity checks and an above-the-fold copy diff in this specification.
 
 ## Native-reference comparison, 2026-10-12
 
