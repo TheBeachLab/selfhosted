@@ -293,6 +293,9 @@ to evaluate, not a completed discovery of his other mailbox. Primary private
 receipts: `/var/lib/msgvault-backup/identity-jev-20261012T080947Z/activation.json`
 and `first-batch-summary.json`; registered MCP status, judgment history and
 profile reads confirmed the saved state.
+The final encrypted NAS snapshot is `ca9e56bc`; restoring the Jev service
+drop-in matched its live SHA-256, and the NAS staging payload was removed.
+Receipt: `nas-final-proof.json` in the same private checkpoint directory.
 
 ### Automatic profiles from email
 
