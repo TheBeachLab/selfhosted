@@ -279,6 +279,21 @@ as separate participants on 2026-10-12 (MCP `search_people`, and messages 2378
 and 2707). Activating the scorer alone does not establish an exclusive-person
 binding for that shared mailbox.
 
+Verified on 2026-10-12: the native scorer reports `enabled`,
+`credential_available`, `consent_active` and `ready` as true, using
+`jev-1.13.0`, threshold 0.80 and batch limit 20. Both Msgvault services are
+active and the existing `0.21.0-email-2` binary is unchanged. The synthetic
+provider request returned the exact pinned model and a valid Noul answer;
+the model-list endpoint exposed only `jev-latest` and `jev-preview`, so the
+installer verifies the exact-version request instead of substituting an alias.
+The first native batch completed without errors with `processed = 0`; the
+participant-link count stayed at one, and Geier's profile still contains only
+his professional address. This is enabled scoring with no current candidate
+to evaluate, not a completed discovery of his other mailbox. Primary private
+receipts: `/var/lib/msgvault-backup/identity-jev-20261012T080947Z/activation.json`
+and `first-batch-summary.json`; registered MCP status, judgment history and
+profile reads confirmed the saved state.
+
 ### Automatic profiles from email
 
 The stock 0.21.0 extractor excludes Gmail and IMAP as subject-authored evidence.
