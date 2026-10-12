@@ -117,14 +117,63 @@ class Ledger:
             self.database.audit(db, "record.reviewed", record_id, {"revision": current["revision"]})
             return self.get(record_id, db)
 
+    def classify_imported(self, record_id, classification, reason):
+        """Explicit owner classification; preserve amounts, originals and payments."""
+        if len(reason.strip()) < 8:
+            raise ValueError("Documenta la evidencia y autorización de la clasificación.")
+        with self.database.transaction() as db:
+            current = self.get(record_id, db)
+            if not current["source"] or current["state"] not in ("needs_review", "private"):
+                raise ValueError("Solo documentos importados pendientes o ya privados.")
+            data = json.loads(canonical(current["data"]))
+            kind, state = current["kind"], current["state"]
+            allowed_issues = ("", "Centro de coste sin actividad reconocida.")
+            if classification == "tax_refund" and kind == "tax_refund":
+                allowed_issues += ("Devolución de IVA: falta un reparto verificado entre actividades.",)
+            if data.get("source_currency", "EUR") != "EUR" or data.get("source_unsupported", "") not in allowed_issues:
+                raise ValueError("Resuelve activos, conversión u otros casos no soportados antes de clasificar.")
+            if classification == "private":
+                if kind != "expense" or any(line["tax_cents"] for line in data["lines"]):
+                    raise ValueError("Verifica por separado documentos con IVA o de otro tipo.")
+                state = "private"
+                data["source_private"] = True
+                for line in data["lines"]:
+                    line["deduct_percent"] = 0
+                if data.get("source_unsupported") == "Centro de coste sin actividad reconocida.":
+                    data["source_unsupported"] = ""
+            elif classification == "tax_refund":
+                if state != "needs_review" or kind not in ("income", "tax_refund") or any(line["tax_cents"] for line in data["lines"]):
+                    raise ValueError("La devolución requiere un ingreso sin IVA facturado.")
+                kind = data["kind"] = "tax_refund"
+                for line in data["lines"]:
+                    line["tax_code"], line["category"] = "none", "vat_refund"
+                # The owner/source confirms the nature, not its EÜR allocation.
+                # ELSTER: separate EÜR per business and a distinct VAT refund entry.
+                # https://www.elster.de/elsterweb/helpGlobal?themaGlobal=help_euer_ufa_77_2025
+                if data.get("source_unsupported") == "Centro de coste sin actividad reconocida.":
+                    data["source_unsupported"] = "Devolución de IVA: falta un reparto verificado entre actividades."
+                    data["source_activity_pending"] = True
+            else:
+                raise ValueError("Clasificación no permitida.")
+            data["source_classification_reason"] = reason.strip()
+            if data == current["data"] and kind == current["kind"] and state == current["state"]:
+                return current
+            revision = current["revision"] + 1
+            db.execute("UPDATE records SET data=?,kind=?,state=?,revision=?,updated=? WHERE id=?",
+                       (canonical(data), kind, state, revision, now(), record_id))
+            self.database.audit(db, "record.owner_classified", record_id,
+                                {"classification": classification, "reason": reason, "revision": revision,
+                                 "before": current["data"], "after": data, "payments_preserved": True})
+            return self.get(record_id, db)
+
     def payment(self, record_id, payload, bank_id=None, source=None, db=None):
         if db is None:
             with self.database.transaction() as connection:
                 return self.payment(record_id, payload, bank_id, source, connection)
         current = self.get(record_id, db)
-        if current["state"] not in ("issued", "reviewed", "needs_review"):
+        if current["state"] not in ("issued", "reviewed", "needs_review", "private"):
             raise ValueError("Cierra el documento antes de registrar el pago.")
-        if current["state"] == "needs_review" and not source:
+        if current["state"] in ("needs_review", "private") and not source:
             raise ValueError("Revisa el documento importado antes de conciliar.")
         if current["paid"] + payload.amount > current["total"]:
             raise ValueError("El pago supera el saldo pendiente del documento.")

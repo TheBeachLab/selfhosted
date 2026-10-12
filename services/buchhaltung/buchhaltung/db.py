@@ -46,6 +46,15 @@ CREATE TABLE IF NOT EXISTS payments (
  reversed_by TEXT UNIQUE, created TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS payments_date ON payments(date);
+CREATE TABLE IF NOT EXISTS payment_source_aliases (
+ source TEXT PRIMARY KEY, payment_id TEXT NOT NULL REFERENCES payments(id),
+ original_source TEXT NOT NULL, approved_snapshot_sha256 TEXT NOT NULL,
+ created TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS payment_alias_no_update BEFORE UPDATE ON payment_source_aliases
+ BEGIN SELECT RAISE(ABORT,'payment source aliases are append-only'); END;
+CREATE TRIGGER IF NOT EXISTS payment_alias_no_delete BEFORE DELETE ON payment_source_aliases
+ BEGIN SELECT RAISE(ABORT,'payment source aliases are append-only'); END;
 CREATE TABLE IF NOT EXISTS documents (
  id TEXT PRIMARY KEY, sha256 TEXT NOT NULL UNIQUE, filename TEXT NOT NULL,
  media_type TEXT NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL

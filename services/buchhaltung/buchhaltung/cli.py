@@ -121,6 +121,12 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     migration = commands.add_parser("import-sevdesk")
     migration.add_argument("--year", type=int, default=2026)
+    migration.add_argument("--accept-cost-centre", action="append", default=[], metavar="VOUCHER_ID:CENTRE_ID",
+                           help="Accept an explicitly authorized centre change only when financial data/payments match.")
+    classification = commands.add_parser("classify-imported")
+    classification.add_argument("--record-id", required=True)
+    classification.add_argument("--classification", choices=("private", "tax_refund"), required=True)
+    classification.add_argument("--reason", required=True)
     commands.add_parser("verify")
     commands.add_parser("init-profile")
     archive = commands.add_parser("backup")
@@ -160,13 +166,23 @@ def main():
             database.audit(db,"seller.profile_initialized","settings",{"source":"sevdesk/SevClient","history_imported":False,"fiscal_reviewed":False},"sevdesk-import")
         print(canonical({"profile_initialized":True,"history_imported":False,"fiscal_reviewed":False}))
     elif args.command == "import-sevdesk":
+        import re
+        approvals = {}
+        for value in args.accept_cost_centre:
+            if not re.fullmatch(r"\d+:\d+", value):
+                raise ValueError("Usa --accept-cost-centre VOUCHER_ID:CENTRE_ID.")
+            voucher, centre = value.split(":")
+            approvals["sevdesk/Voucher/" + voucher] = centre
         client = ReadOnlyClient(os.environ.get("SEVDESK_API_KEY"))
         try:
-            result = Importer(config, database, documents, Ledger(database, documents), client).run(args.year)
+            result = Importer(config, database, documents, Ledger(database, documents), client, approvals).run(args.year)
         finally:
             client.close()
         print(canonical(result))
         raise SystemExit(0 if result["state"] == "complete" else 2)
+    elif args.command == "classify-imported":
+        record = Ledger(database, documents).classify_imported(args.record_id, args.classification, args.reason)
+        print(canonical({"id": record["id"], "kind": record["kind"], "state": record["state"], "revision": record["revision"], "total": record["total"], "paid": record["paid"]}))
     elif args.command == "verify":
         with database.connect() as db:
             integrity = db.execute("PRAGMA integrity_check").fetchone()[0]

@@ -36,7 +36,7 @@ def blockers(database, db, start, end, annual=False):
         issues.append("Falta importar y verificar el histórico de sevdesk de este año.")
     if database.setting("source_drift", db):
         issues.append("Hay cambios en sevdesk posteriores a la importación que requieren comparar los originales.")
-    rows = db.execute("SELECT id,kind,state,data FROM records WHERE date>=? AND date<? AND state NOT IN ('void','cancelled')", (start, end)).fetchall()
+    rows = db.execute("SELECT id,kind,state,data FROM records WHERE date>=? AND date<? AND state NOT IN ('void','cancelled','private')", (start, end)).fetchall()
     for row in rows:
         if row["state"] not in ("issued", "reviewed"):
             issues.append(f"{row['id']}: documento pendiente de revisión o emisión.")
@@ -49,7 +49,7 @@ def blockers(database, db, start, end, annual=False):
     if unresolved:
         issues.append(f"{unresolved} movimientos bancarios pendientes de conciliación o clasificación.")
     # Payments from another issue year still require a reviewed source document.
-    for row in db.execute("SELECT DISTINCT r.id FROM payments p JOIN records r ON r.id=p.record_id WHERE p.date>=? AND p.date<? AND p.reversed_by IS NULL AND r.state NOT IN ('issued','reviewed')", (start, end)):
+    for row in db.execute("SELECT DISTINCT r.id FROM payments p JOIN records r ON r.id=p.record_id WHERE p.date>=? AND p.date<? AND p.reversed_by IS NULL AND r.state NOT IN ('issued','reviewed','private')", (start, end)):
         issues.append(f"{row['id']}: pago de un documento sin revisión.")
     close = database.setting("year_reviewed_" + start[:4], db)
     if annual and close != ledger_fingerprint(db):

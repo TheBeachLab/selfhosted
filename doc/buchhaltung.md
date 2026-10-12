@@ -202,6 +202,48 @@ no guessed automatic classifications are made.
 For a shared payment, classification applies to its unmatched remainder and
 preserves the already reconciled business portion.
 
+### Authorized corrections after migration
+
+The sevdesk API rejects paid-voucher edits: its documented `resetToOpen` and
+`resetToDraft` operations unlink payments, and only drafts may be updated.
+Do not reset a source voucher implicitly when the user authorized only a read.
+Before an explicitly authorized reset/rebooking, retain its raw object,
+positions, originals, account/movement, signed amounts and booking dates.
+Read back the complete reconstruction and compare those financial fields.
+API source: https://api.sevdesk.de/, operations `updateVoucher`,
+`voucherResetToOpen`, `voucherResetToDraft`, `voucherFactorySaveVoucher` and
+`bookVoucher`, read and exercised against the user's authorized records 2026-10-12.
+
+`import-sevdesk --accept-cost-centre VOUCHER_ID:CENTRE_ID` accepts only that
+explicit centre and only when all other source fields/positions and the cash
+payment amounts, dates and bank references match the accepted snapshot.
+Provider-generated creation/update timestamps and new payment-log IDs may differ.
+New log IDs become append-only aliases of the original local payment; payment
+IDs, amounts and original references are retained, without a second cash entry.
+Other source changes remain blocked across retries, including when their rejected
+raw revision was already archived. Keep this importer version when resuming a
+source rebooking: earlier versions do not interpret payment aliases.
+
+`classify-imported --record-id ID --classification private|tax_refund --reason TEXT`
+records an explicit owner decision with before/after audit snapshots. A private
+receipt stays visible with its original and payment links, contributes zero to
+EÜR/UStVA, and does not mark an entire shared bank transaction as private.
+The UI labels it private and excludes it from individual business filters.
+Source for personal living expenses excluded from deduction: §12 EStG,
+https://www.gesetze-im-internet.de/estg/__12.html, read 2026-10-12.
+
+A confirmed VAT refund is kept as `tax_refund`, with no additional invoice VAT.
+If its activity is unresolved, it stays pending and cannot be closed or silently
+assigned to the first business. Official ELSTER EÜR 2025 help identifies VAT
+refunds separately in line 18 and requires a separate EÜR for each business:
+https://www.elster.de/elsterweb/helpGlobal?themaGlobal=help_euer_ufa_77_2025,
+read 2026-10-12. This confirms the nature/separation, not a 2026 schema field or
+a method for splitting a combined refund. No percentage allocation is inferred.
+
+Synthetic tests cover unchanged cash IDs after a source rebooking, retry
+idempotency, persistent rejection of financial drift, private portions of shared
+payments and a VAT refund blocked until its activity allocation is verified.
+
 ## Backup / recovery
 
 The dedicated job invokes SQLite capture/restore as **buchhaltung**, to avoid
