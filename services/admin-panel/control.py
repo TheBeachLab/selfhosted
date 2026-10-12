@@ -88,7 +88,9 @@ def snapshot():
     for id,unit,name,message in [('docker','docker.service','Docker','Servicios en contenedores.'),('firewall','remote-browser-firewall.service','Cortafuegos','Aislamiento del navegador remoto.')]:
         deps[id]={'id':id,'name':name,'state':us.get(unit,{}).get('ActiveState','unknown'),'message':message}
     t=cs.get('transmission-vpn',{}).get('State',{})
-    deps['vpn']={'id':'vpn','name':'VPN integrada','state':'active' if t.get('Health',{}).get('Status')=='healthy' else 'unknown' if t.get('Running') else 'inactive','message':'Arranca junto con Transmission. El túnel lo gestiona el contenedor.'}
+    vpn_running=bool(t.get('Running')) or bool(t.get('Restarting'))
+    vpn_ready=bool(t.get('Running')) and not t.get('Restarting') and t.get('Health',{}).get('Status')=='healthy'
+    deps['vpn']={'id':'vpn','name':'VPN integrada','state':'active' if vpn_ready else 'unknown' if vpn_running else 'inactive','message':'Arranca junto con Transmission. El túnel lo gestiona el contenedor.'}
     rows=[]
     for s in SERVICES:
         item={k:v for k,v in s.items() if k not in ('unit','compose','compose_service','image','container')}
@@ -101,8 +103,13 @@ def snapshot():
             installed=bool(c) or bool(s.get('compose') and Path(s['compose']).is_file())
             running=bool(st.get('Running')) or bool(st.get('Restarting'))
             health=st.get('Health',{}).get('Status')
-            state='failed' if st.get('Dead') else 'degraded' if health=='unhealthy' else 'activating' if st.get('Restarting') or health=='starting' else 'active' if running else 'inactive'
-            detail=health or st.get('Status','not-created'); ready=running and state=='active'
+            if st.get('Dead'):state='failed'
+            elif st.get('Restarting'):state='activating'
+            elif not running:state='inactive'
+            elif health=='unhealthy':state='degraded'
+            elif health=='starting':state='activating'
+            else:state='active'
+            detail=(health if running else None) or st.get('Status','not-created'); ready=running and state=='active'
         item.update(state=state,detail=detail,running=running,ready=ready,installed=installed,blocked=None)
         rows.append(item)
     active_gpu=[x['name'] for x in rows if x['id'] in AI_IDS and x['running']]

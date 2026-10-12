@@ -39,6 +39,43 @@ class ControllerTests(unittest.TestCase):
   s=state();next(r for r in s['services'] if r['id']=='minecraft')['running']=True
   self.assertEqual(c.plan('stop','minecraft',s),[['/usr/bin/systemctl','stop','minecraft-java.service']])
 
+class ContainerStatusTests(unittest.TestCase):
+ def snapshot(self,docker_state):
+  units={'docker.service':{'ActiveState':'active'}}
+  containers={'transmission-vpn':{'State':docker_state}}
+  with patch.object(c,'unit_states',return_value=units), patch.object(c,'containers',return_value=containers), patch.object(c,'gpu',return_value={'state':'active'}), patch.object(c.Path,'read_text',return_value='MemTotal: 16384000 kB\nMemAvailable: 8192000 kB\n'):
+   return c.snapshot()
+ def transmission(self,snapshot):
+  return next(row for row in snapshot['services'] if row['id']=='transmission')
+ def test_stopped_container_ignores_cached_health(self):
+  for health in ['unhealthy','healthy','starting']:
+   with self.subTest(health=health):
+    snapshot=self.snapshot({'Running':False,'Status':'exited','Health':{'Status':health}})
+    row=self.transmission(snapshot)
+    self.assertEqual(row['state'],'inactive')
+    self.assertEqual(row['detail'],'exited')
+    self.assertFalse(row['running']);self.assertFalse(row['ready'])
+    self.assertEqual(snapshot['dependencies']['vpn']['state'],'inactive')
+ def test_running_unhealthy_container_remains_stoppable(self):
+  snapshot=self.snapshot({'Running':True,'Status':'running','Health':{'Status':'unhealthy'}})
+  row=self.transmission(snapshot)
+  self.assertEqual(row['state'],'degraded');self.assertTrue(row['running'])
+  self.assertFalse(row['ready']);self.assertIsNone(row['blocked'])
+  self.assertEqual(c.plan('stop','transmission',snapshot),[['/usr/bin/docker','stop','--time','60','transmission-vpn']])
+ def test_restart_takes_precedence_over_cached_health(self):
+  for health in ['unhealthy','healthy']:
+   with self.subTest(health=health):
+    snapshot=self.snapshot({'Running':False,'Restarting':True,'Status':'restarting','Health':{'Status':health}})
+    row=self.transmission(snapshot)
+    self.assertEqual(row['state'],'activating');self.assertTrue(row['running'])
+    self.assertFalse(row['ready'])
+    self.assertEqual(snapshot['dependencies']['vpn']['state'],'unknown')
+ def test_running_healthy_container_is_ready(self):
+  snapshot=self.snapshot({'Running':True,'Status':'running','Health':{'Status':'healthy'}})
+  row=self.transmission(snapshot)
+  self.assertEqual(row['state'],'active');self.assertTrue(row['ready'])
+  self.assertEqual(snapshot['dependencies']['vpn']['state'],'active')
+
 class CsrfTests(unittest.TestCase):
  def test_token_bound_to_user_and_secret(self):
   t=web.issue_token('fran',b'key')

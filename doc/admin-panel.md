@@ -65,6 +65,13 @@ Stopping Minecraft, Transmission or the browser requires confirmation.
 A running container with a failed healthcheck shows **Revisar salud** and can
 still be stopped. Check the application's logs to find the failure.
 
+A stopped container shows **Apagado**, even when Docker retains an old
+`healthy`, `unhealthy`, or `starting` health result. The panel reads the running
+and restarting flags before using health to classify a live container. The
+Transmission VPN dependency is also inactive when its container is stopped.
+This changes the status display only; it does not start or stop Transmission,
+alter its VPN, or change any download.
+
 ## Configuration
 
 Nginx validates each request with Authentik and replaces
