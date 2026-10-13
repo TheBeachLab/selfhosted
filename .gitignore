@@ -3,3 +3,7 @@ ignore
 .DS_Store
 .vscode
 .playwright-mcp/
+
+# Buchhaltung moved to its own private repository. Keep legacy local caches
+# and any operator data at the old path out of this infrastructure repository.
+services/buchhaltung/
