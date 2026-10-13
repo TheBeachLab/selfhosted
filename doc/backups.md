@@ -148,6 +148,12 @@ sudo rm -rf /var/tmp/restic-restore-test
 The script refuses to run if `/mnt/nas-downloads` is not an NFS mount, so a
 NAS outage cannot silently fill the local root filesystem.
 
+## Vaultwarden backups
+
+Vaultwarden has its own encrypted repository at
+`/mnt/nas-downloads/backups/vaultwarden-restic` and a daily 02:10 Europe/Madrid
+timer. Capture, retention and recovery commands are in [Vaultwarden](vaultwarden.md#backup-and-recovery).
+
 ## Msgvault archive backups
 
 Msgvault has a separate encrypted repository at

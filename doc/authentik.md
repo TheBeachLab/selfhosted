@@ -14,9 +14,14 @@ Open [auth.beachlab.org](https://auth.beachlab.org/) to sign in.
 | Barrakuda Designer | https://designer.daswerklab.de/ |
 | Administration | https://admin.beachlab.org/ |
 | Msgvault (Fran only) | https://msgvault.beachlab.org/ |
+| Passwords (Fran only, native SSO) | https://passwords.beachlab.org/ |
 
 Transmission keeps its own web and RPC login so Remote GUI can connect over
 HTTPS. The public websites keep their existing access.
+
+Passwords uses native OpenID Connect with the same passkey flow so Bitwarden
+apps can connect. Its master password decrypts the vault; see
+[Vaultwarden](vaultwarden.md) for the client settings and private account mapping.
 
 ## Access
 

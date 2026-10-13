@@ -1,0 +1,140 @@
+# Vaultwarden
+
+Open [passwords.beachlab.org](https://passwords.beachlab.org/) and use
+**hola@beachlab.org → Use single sign-on**. Authentik authenticates Fran with
+his existing passkey. On the first access, choose the vault's master password
+in Vaultwarden; it is still needed to decrypt the vault.
+
+In each Bitwarden app or browser extension, choose **Self-hosted**, enter
+`https://passwords.beachlab.org`, and use **Single sign-on**. If a client asks
+for an organization identifier, Vaultwarden returns
+`00000000-01DC-01DC-01DC-000000000000` automatically.
+See [client configuration](https://bitwarden.com/help/change-client-environment/)
+and [Vaultwarden SSO](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-SSO-support-using-OpenId-Connect).
+
+## Access
+
+The official Vaultwarden container
+[1.37.4](https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.4) is
+pinned by digest in [compose.yaml](../services/vaultwarden/compose.yaml).
+Nginx serves its dedicated host with a Let's Encrypt certificate. The existing
+`passwords` CNAME points to `beachlab.org`; Certbot renews the certificate and
+`50-vaultwarden-nginx` validates and reloads Nginx.
+
+`SSO_ONLY=true` disables password-only login. Public registration, SSO signup
+without invitation and organization invitations are disabled. The local
+invitation for `hola@beachlab.org` permits the first account. Public `/admin`
+returns 404. SMTP and Bitwarden mobile push services are not configured.
+
+Authentik has a separate `passwords` OIDC application and provider, with a
+single personal access binding for `fran`. It uses the existing
+`beachlab-passkey` flow, requiring WebAuthn and user verification, plus PKCE.
+Only authorization-code and refresh-token grants are enabled. Access tokens
+last 15 minutes and refresh tokens 12 hours. The issuer is:
+
+```text
+https://auth.beachlab.org/application/o/passwords/
+```
+
+Fran's Authentik profile has no email. The private `Passwords Fran email`
+scope mapping assigns `hola@beachlab.org` only for this application, based on
+Fran's explicit address choice. It marks this administrative identity claim
+as verified; SMTP ownership verification was not performed. Other Authentik
+profiles and application bindings were retained.
+
+[configure-oidc.py](../services/vaultwarden/configure-oidc.py) provisions these
+objects without changing the shared flow. It refuses an existing application,
+provider or credential file. The configuration follows upstream
+[Vaultwarden's Authentik guidance](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-SSO-support-using-OpenId-Connect#authentik)
+and [Authentik's OAuth2 provider](https://docs.goauthentik.io/add-secure-apps/providers/oauth2/).
+Interactive forward-auth redirects are not placed in front of the API;
+the native SSO flow enforces passkey authentication for Bitwarden clients.
+
+## Paths and operation
+
+```text
+/opt/vaultwarden/compose.yaml
+/opt/vaultwarden/.env
+/opt/vaultwarden/admin-token
+/opt/vaultwarden/deployment/
+/opt/vaultwarden/oidc-provision.json
+/var/lib/vaultwarden/
+/etc/nginx/sites-available/passwords.beachlab.org
+/etc/letsencrypt/live/passwords.beachlab.org/
+/etc/letsencrypt/renewal-hooks/deploy/50-vaultwarden-nginx
+/usr/local/sbin/vaultwarden-invite
+/usr/local/sbin/vaultwarden-backup
+```
+
+The container runs as the dedicated `vaultwarden` user, with a read-only root
+filesystem, no Linux capabilities, a 512 MiB memory limit and one CPU.
+Only `127.0.0.1:18080` is published. Data is private (0700); deployment secrets
+are root-only (0600). The administration token is stored as an Argon2id hash
+in the server environment. Do not print `.env`, the recovery token or
+unfiltered Docker inspection output.
+
+On the NUC (`ssh pink-sudo`):
+
+```bash
+sudo docker compose --project-directory /opt/vaultwarden config --quiet
+sudo docker compose --project-directory /opt/vaultwarden ps
+sudo docker compose --project-directory /opt/vaultwarden restart
+curl -fsS http://127.0.0.1:18080/alive
+sudo nginx -t
+```
+
+[install.py](../services/vaultwarden/install.py) is for a first installation
+only. It refuses existing paths, users and containers. Existing data and
+credentials must be preserved during upgrades; update the pinned image,
+back up first, then recreate the container. Enabling another person also
+requires an explicit Authentik binding and a suitable email mapping;
+an invitation alone does not grant SSO access.
+
+## Backup and recovery
+
+`vaultwarden-backup.timer` runs daily at **02:10 Europe/Madrid**, with up to five
+minutes of delay. It briefly stops the container to capture SQLite, attachments,
+keys and deployment together, restarts it even if capture fails, then uploads the
+capture to the encrypted, separate Restic repository:
+
+```text
+/mnt/nas-downloads/backups/vaultwarden-restic
+```
+
+The job refuses a missing or unexpected Synology NFS mount and checks the
+repository identity. Retention is 7 daily, 4 weekly and 6 monthly snapshots.
+It uses `/root/.config/thebeachlab-backup/restic-password`; recovery password
+location and NAS access are in [Backups](backups.md).
+See [Vaultwarden backup and restore requirements](https://github.com/dani-garcia/vaultwarden/wiki/Backing-up-your-vault).
+
+```bash
+sudo systemctl start vaultwarden-backup.service
+systemctl show vaultwarden-backup.service -p Result -p ExecMainStatus
+systemctl list-timers vaultwarden-backup.timer
+sudo cat /var/lib/vaultwarden-backup/last-success.json
+```
+
+Restore into a private, separate directory before changing live data:
+
+```bash
+sudo install -d -m 700 /var/tmp/vaultwarden-restore
+sudo env \
+  RESTIC_REPOSITORY=/mnt/nas-downloads/backups/vaultwarden-restic \
+  RESTIC_PASSWORD_FILE=/root/.config/thebeachlab-backup/restic-password \
+  restic restore latest --tag vaultwarden --target /var/tmp/vaultwarden-restore
+sudo sqlite3 /var/tmp/vaultwarden-restore/var/lib/vaultwarden-backup/payload/data/db.sqlite3 \
+  'PRAGMA integrity_check;'
+```
+
+Stop the container and preserve current data before a live restore. Recover
+`data/` as a whole, including its matching WAL if captured. Keep ownership with
+`vaultwarden`. Restore deployment secrets only when needed, then start the
+container and check `/alive` and SSO login. Do not mix a recovered database with
+the current WAL or overwrite newer data. Authentik and its signing key must also
+be available; this backup captures Vaultwarden, not the Authentik database.
+
+The initial capture was restored on 2026-10-13 into an isolated container with
+no network or published ports. SQLite integrity, database hash, signing keys,
+deployment credentials and the restored image's healthcheck passed. The vault
+was still empty, with one invited account. Proof is stored privately at
+`/var/lib/vaultwarden-backup/restore-proof.json`.

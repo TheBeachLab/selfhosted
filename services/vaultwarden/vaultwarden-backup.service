@@ -1,0 +1,24 @@
+[Unit]
+Description=Consistent Vaultwarden backup to encrypted Synology repository
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+RequiresMountsFor=/mnt/nas-downloads
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/local/sbin/vaultwarden-backup
+TimeoutStartSec=1h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=100%
+MemoryMax=512M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/vaultwarden /var/lib/vaultwarden-backup /mnt/nas-downloads/backups/vaultwarden-restic /run/lock
+RestrictSUIDSGID=true

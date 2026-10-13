@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+if [ "${RENEWED_LINEAGE:-}" = /etc/letsencrypt/live/passwords.beachlab.org ]; then
+    nginx -t
+    systemctl reload nginx
+fi

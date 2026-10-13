@@ -1,0 +1,57 @@
+# Official release: https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.4
+# Digest read back from Docker Hub on 2026-10-13; Linux amd64 on the NUC.
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.37.4@sha256:efb3cde962015fcc036b2ea625242248611943b27212ebf4392841fb30fad055
+    container_name: vaultwarden
+    user: "${VAULTWARDEN_UID:?service uid required}:${VAULTWARDEN_GID:?service gid required}"
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    memswap_limit: 768m
+    cpus: 1
+    pids_limit: 128
+    extra_hosts:
+      - auth.beachlab.org:host-gateway
+    ports:
+      - "127.0.0.1:18080:80"
+    volumes:
+      - /var/lib/vaultwarden:/data
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    environment:
+      DOMAIN: https://passwords.beachlab.org
+      ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:?admin token hash required}
+      SSO_ENABLED: "true"
+      SSO_ONLY: "true"
+      SSO_SIGNUPS_ALLOWED: "false"
+      SSO_SIGNUPS_MATCH_EMAIL: "false"
+      SSO_ALLOW_UNKNOWN_EMAIL_VERIFICATION: "false"
+      SSO_AUTHORITY: https://auth.beachlab.org/application/o/passwords/
+      SSO_CLIENT_ID: ${VAULTWARDEN_SSO_CLIENT_ID:?SSO client id required}
+      SSO_CLIENT_SECRET: ${VAULTWARDEN_SSO_CLIENT_SECRET:?SSO client secret required}
+      SSO_SCOPES: openid profile email offline_access
+      SSO_PKCE: "true"
+      SIGNUPS_ALLOWED: "false"
+      INVITATIONS_ALLOWED: "false"
+      SIGNUPS_VERIFY: "false"
+      SHOW_PASSWORD_HINT: "false"
+      ICON_BLACKLIST_NON_GLOBAL_IPS: "true"
+      ROCKET_ADDRESS: 0.0.0.0
+      ROCKET_PORT: 80
+      IP_HEADER: X-Real-IP
+      LOG_LEVEL: warn
+      UMASK: "0077"
+    healthcheck:
+      test: [CMD, /healthcheck.sh]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
