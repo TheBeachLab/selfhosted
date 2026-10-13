@@ -302,10 +302,8 @@ of NUC **and** Core X (see Razer power-cycle notes in [gpu.md](gpu.md)).
 - Pre-change GRUB backup: `/etc/default/grub.pre-aspm-20260718`
 - GSP firmware disabled via `/etc/modprobe.d/nvidia-no-gsp.conf` (`NVreg_EnableGpuFirmware=0`)
 - The issue matches known Linux/NVIDIA/Thunderbolt reports around `Xid 79` and "fallen off the bus"
-- An earlier stability test imposed a **1500 MHz graphics-clock ceiling**. It
-  was no longer active in the 2026-10-13 check. See the
-  [clock-limit history and current GPU state](gpu.md#historical-1500-mhz-cap-and-current-gpu-state-2026-10-13)
-  for the original driver receipt, measured clocks, and read-only checks.
+- The old **1500 MHz cap** was no longer active on 2026-10-13. See
+  [GPU clocks](gpu.md#gpu-clocks).
 
 ### Still-open experiments (when you next need a long GPU day)
 
