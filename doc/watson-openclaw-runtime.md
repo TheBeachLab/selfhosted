@@ -88,6 +88,23 @@ tmux new-session -d -s watson \
   'openclaw tui --session agent:main:main --deliver'
 ```
 
+## Telegram timeout
+
+The Telegram ingress timeout is **15 minutes**, set in
+`~/.config/systemd/user/openclaw-gateway.service.d/telegram-handler-timeout.conf`:
+
+```ini
+[Service]
+Environment=OPENCLAW_TELEGRAM_SPOOLED_HANDLER_TIMEOUT_MS=900000
+```
+
+Check the service setting:
+
+```bash
+systemctl --user show openclaw-gateway.service -p Environment --value |
+  grep -o 'OPENCLAW_TELEGRAM_SPOOLED_HANDLER_TIMEOUT_MS=[0-9]*'
+```
+
 ## Public verification commands
 
 ```bash
