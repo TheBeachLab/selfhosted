@@ -244,6 +244,64 @@ sudo reboot
 Verify the module setting after reboot while the Core X is online. The absence of
 a particular Xid is not proof that the setting fixed the runtime failure.
 
+### Historical 1500 MHz cap and current GPU state (2026-10-13)
+
+An earlier stability diagnosis applied this temporary graphics-clock range:
+
+```bash
+sudo nvidia-smi -i 0 -lgc 300,1500
+```
+
+The original tool output confirmed the change:
+
+```text
+GPU clocks set to "(gpuClkMin 300, gpuClkMax 1500)" for GPU 00000000:04:00.0
+```
+
+The same output reported both current and default power limits as **215 W**.
+This was a real **1500 MHz frequency ceiling**, separate from the power limit.
+[NVIDIA documents `-lgc` as a minimum/maximum GPU-clock pair](https://docs.nvidia.com/deploy/nvidia-smi/index.html).
+There is no verified evidence here that this diagnostic cap resolved the
+underlying eGPU instability.
+
+Historical source: the original Codex tool call and output retained in the local
+`sessions/2026/08/04/` logs, rechecked on 2026-10-13. Locate the receipt without
+printing unrelated log contents:
+
+```bash
+rg -l -F 'gpuClkMin 300, gpuClkMax 1500' "${CODEX_HOME:-$HOME/.codex}/sessions/2026/08/04/"
+```
+
+The current host was checked directly on **2026-10-13**:
+
+| Observation | Verified value |
+|---|---|
+| GPU / driver | RTX 2070 SUPER / NVIDIA 595.99.02 |
+| Idle graphics / memory clocks | 1605 / 7000 MHz, 0% GPU utilization |
+| Performance policy | P0; `GPUPowerMizerMode=1` (prefer maximum performance) |
+| Current / requested / default power limit | 215 / 215 / 215 W |
+| Isolated CUDA check | 4.032 seconds of FP16 matrix multiplication, 3072 × 3072 |
+| Graphics clocks during busy samples | 1860–1920 MHz; peak GPU utilization 100% |
+
+These measured clocks establish that the old **1500 MHz ceiling was no longer
+active**. The exact time and mechanism that removed it have not been verified.
+No clock or power setting was changed during this check; the short workload does
+not establish long-run stability.
+
+The inspected startup policy in `/usr/local/sbin/egpu-powermizer-set` assigns
+`GPUPowerMizerMode=1`; `/etc/X11/xorg-egpu-headless.conf` also selects high
+performance. This policy favors higher clocks rather than imposing the old
+1500 MHz ceiling, as defined by
+[NVIDIA's PowerMizer constants](https://raw.githubusercontent.com/NVIDIA/nvidia-settings/main/src/libXNVCtrl/NVCtrl.h).
+
+Recheck the live snapshot with these read-only commands. Idle clocks alone do
+not predict the frequency reached under load:
+
+```bash
+nvidia-smi -q -d CLOCK,PERFORMANCE,POWER
+sudo nvidia-settings -c :99 -t -q '[gpu:0]/GPUPowerMizerMode'
+```
+
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
