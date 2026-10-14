@@ -5,9 +5,9 @@ Las llamadas entran por el número 089 5104 2000 / +49 89 5104 2000.
 
 ## Estado verificado: 14 de octubre de 2026
 
-La implementación bc4219daf531776df82e556fc9bb6fe0c3a48291 está integrada en
+La implementación 65b541c38da8996ffb4f37ce57587f46f9ea62a3 está integrada en
 master e instalada en el NUC. El servicio está activo y Nginx pasa su validación.
-El recibo update-bc4219daf531776df82e556fc9bb6fe0c3a48291.json, en
+El recibo update-65b541c38da8996ffb4f37ce57587f46f9ea62a3.json, en
 /var/lib/daswerklab-voice/, registra ese commit y los hashes de los archivos.
 installation.json conserva el registro de la instalación inicial 8fc528d.
 
@@ -52,14 +52,24 @@ Validación realizada:
   español. La petición del saludo incluye explícitamente de-DE: las
   instrucciones de respuesta sustituyen las instrucciones de sesión, según
   la [referencia de OpenAI](https://developers.openai.com/api/reference/resources/realtime/client-events).
+- La llamada humana desde el móvil de Fran figura en IE1 como entrante,
+  completed, con 72 segundos de duración. El titular confirmó que el asistente
+  respondió y comunicó que dejaba de hablar ante ruidos leves. La llamada
+  CA08532ede7e1fa43874763ef07ec91dfe comenzó el 14 de octubre a las 21:39:27 UTC.
+- El código desplegado configura reducción de ruido near_field y sube el
+  umbral de server_vad de 0.5 a 0.8. OpenAI devuelve esos valores efectivos en
+  session.updated. En una comprobación real de la API, ruido sintético de bajo
+  nivel no dispara speech_started y una frase alemana sintetizada sí lo hace.
+  HTTPS /voice/healthz vuelve a devolver 200 y ready=true tras actualizar.
 
 Estas verificaciones consumieron audio de OpenAI y una llamada interna de
-Twilio al número propio. Queda pendiente la prueba humana desde un teléfono
-externo: escucha, conversación y transferencia que haga sonar el móvil de Fran.
+Twilio al número propio. La recepción desde el móvil de Fran está comprobada;
+quedan pendientes la evaluación humana del ajuste de ruido y la transferencia
+desde otro teléfono que haga sonar el móvil de Fran. La prueba con ruido
+sintético no demuestra por sí sola una mejora con el ruido de su llamada.
 El anuncio de indisponibilidad comunicado en el primer intento humano no tuvo
 un registro entrante visible en US1; no se estableció su causa. La prueba
-interna completada en IE1 no demuestra por sí sola la recepción desde fraenk
-ni la transferencia al móvil.
+interna completada en IE1 no demuestra por sí sola la transferencia al móvil.
 
 ## Comportamiento
 
@@ -68,6 +78,10 @@ ni la transferencia al móvil.
 - Usa Cedar y se presenta como asistente virtual de Fran. Cove no figura entre
   las voces de [Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
   comprobado el 14 de octubre de 2026; el titular eligió Cedar.
+- Filtra ruido de micrófono antes de detectar voz y conserva las interrupciones
+  cuando detecta habla. VAD_THRESHOLD=0.8 e INPUT_NOISE_REDUCTION=near_field son
+  los valores iniciales, ajustables en la configuración privada; no eliminan
+  cualquier ruido ni garantizan reconocer todas las voces débiles.
 - Pedir hablar con Fran usa una herramienta con un destino fijo: el móvil
   profesional publicado, terminado en 0901. El modelo no puede elegir otro
   destino.
