@@ -72,6 +72,8 @@ class Settings:
     max_seconds: int = 600
     max_calls: int = 4
     direct_callers: tuple = ()
+    vad_threshold: float = 0.8
+    noise_reduction: str = "near_field"
 
     def __post_init__(self):
         self.public_base = self.public_base.rstrip("/")
@@ -87,6 +89,8 @@ class Settings:
             raise ValueError("Handoff destination must differ from the receptionist number.")
         if not 30 <= self.max_seconds <= 1800 or not 1 <= self.max_calls <= 8:
             raise ValueError("Invalid call resource limits.")
+        if not 0 <= self.vad_threshold <= 1 or self.noise_reduction not in ("near_field", "far_field", "off"):
+            raise ValueError("Invalid voice activity or noise reduction setting.")
 
     @classmethod
     def from_env(cls):
@@ -99,6 +103,7 @@ class Settings:
             Path(env.get("STATE_DIR", "/var/lib/daswerklab-voice")),
             int(env.get("MAX_CALL_SECONDS", "600")), int(env.get("MAX_CONCURRENT_CALLS", "4")),
             tuple(x.strip() for x in env.get("DIRECT_CALLERS", "").split(",") if x.strip()),
+            float(env.get("VAD_THRESHOLD", "0.8")), env.get("INPUT_NOISE_REDUCTION", "near_field"),
         )
 
 
@@ -161,7 +166,12 @@ def session_config(settings, call):
                     "output_modalities": ["audio"], "instructions": instructions(call),
                     "audio": {
                         "input": {"format": {"type": "audio/pcmu"},
-                                  "turn_detection": {"type": "server_vad", "threshold": 0.5,
+                                  # Filter telephone microphone noise before VAD. A higher
+                                  # threshold reduces false starts while retaining spoken barge-in.
+                                  # https://developers.openai.com/api/reference/resources/realtime/client-events
+                                  "noise_reduction": (None if settings.noise_reduction == "off" else
+                                                      {"type": settings.noise_reduction}),
+                                  "turn_detection": {"type": "server_vad", "threshold": settings.vad_threshold,
                                                      "prefix_padding_ms": 300, "silence_duration_ms": 600,
                                                      "create_response": True, "interrupt_response": True}},
                         "output": {"format": {"type": "audio/pcmu"}, "voice": settings.voice}},
