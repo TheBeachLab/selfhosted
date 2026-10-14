@@ -114,6 +114,28 @@ Initialize the database as the service user, prepare the dedicated encrypted
 Restic repository/key, run `backup.py --verify-restore`, then start the service.
 Do not expose a signup form with a fake mail-success response.
 
+Deployment checkpoint, checked directly on the NUC on 2026-10-14:
+
+- Integrated release `0234071da376` is linked at `/opt/mebuko/current`;
+  all 27 packaged files matched the integrated Git archive before activation.
+- `mebuko.service` is running, bound only to `127.0.0.1:8099`;
+  `/_health` returned `{"ok": true}`. The subscriber database is empty.
+- The private environment and database have the permissions listed above.
+  Dedicated encrypted snapshot `6252ec17` passed restoration and integrity/hash
+  checks. A restricted recovery-key copy is under
+  `/mnt/nas-downloads/backups/mebuko-recovery/` (0700; key 0600).
+- The scoped updater read the existing apex A record successfully and verified
+  the NUC IPv4 without changing it. Hetzner expects the literal `@` in the
+  RRSet endpoint; percent-encoding it as `%40` returned 404 in the live API.
+- Public registration, TLS and the public email-confirmation loop remain
+  unverified. The registrar session expired at the final purchase step and its
+  automatic access check remained stuck. DENIC RDAP returned 404; there is no
+  registration confirmation. No Mebuko Nginx vhost or timer is enabled yet.
+
+Reopen the registrar's domain list after restoring access before retrying the
+authorized registration; do not infer purchase success from the filled form.
+This checkpoint is dated evidence, not a replacement for a fresh readback.
+
 Only after registration and delegation are verified, install this host's HTTP
 ACME vhost and obtain its certificate using the existing `/var/www/letsencrypt`
 webroot. Install the scoped HTTPS vhost, run `nginx -t`, reload, and check public
