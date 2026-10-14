@@ -5,26 +5,29 @@ Las llamadas entran por el número 089 5104 2000 / +49 89 5104 2000.
 
 ## Estado verificado: 14 de octubre de 2026
 
-La implementación 8fc528d46294fe71bff97d8420995936fee098b0 está integrada en
+La implementación bc4219daf531776df82e556fc9bb6fe0c3a48291 está integrada en
 master e instalada en el NUC. El servicio está activo y Nginx pasa su validación.
-El recibo de instalación registra ese commit y los hashes de los archivos.
+El recibo update-bc4219daf531776df82e556fc9bb6fe0c3a48291.json, en
+/var/lib/daswerklab-voice/, registra ese commit y los hashes de los archivos.
+installation.json conserva el registro de la instalación inicial 8fc528d.
 
 Las llamadas están configuradas para entrar al agente. La clave de OpenAI
 está instalada en la configuración privada del NUC y el endpoint HTTPS
 /voice/healthz devuelve 200 con ready=true. El servicio está activo sin
 reinicios inesperados tras instalar la clave.
 
-La lectura de las API de Twilio confirma la región activa US1, VoiceUrl
+La lectura de las API de Twilio confirma la región activa Ireland (IE1), VoiceUrl
 https://daswerklab.de/voice/incoming y StatusCallback
 https://daswerklab.de/voice/status, ambos con método POST. Alemania tiene
-habilitadas las llamadas salientes normales necesarias para conectar al móvil
-de Fran. Los permisos de números especiales y de alto riesgo siguen
-deshabilitados. Los recibos privados de activación conservan los estados
-anteriores y posteriores en /Users/Papi/.config/recepcionista/.
+una prueba de salida completada desde IE1 al propio número alemán de Twilio.
+El NUC valida las firmas con el Auth Token de IE1. Mantener el número en
+Irlanda: no migrar a US1 para utilizar otras credenciales. Los recibos privados
+conservan los estados anteriores y posteriores en
+/Users/Papi/.config/recepcionista/.
 
 Validación realizada:
 
-- 22 pruebas simuladas pasan en Python 3.10, también sobre master.
+- 25 pruebas simuladas pasan en Python 3.10, también sobre master.
 - El webhook HTTPS rechaza peticiones sin firma con 403.
 - OpenAI Realtime completa respuestas con audio PCMU sobre los servicios en
   español, inglés y alemán. En los tres idiomas selecciona transfer_to_fran
@@ -36,17 +39,35 @@ Validación realizada:
 - El handshake WSS sin firma devuelve 403.
 - La configuración privada y la base de mensajes tienen permisos 0600.
 - Las páginas públicas española, inglesa y alemana continúan devolviendo 200.
+- Una llamada de prueba creada en IE1 al propio número de Twilio completa
+  sus dos tramos (saliente y entrante) durante ocho segundos; el NUC acepta
+  su Media Stream. No se llamó al móvil de Fran. El recibo es
+  /Users/Papi/.config/recepcionista/twilio-selftest-ie1-20261014.json.
+- Los archivos desplegados coinciden por SHA-256 con el commit integrado.
+  La voz configurada es Cedar, con respuestas de audio verificadas en los
+  tres idiomas.
+- Bridge.run, ejecutado desde el código desplegado con el modelo real, genera
+  el saludo alemán «Hallo! Ich bin Frans virtueller Assistent bei Das Werklab».
+  Después reconoce «Hola, pásame a Fran» y selecciona transfer_to_fran en
+  español. La petición del saludo incluye explícitamente de-DE: las
+  instrucciones de respuesta sustituyen las instrucciones de sesión, según
+  la [referencia de OpenAI](https://developers.openai.com/api/reference/resources/realtime/client-events).
 
-Estas verificaciones consumieron audio de OpenAI, pero no colocaron llamadas
-telefónicas reales. Queda pendiente la prueba humana al número contratado:
-escucha, conversación por la red telefónica y transferencia que haga sonar el
-móvil de Fran. La configuración leída en Twilio y la prueba sintética no
-demuestran por sí solas esa conexión telefónica.
+Estas verificaciones consumieron audio de OpenAI y una llamada interna de
+Twilio al número propio. Queda pendiente la prueba humana desde un teléfono
+externo: escucha, conversación y transferencia que haga sonar el móvil de Fran.
+El anuncio de indisponibilidad comunicado en el primer intento humano no tuvo
+un registro entrante visible en US1; no se estableció su causa. La prueba
+interna completada en IE1 no demuestra por sí sola la recepción desde fraenk
+ni la transferencia al móvil.
 
 ## Comportamiento
 
 - El asistente se identifica como Asistente de Fran, explica los servicios y conversa en
   español, inglés y alemán. El saludo empieza en alemán para clientes.
+- Usa Cedar y se presenta como asistente virtual de Fran. Cove no figura entre
+  las voces de [Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
+  comprobado el 14 de octubre de 2026; el titular eligió Cedar.
 - Pedir hablar con Fran usa una herramienta con un destino fijo: el móvil
   profesional publicado, terminado en 0901. El modelo no puede elegir otro
   destino.
@@ -96,6 +117,10 @@ Fuentes oficiales consultadas el 14 de octubre de 2026:
 - [Regiones de Twilio](https://www.twilio.com/docs/global-infrastructure/inbound-processing-api):
   cada región tiene su propia configuración de webhooks y credenciales;
   cambiar la región puede tardar cinco minutos en aplicarse.
+- [Credenciales regionales](https://www.twilio.com/docs/global-infrastructure/manage-regional-api-credentials):
+  un Auth Token o una API key solo funciona en la región donde fue creado.
+  IE1 requiere su token para las firmas y permite autenticar la REST API con
+  Account SID y ese mismo token.
 - [Permisos por país](https://www.twilio.com/docs/voice/api/dialingpermissions-country-resource)
   y [actualización de permisos](https://www.twilio.com/docs/voice/api/dialingpermissions-bulkcountryupdate-resource):
   la lectura de Countries/DE comprueba los tres permisos; BulkCountryUpdates
@@ -131,11 +156,11 @@ de Realtime, sin generar audio. Esta comprobación no sustituye una llamada real
 
 ## Activación de Twilio
 
-Observación directa del 14 de octubre de 2026: el número contratado estaba
-inicialmente en IE1. Las credenciales locales funcionaban para US1 y la petición
-equivalente a IE1 devolvía HTTP 401; el webhook US1 estaba vacío. La activación
-configuró los webhooks US1 y migró el enrutamiento del número a US1. Ambas
-operaciones se comprobaron con una lectura posterior de sus API.
+Observación directa del 14 de octubre de 2026: el número está activo en IE1,
+con los dos webhooks POST configurados en esa región. Las credenciales US1
+devolvían HTTP 401 en IE1. Tras guardar TWILIO_IE1_AUTH_TOKEN en el archivo
+local privado, la API de Irlanda autenticó correctamente. El token regional
+se instaló como TWILIO_AUTH_TOKEN en /etc/daswerklab-voice.env.
 
 El script configure_twilio.py es de solo lectura por defecto. Para activar,
 exige que el servicio responda ready=true, un archivo de recibo nuevo y
@@ -143,24 +168,28 @@ credenciales válidas para la región seleccionada. Una migración de región
 necesita explícitamente --allow-region-change. Las configuraciones anteriores
 se guardan en el recibo antes de modificarlas.
 
-La instalación actual usa US1 y su Auth Token para validar las firmas. Para
-una futura migración a IE1 hacen falta su clave, secreto y Auth Token
-regionales y una nueva validación. El Auth Token del servicio debe corresponder
-a la región de las llamadas.
+La instalación actual usa IE1 y su Auth Token para validar las firmas. El script
+prefiere TWILIO_IE1_API_KEY y TWILIO_IE1_API_SECRET si están disponibles; en su
+ausencia admite Account SID y TWILIO_IE1_AUTH_TOKEN. No utiliza el token de US1
+como sustituto del de Irlanda. Las credenciales US1 locales solo permiten
+consultar el control de enrutamiento; no determinan la región de las llamadas.
 
 ~~~sh
-python3 configure_twilio.py --region us1
-python3 configure_twilio.py --activate --region us1 --allow-region-change \
+python3 configure_twilio.py --region ie1
+python3 configure_twilio.py --activate --region ie1 \
   --receipt RUTA_PRIVADA_NUEVA.json
 ~~~
 
 Recibo de esta activación:
-/Users/Papi/.config/recepcionista/activation-20261014-voice.json.
-El permiso DE de llamadas normales estaba deshabilitado y se activó mediante
-POST /v1/DialingPermissions/BulkCountryUpdates; la lectura posterior confirmó
-low_risk_numbers_enabled=true, high_risk_special_numbers_enabled=false y
-high_risk_tollfraud_numbers_enabled=false. El estado anterior se conserva en
+/Users/Papi/.config/recepcionista/activation-20261014-ie1.json.
+La restauración del número a Irlanda se conserva en
+/Users/Papi/.config/recepcionista/ireland-region-restore-20261014.json.
+La API voice.twilio.com confirmó el permiso DE de llamadas normales habilitado
+y los dos permisos de alto riesgo deshabilitados; su recibo se conserva en
 /Users/Papi/.config/recepcionista/germany-dialing-permission-20261014.json.
+La consulta equivalente a voice.dublin.ie1.twilio.com devolvió HTTP 404, por lo
+que no se presenta esa lectura de permisos como una verificación regional IE1.
+La salida real de prueba desde IE1 al número propio sí se completó.
 
 Verificar después una llamada al número contratado y su registro en la región
 activa. Probar información de servicios y cambios de idioma. Probar la
