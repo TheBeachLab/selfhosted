@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Move all same-site/password candidates to Duplicados without consolidation.
 
-Uses the official CLI's folder/item API, preserving every credential:
+Uses the official CLI to select items and create the folder, then changes
+only server folder links, preserving every encrypted credential byte:
 https://bitwarden.com/help/cli/#create
 https://bitwarden.com/help/cli/#edit
 """
 import argparse
 from collections import defaultdict
-import copy
 import json
 import os
+from pathlib import Path
+import subprocess
+import sys
 from urllib.parse import urlsplit
 
 from deduplicate import Cli, GuardError, login, passkeys, save_receipt
@@ -64,15 +67,23 @@ def candidates(items, wifi_folders):
     return [group for group in grouped.values() if len(group) > 1]
 
 
+def optional_values(value):
+    if isinstance(value, dict):
+        return {k: optional_values(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [optional_values(v) for v in value]
+    return value
+
+
 def contents(item):
-    return {k: v for k, v in item.items() if k not in {"folderId", "revisionDate"}}
+    return optional_values({k: v for k, v in item.items() if k not in {"folderId", "revisionDate"}})
 
 
-def execute(cli, receipt_path, apply=False):
+def execute(cli, receipt_path, apply=False, move_metadata=None):
     status = cli.request("GET", "/status")
     if status.get("userEmail") != "hola@beachlab.org" or status.get("serverUrl", "").rstrip("/") != "https://passwords.beachlab.org":
         raise GuardError("wrong_account_or_server")
-    cli.request("POST", "/sync")
+    cli.request("POST", "/sync?force=true")
     items = cli.request("GET", "/list/object/items")
     items = {i["id"]: i for i in items if not i.get("deletedDate")}
     folders = cli.request("GET", "/list/object/folders")
@@ -93,21 +104,20 @@ def execute(cli, receipt_path, apply=False):
     folder = matching[0] if matching else cli.request("POST", "/object/folder", {"name": "Duplicados"})
     folder_id = folder["id"]
     receipt["folder_id"] = folder_id
-    for number, identity in enumerate(sorted(targets), 1):
-        original = items[identity]
-        if cli.request("GET", "/object/item/" + identity) != original:
-            raise GuardError("concurrent_item_change")
-        if original.get("folderId") != folder_id:
-            changed = copy.deepcopy(original)
-            changed["folderId"] = folder_id
-            result = cli.request("PUT", "/object/item/" + identity, changed)
-            if contents(result) != contents(original) or result.get("folderId") != folder_id:
-                raise GuardError("credential_content_changed")
-            receipt["moved"].append({"id": identity, "previous_folder": original.get("folderId")})
-            save_receipt(receipt_path, receipt)
-        if number % 25 == 0:
-            print(json.dumps({"checked": number, "total": len(targets)}), flush=True)
-    cli.request("POST", "/sync")
+    plan = {"account": status["userEmail"], "folder_id": folder_id,
+            "items": [{"id": i, "previous_folder": items[i].get("folderId"),
+                       "revisionDate": items[i]["revisionDate"]} for i in sorted(targets)]}
+    if move_metadata is None:
+        plan_path = Path(receipt_path).with_suffix(".folder-plan.json")
+        save_receipt(plan_path, plan)
+        result = subprocess.run(["sudo", sys.executable, str(Path(__file__).with_name("review_folder_links.py")), str(plan_path)], capture_output=True)
+        if result.returncode:
+            raise GuardError("folder_metadata_move_failed")
+        receipt["moved"] = json.loads(result.stdout)["moved"]
+    else:
+        receipt["moved"] = move_metadata(plan)
+    save_receipt(receipt_path, receipt)
+    cli.request("POST", "/sync?force=true")
     final = cli.request("GET", "/list/object/items")
     final = {i["id"]: i for i in final if not i.get("deletedDate")}
     if set(final) != set(items):

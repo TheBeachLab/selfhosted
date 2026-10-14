@@ -112,12 +112,24 @@ excluded. All passkeys remain in their existing item IDs, even when their
 items are moved.
 
 Use the same private, user-unlocked official CLI workflow, with `--bw`,
-`--private-dir`, `--receipt` and optionally `--apply`. The script preserves
-each entire decrypted item (including usernames, credential private keys,
-notes and fields), verifies the content returned by each edit and then
-checks all server items after a final sync. Only folder IDs and modification
-timestamps may change. Its owner-only receipt records each previous folder
-ID so that the move can be undone without exposing credential contents.
+`--private-dir`, `--receipt` and optionally `--apply`. The official CLI
+selects candidates and creates the folder; it does not re-save login contents.
+[review_folder_links.py](../services/vaultwarden/review_folder_links.py)
+briefly stops Vaultwarden under the backup lock and changes only folder links
+and modification timestamps in one SQLite transaction. It checks ownership,
+original folder IDs and revisions before mutation, and verifies that every
+encrypted cipher column remains byte-for-byte identical except the
+modification timestamp. The CLI then syncs and checks all items. The
+owner-only receipt records previous folder IDs for undoing the move.
+
+The 2026-10-14 review grouped 91 entries in 44 groups under `Duplicados`,
+retaining 750 active items, all 29 passkeys and 162 Wi-Fi items. The initial
+CLI edit route omitted two encrypted username fields; the content guard
+stopped those edits. Those original encrypted fields were restored from
+pre-change Restic snapshot `c4b7802d`, after checking that account key
+material and the respective cipher keys were unchanged. The corrected
+folder-link route avoids credential serialization entirely. The private
+receipt is `/var/lib/vaultwarden-migration/review-duplicates-20261014-receipt.json`.
 
 On 2026-10-14 the NUC resolver failed to resolve `passwords.beachlab.org`
 (`resolvectl query`: the CNAME target had no requested RR). HTTPS to the
