@@ -9,24 +9,39 @@ La implementación 8fc528d46294fe71bff97d8420995936fee098b0 está integrada en
 master e instalada en el NUC. El servicio está activo y Nginx pasa su validación.
 El recibo de instalación registra ese commit y los hashes de los archivos.
 
-La activación de llamadas sigue pendiente: no se ha creado ni instalado la
-clave de OpenAI y no se ha cambiado el enrutamiento de Twilio. El endpoint
-HTTPS /voice/healthz devuelve 503 con ready=false. El número continúa en IE1;
-el script de inspección confirma las credenciales disponibles para US1.
+Las llamadas están configuradas para entrar al agente. La clave de OpenAI
+está instalada en la configuración privada del NUC y el endpoint HTTPS
+/voice/healthz devuelve 200 con ready=true. El servicio está activo sin
+reinicios inesperados tras instalar la clave.
+
+La lectura de las API de Twilio confirma la región activa US1, VoiceUrl
+https://daswerklab.de/voice/incoming y StatusCallback
+https://daswerklab.de/voice/status, ambos con método POST. Alemania tiene
+habilitadas las llamadas salientes normales necesarias para conectar al móvil
+de Fran. Los permisos de números especiales y de alto riesgo siguen
+deshabilitados. Los recibos privados de activación conservan los estados
+anteriores y posteriores en /Users/Papi/.config/recepcionista/.
 
 Validación realizada:
 
 - 22 pruebas simuladas pasan en Python 3.10, también sobre master.
-- El webhook HTTPS rechaza peticiones sin firma con 403; una petición sintética
-  correctamente firmada devuelve 200 y un Dial al móvil configurado, con aviso
-  en español cuando el origen es el móvil de Fran.
+- El webhook HTTPS rechaza peticiones sin firma con 403.
+- OpenAI Realtime completa respuestas con audio PCMU sobre los servicios en
+  español, inglés y alemán. En los tres idiomas selecciona transfer_to_fran
+  con el idioma correcto al solicitar hablar con Fran.
+- Una llamada sintética firmada recorre HTTPS, WSS y el modelo real: recibe
+  el saludo, procesa audio PCMU con la frase «Pásame a Fran, por favor» y
+  devuelve un Dial al móvil fijo. El callback sintético no-answer vuelve a
+  la IA con un ticket nuevo. El contexto sintético se elimina al terminar.
 - El handshake WSS sin firma devuelve 403.
 - La configuración privada y la base de mensajes tienen permisos 0600.
 - Las páginas públicas española, inglesa y alemana continúan devolviendo 200.
 
-Estas verificaciones no colocaron llamadas reales ni consumieron voz de
-OpenAI. Falta validar con una llamada real la conversación en los tres idiomas
-y la transferencia telefónica después de completar la clave y la activación.
+Estas verificaciones consumieron audio de OpenAI, pero no colocaron llamadas
+telefónicas reales. Queda pendiente la prueba humana al número contratado:
+escucha, conversación por la red telefónica y transferencia que haga sonar el
+móvil de Fran. La configuración leída en Twilio y la prueba sintética no
+demuestran por sí solas esa conexión telefónica.
 
 ## Comportamiento
 
@@ -82,6 +97,10 @@ Fuentes oficiales consultadas el 14 de octubre de 2026:
 - [Regiones de Twilio](https://www.twilio.com/docs/global-infrastructure/inbound-processing-api):
   cada región tiene su propia configuración de webhooks y credenciales;
   cambiar la región puede tardar cinco minutos en aplicarse.
+- [Permisos por país](https://www.twilio.com/docs/voice/api/dialingpermissions-country-resource)
+  y [actualización de permisos](https://www.twilio.com/docs/voice/api/dialingpermissions-bulkcountryupdate-resource):
+  la lectura de Countries/DE comprueba los tres permisos; BulkCountryUpdates
+  permite habilitar llamadas normales solo para DE conservando los otros dos.
 
 ## Preparación del NUC
 
@@ -113,10 +132,11 @@ de Realtime, sin generar audio. Esta comprobación no sustituye una llamada real
 
 ## Activación de Twilio
 
-Observación directa del 14 de octubre de 2026: el número está contratado y su
-región activa es IE1. Las credenciales locales funcionan para US1; la petición
-equivalente a IE1 devuelve HTTP 401. El webhook US1 está vacío. No asumir que
-cambiar un webhook US1 conecta las llamadas entrantes de IE1.
+Observación directa del 14 de octubre de 2026: el número contratado estaba
+inicialmente en IE1. Las credenciales locales funcionaban para US1 y la petición
+equivalente a IE1 devolvía HTTP 401; el webhook US1 estaba vacío. La activación
+configuró los webhooks US1 y migró el enrutamiento del número a US1. Ambas
+operaciones se comprobaron con una lectura posterior de sus API.
 
 El script configure_twilio.py es de solo lectura por defecto. Para activar,
 exige que el servicio responda ready=true, un archivo de recibo nuevo y
@@ -124,15 +144,24 @@ credenciales válidas para la región seleccionada. Una migración de región
 necesita explícitamente --allow-region-change. Las configuraciones anteriores
 se guardan en el recibo antes de modificarlas.
 
-Opciones: conservar IE1 y proporcionar su clave, secreto y Auth Token
-regionales; o usar US1 con las credenciales ya configuradas y migrar el número.
-El Auth Token del servicio debe corresponder a la región de las llamadas.
+La instalación actual usa US1 y su Auth Token para validar las firmas. Para
+una futura migración a IE1 hacen falta su clave, secreto y Auth Token
+regionales y una nueva validación. El Auth Token del servicio debe corresponder
+a la región de las llamadas.
 
 ~~~sh
 python3 configure_twilio.py --region us1
 python3 configure_twilio.py --activate --region us1 --allow-region-change \
   --receipt RUTA_PRIVADA_NUEVA.json
 ~~~
+
+Recibo de esta activación:
+/Users/Papi/.config/recepcionista/activation-20261014-voice.json.
+El permiso DE de llamadas normales estaba deshabilitado y se activó mediante
+POST /v1/DialingPermissions/BulkCountryUpdates; la lectura posterior confirmó
+low_risk_numbers_enabled=true, high_risk_special_numbers_enabled=false y
+high_risk_tollfraud_numbers_enabled=false. El estado anterior se conserva en
+/Users/Papi/.config/recepcionista/germany-dialing-permission-20261014.json.
 
 Verificar después una llamada al número contratado y su registro en la región
 activa. Probar información de servicios y cambios de idioma. Probar la
