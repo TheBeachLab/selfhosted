@@ -1,0 +1,29 @@
+[Unit]
+Description=Das Werklab multilingual voice receptionist
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=daswerklab-voice
+Group=daswerklab-voice
+WorkingDirectory=/opt/daswerklab-voice/current
+EnvironmentFile=/etc/daswerklab-voice.env
+ExecStart=/opt/daswerklab-voice/venv/bin/uvicorn server:create_app --factory --host 127.0.0.1 --port 18090 --workers 1 --no-access-log --ws-max-size 1048576
+Restart=on-failure
+RestartSec=5
+StateDirectory=daswerklab-voice
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/daswerklab-voice
+MemoryHigh=192M
+MemoryMax=256M
+CPUQuota=100%
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

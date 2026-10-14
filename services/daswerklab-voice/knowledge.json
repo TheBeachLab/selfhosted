@@ -1,0 +1,50 @@
+{
+  "verified_on": "2026-10-14",
+  "sources": [
+    "https://daswerklab.de/es/",
+    "https://daswerklab.de/en/",
+    "https://daswerklab.de/de/"
+  ],
+  "business": "Das Werklab",
+  "owner": "Francisco Sanchez Arroyo, también conocido como Fran",
+  "location": "Múnich, Alemania",
+  "email": "fran@daswerklab.de",
+  "services": [
+    {
+      "name": "Consultoría de ingeniería civil",
+      "scope": "Estudios de viabilidad, comparación de alternativas técnicas y revisión de documentación existente para promotores y equipos de proyecto."
+    },
+    {
+      "name": "Dirección y coordinación de obra",
+      "scope": "Coordinación de participantes, seguimiento de plazos, controles de calidad y documentación de puntos pendientes durante la ejecución."
+    },
+    {
+      "name": "Desarrollo de sistemas",
+      "scope": "Diseño, construcción y validación de sistemas que combinan electrónica, sensores, mecánica, CAD, fabricación y ensayos."
+    },
+    {
+      "name": "Desarrollo de software",
+      "scope": "Aplicaciones, firmware, APIs, flujos de datos, automatización e integración con sistemas físicos cuando el software estándar no encaja."
+    }
+  ],
+  "method": "Acordar al inicio un primer resultado útil y acotado en siete días: una decisión, prueba de viabilidad, prototipo o plan técnico. El alcance y la fecha de inicio necesitan acuerdo con Fran; no existe una reserva de disponibilidad automática.",
+  "handover": "Archivos fuente, decisiones, documentación, pasos de reproducción y transferencia de conocimiento según lo acordado. Las condiciones de licencia y el alcance exacto los define el contrato.",
+  "examples": [
+    "Zyklopen: percepción local de profundidad mediante dos cámaras.",
+    "Maps / Wind: exploración de terreno y viento en el navegador.",
+    "Alphabets: display modular que integra mecánica, electrónica, fabricación y control web."
+  ],
+  "products": [
+    "Orbita: sistema modular de microrefugios.",
+    "Hariburi: conversión de unidades y divisas para iPhone e iPad.",
+    "FMCU: control y consulta del estado de un Fab Lab mediante MQTT.",
+    "Hariboo: juego de supervivencia sin anuncios y con partidas offline."
+  ],
+  "unknown": [
+    "Tarifas, presupuestos y precios de productos.",
+    "Disponibilidad actual, horarios de atención y citas.",
+    "Fechas de entrega de un proyecto completo.",
+    "Existencias y disponibilidad comercial de productos.",
+    "Habilitaciones, reconocimientos oficiales y facultades para firmar documentos regulados."
+  ]
+}
