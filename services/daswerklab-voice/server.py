@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Signed Twilio Media Streams bridge to OpenAI Realtime, with fixed handoff."""
+"""Signed Twilio bridge to OpenAI conversation and selectable streamed speech."""
 import asyncio
 import base64
 from collections import deque
@@ -74,6 +74,10 @@ class Settings:
     direct_callers: tuple = ()
     vad_threshold: float = 0.8
     noise_reduction: str = "near_field"
+    voice_provider: str = "openai"
+    eleven_key: str = field(default="", repr=False)
+    eleven_voice: str = "cllvQaMvj0ZKxH88HGEn"
+    eleven_model: str = "eleven_v4_turbo"
 
     def __post_init__(self):
         self.public_base = self.public_base.rstrip("/")
@@ -91,6 +95,12 @@ class Settings:
             raise ValueError("Invalid call resource limits.")
         if not 0 <= self.vad_threshold <= 1 or self.noise_reduction not in ("near_field", "far_field", "off"):
             raise ValueError("Invalid voice activity or noise reduction setting.")
+        if self.voice_provider not in ("openai", "elevenlabs"):
+            raise ValueError("Invalid voice provider.")
+        if self.voice_provider == "elevenlabs" and (not self.eleven_key
+                or not re.fullmatch(r"[A-Za-z0-9]{20}", self.eleven_voice)
+                or self.eleven_model != "eleven_v4_turbo"):
+            raise ValueError("ElevenLabs requires its key, voice ID and supported streaming model.")
 
     @classmethod
     def from_env(cls):
@@ -104,6 +114,9 @@ class Settings:
             int(env.get("MAX_CALL_SECONDS", "600")), int(env.get("MAX_CONCURRENT_CALLS", "4")),
             tuple(x.strip() for x in env.get("DIRECT_CALLERS", "").split(",") if x.strip()),
             float(env.get("VAD_THRESHOLD", "0.8")), env.get("INPUT_NOISE_REDUCTION", "near_field"),
+            env.get("VOICE_PROVIDER", "openai"), env.get("ELEVENLABS_API_KEY", ""),
+            env.get("ELEVENLABS_VOICE_ID", "cllvQaMvj0ZKxH88HGEn"),
+            env.get("ELEVENLABS_MODEL", "eleven_v4_turbo"),
         )
 
 
@@ -160,7 +173,7 @@ def instructions(call):
 def session_config(settings, call):
     # OpenAI GA schema and PCMU:
     # https://developers.openai.com/api/docs/guides/realtime-conversations
-    return {
+    config = {
         "type": "session.update",
         "session": {"type": "realtime", "model": settings.model,
                     "output_modalities": ["audio"], "instructions": instructions(call),
@@ -177,6 +190,14 @@ def session_config(settings, call):
                         "output": {"format": {"type": "audio/pcmu"}, "voice": settings.voice}},
                     "tools": TOOLS, "tool_choice": "auto"},
     }
+    if settings.voice_provider == "elevenlabs":
+        # OpenAI still understands caller audio and chooses tools. ElevenLabs
+        # speaks streamed output_text; there is no second generated OpenAI voice.
+        config["session"]["output_modalities"] = ["text"]
+        del config["session"]["audio"]["output"]
+        if settings.eleven_voice == "cllvQaMvj0ZKxH88HGEn":
+            config["session"]["instructions"] += "\nLa voz es femenina; usa formas femeninas al presentarte en alemán."
+    return config
 
 
 def realtime_connection(settings, call):
@@ -201,8 +222,166 @@ async def configure_session(ai, settings, call):
     raise RuntimeError("Realtime session acknowledgement was not received.")
 
 
+def eleven_connection(settings):
+    # v4 Turbo uses Text to Dialogue, not the legacy TTS stream-input endpoint.
+    # https://elevenlabs.io/docs/eleven-api/guides/how-to/websockets/realtime-tdd
+    return connect("wss://api.elevenlabs.io/v1/text-to-dialogue/stream-input?" + urlencode({
+        "model_id": settings.eleven_model, "output_format": "ulaw_8000", "sync_alignment": "true"}),
+        additional_headers={"xi-api-key": settings.eleven_key}, open_timeout=10, close_timeout=2,
+        max_size=2**20, max_queue=32)
+
+
+async def probe_eleven(settings, connector):
+    # Register the voice and close without text: check authentication/configuration
+    # without synthesizing a greeting on each service start.
+    async with connector(settings) as speech:
+        await speech.send(json.dumps({"voices": [settings.eleven_voice]}))
+        await speech.send(json.dumps({"close_socket": True}))
+        for _ in range(10):
+            event = json.loads(await asyncio.wait_for(speech.recv(), 10))
+            if event.get("error"):
+                raise RuntimeError("ElevenLabs rejected the speech configuration.")
+            if event.get("is_final"):
+                return
+    raise RuntimeError("ElevenLabs did not acknowledge the speech configuration.")
+
+
+@dataclass
+class Utterance:
+    item_id: str
+    queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=64))
+    text: str = ""
+    audio_ms: int = 0
+    alignment: list = field(default_factory=list)
+    finished: bool = False
+    cancelled: bool = False
+    task: object = None
+
+    def heard_text(self, played_ms):
+        # Alignment times are relative to their audio chunk. Never substitute the
+        # complete generated text when timing is unavailable: it may be unheard.
+        return "".join(char for end, char in self.alignment if end <= played_ms).strip()
+
+
+class ElevenSpeech:
+    def __init__(self, bridge, connector):
+        self.bridge, self.connector = bridge, connector
+        self.entries, self.repairs = {}, []
+        self.failures = asyncio.Queue(maxsize=1)
+
+    def completed(self, task):
+        if not task.cancelled() and task.exception() is not None and self.failures.empty():
+            self.failures.put_nowait(True)
+
+    async def failure(self):
+        await self.failures.get()
+        raise RuntimeError("External speech generation failed.")
+
+    def feed(self, item_id, text):
+        if item_id in self.bridge.blocked_items or self.bridge.stopping:
+            return
+        entry = self.entries.get(item_id)
+        if entry is None:
+            entry = self.entries[item_id] = Utterance(item_id)
+            entry.task = asyncio.create_task(self.synthesize(entry))
+            entry.task.add_done_callback(self.completed)
+        if entry.finished or entry.cancelled:
+            return
+        if not isinstance(text, str) or len(entry.text) + len(text) > 8000:
+            raise ValueError("Speech response exceeded its text limit.")
+        entry.text += text
+        entry.queue.put_nowait(text)
+
+    def finish(self, item_id):
+        entry = self.entries.get(item_id)
+        if entry and not entry.finished and not entry.cancelled:
+            entry.finished = True
+            entry.queue.put_nowait(None)
+
+    async def synthesize(self, entry):
+        async with self.connector(self.bridge.settings) as speech:
+            await speech.send(json.dumps({"voices": [self.bridge.settings.eleven_voice]}))
+
+            async def send_text():
+                while True:
+                    text = await entry.queue.get()
+                    if text is None:
+                        await speech.send(json.dumps({"close_socket": True}))
+                        return
+                    await speech.send(json.dumps({"inputs": [{"text": text,
+                        "voice_id": self.bridge.settings.eleven_voice, "new_turn": False}]}))
+
+            sender = asyncio.create_task(send_text())
+            try:
+                while True:
+                    event = json.loads(await asyncio.wait_for(speech.recv(), 20))
+                    if event.get("error"):
+                        raise RuntimeError("ElevenLabs rejected speech generation.")
+                    if event.get("audio") and not entry.cancelled:
+                        audio = base64.b64decode(event["audio"], validate=True)
+                        offset = entry.audio_ms
+                        alignment = event.get("alignment") or {}
+                        chars, starts, lengths = (alignment.get("chars", []),
+                            alignment.get("char_start_times_ms", []), alignment.get("char_durations_ms", []))
+                        if len(chars) == len(starts) == len(lengths):
+                            entry.alignment.extend((offset + float(start) + float(length), char)
+                                for char, start, length in zip(chars, starts, lengths))
+                        entry.audio_ms += len(audio) // 8
+                        await self.bridge.send_audio(entry.item_id, event["audio"])
+                    if event.get("is_final"):
+                        await sender
+                        return
+            finally:
+                sender.cancel()
+                await asyncio.gather(sender, return_exceptions=True)
+
+    async def interrupt(self):
+        bridge = self.bridge
+        async with bridge.audio_lock:
+            for entry in self.entries.values():
+                pending = not entry.task.done() or entry.item_id == bridge.last_item and bool(bridge.marks)
+                if not pending or entry.cancelled:
+                    continue
+                played = (min(bridge.generated_ms, max(0, bridge.timestamp - bridge.audio_started))
+                          if entry.item_id == bridge.last_item and bridge.audio_started is not None else 0)
+                self.repairs.append((entry.item_id, entry.heard_text(played),
+                                     bridge.previous_items.get(entry.item_id) or "root"))
+                entry.cancelled = True
+                bridge.blocked_items.add(entry.item_id)
+                entry.task.cancel()
+            await bridge.socket.send_json({"event": "clear", "streamSid": bridge.stream_sid})
+            bridge.marks.clear()
+            bridge.last_item, bridge.audio_started = None, None
+        if not bridge.active_response:
+            await self.repair_history()
+
+    async def repair_history(self):
+        # item.truncate applies to audio, not text. Remove unplayed assistant text
+        # and retain only words covered by the speech provider's timing alignment.
+        # https://developers.openai.com/api/reference/resources/realtime/client-events
+        replacements = {}
+        for item_id, heard, previous in self.repairs:
+            previous = replacements.get(previous, previous)
+            await self.bridge.send_ai({"type": "conversation.item.delete", "item_id": item_id})
+            if heard:
+                replacement = "item_" + secrets.token_hex(12)
+                await self.bridge.send_ai({"type": "conversation.item.create", "previous_item_id": previous, "item": {
+                    "id": replacement, "type": "message", "role": "assistant", "content": [
+                        {"type": "output_text", "text": heard + " [interrupted]"}]}})
+                replacements[item_id] = replacement
+            else:
+                replacements[item_id] = previous
+        self.repairs.clear()
+
+    async def close(self):
+        tasks = [entry.task for entry in self.entries.values()]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 class Bridge:
-    def __init__(self, socket, ai, settings, call, messages, stream_sid):
+    def __init__(self, socket, ai, settings, call, messages, stream_sid, speech_connector=None):
         self.socket, self.ai, self.settings, self.call, self.messages = socket, ai, settings, call, messages
         self.stream_sid = stream_sid
         self.timestamp = 0
@@ -213,6 +392,11 @@ class Bridge:
         self.blocked_items = set()
         self.tool_calls = set()
         self.stopping = False
+        self.audio_lock = asyncio.Lock()
+        self.active_response = None
+        self.previous_items = {}
+        self.speech = (ElevenSpeech(self, speech_connector or eleven_connection)
+                       if settings.voice_provider == "elevenlabs" else None)
 
     async def send_ai(self, value):
         await self.ai.send(json.dumps(value))
@@ -232,6 +416,9 @@ class Bridge:
                 return
 
     async def interrupt(self):
+        if self.speech:
+            await self.speech.interrupt()
+            return
         if self.last_item and self.marks:
             played_ms = min(self.generated_ms, max(0, self.timestamp - self.audio_started))
             await self.send_ai({"type": "conversation.item.truncate", "item_id": self.last_item,
@@ -241,6 +428,21 @@ class Bridge:
         self.marks.clear()
         self.last_item = None
         self.audio_started = None
+
+    async def send_audio(self, item_id, payload):
+        # Serialize speech packets with clear so a suspended send cannot deliver
+        # stale voice after the caller's interruption.
+        async with self.audio_lock:
+            if item_id in self.blocked_items or self.stopping:
+                return
+            if item_id != self.last_item:
+                self.last_item, self.audio_started, self.generated_ms = item_id, self.timestamp, 0
+            self.generated_ms += len(base64.b64decode(payload)) // 8
+            await self.socket.send_json({"event": "media", "streamSid": self.stream_sid,
+                                         "media": {"payload": payload}})
+            mark = secrets.token_hex(8)
+            self.marks.append(mark)
+            await self.socket.send_json({"event": "mark", "streamSid": self.stream_sid, "mark": {"name": mark}})
 
     async def execute_tool(self, item):
         tool_id = item.get("call_id", "")
@@ -261,7 +463,8 @@ class Bridge:
                 else:
                     self.call.mode = "transfer"
                     self.stopping = True
-                    await self.socket.send_json({"event": "clear", "streamSid": self.stream_sid})
+                    async with self.audio_lock:
+                        await self.socket.send_json({"event": "clear", "streamSid": self.stream_sid})
                     return True
             elif name == "end_call":
                 self.call.mode = "hangup"
@@ -283,21 +486,26 @@ class Bridge:
             event = json.loads(raw)
             kind = event.get("type")
             if kind == "response.output_audio.delta":
-                item_id = event["item_id"]
-                if item_id in self.blocked_items or self.stopping:
-                    continue
-                if item_id != self.last_item:
-                    self.last_item, self.audio_started, self.generated_ms = item_id, self.timestamp, 0
-                self.generated_ms += len(base64.b64decode(event["delta"])) // 8
-                await self.socket.send_json({"event": "media", "streamSid": self.stream_sid,
-                                             "media": {"payload": event["delta"]}})
-                mark = secrets.token_hex(8)
-                self.marks.append(mark)
-                await self.socket.send_json({"event": "mark", "streamSid": self.stream_sid, "mark": {"name": mark}})
+                if not self.speech:
+                    await self.send_audio(event["item_id"], event["delta"])
+            elif kind == "response.created":
+                self.active_response = event["response"]["id"]
+            elif kind == "conversation.item.added":
+                self.previous_items[event["item"]["id"]] = event.get("previous_item_id")
+            elif kind == "response.output_text.delta" and self.speech:
+                self.speech.feed(event["item_id"], event["delta"])
+            elif kind == "response.output_text.done" and self.speech:
+                self.speech.finish(event["item_id"])
             elif kind == "input_audio_buffer.speech_started":
                 await self.interrupt()
             elif kind == "response.done":
+                self.active_response = None
                 response = event.get("response", {})
+                if self.speech:
+                    for item in response.get("output", []):
+                        if item.get("type") == "message":
+                            self.speech.finish(item["id"])
+                    await self.speech.repair_history()
                 if response.get("status") == "failed":
                     self.call.mode = "unavailable"
                     return
@@ -319,11 +527,15 @@ class Bridge:
             # https://developers.openai.com/api/reference/resources/realtime/client-events
             "instructions": "Give this greeting entirely in " + LANGUAGES[self.call.language]
                             + ". Introduce yourself as Fran's virtual assistant at Das Werklab. "
+                            + ("Use the feminine grammatical form for your role. "
+                               if self.speech and self.settings.eleven_voice == "cllvQaMvj0ZKxH88HGEn" else "")
                             + ("Fran could not answer; offer to continue or leave a message." if self.call.resumed
                                else "Briefly ask how you can help.")}})
         remaining = max(0, self.settings.max_seconds - (time.monotonic() - self.call.started))
         tasks = [asyncio.create_task(self.receive_phone()), asyncio.create_task(self.receive_ai()),
                  asyncio.create_task(asyncio.sleep(remaining))]
+        if self.speech:
+            tasks.append(asyncio.create_task(self.speech.failure()))
         try:
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             if tasks[2] in done:
@@ -335,11 +547,14 @@ class Bridge:
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+            if self.speech:
+                await self.speech.close()
 
 
-def create_app(settings=None, connector=None, probe=True):
+def create_app(settings=None, connector=None, probe=True, speech_connector=None):
     cfg = settings or Settings.from_env()
     connector = connector or realtime_connection
+    speech_connector = speech_connector or eleven_connection
     validator = RequestValidator(cfg.auth_token)
     calls = {}
     messages = Messages(cfg.state_dir)
@@ -351,6 +566,8 @@ def create_app(settings=None, connector=None, probe=True):
             try:
                 async with connector(cfg, Call("probe", "readiness-probe", "de")) as ai:
                     await configure_session(ai, cfg, Call("probe", "readiness-probe", "de"))
+                if cfg.voice_provider == "elevenlabs":
+                    await probe_eleven(cfg, speech_connector)
                 app.state.realtime_ready = True
             except Exception as error:
                 LOG.warning("Realtime readiness failed: %s", type(error).__name__)
@@ -498,7 +715,7 @@ def create_app(settings=None, connector=None, probe=True):
             async with connector(cfg, call) as ai:
                 await configure_session(ai, cfg, call)
                 app.state.realtime_ready = True
-                await Bridge(socket, ai, cfg, call, messages, start["streamSid"]).run()
+                await Bridge(socket, ai, cfg, call, messages, start["streamSid"], speech_connector).run()
         except WebSocketDisconnect:
             pass
         except Exception as error:

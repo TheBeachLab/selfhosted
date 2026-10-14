@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 from twilio.request_validator import RequestValidator
 
-from server import Bridge, Call, Messages, Settings, create_app, session_config
+from server import Bridge, Call, Messages, Settings, create_app, session_config, probe_eleven
 import configure_twilio
 import install
 
@@ -58,9 +58,33 @@ class FakeAI:
 class FakeSocket:
     def __init__(self):
         self.sent = []
+        self.media_received = asyncio.Event()
 
     async def send_json(self, value):
         self.sent.append(value)
+        if value.get("event") == "media":
+            self.media_received.set()
+
+
+class FakeSpeech:
+    def __init__(self, error=False):
+        self.sent, self.events, self.error = [], asyncio.Queue(), error
+
+    async def send(self, raw):
+        event = json.loads(raw)
+        self.sent.append(event)
+        if "inputs" in event:
+            if self.error:
+                self.events.put_nowait(json.dumps({"error": "quota_exceeded"}))
+            else:
+                self.events.put_nowait(json.dumps({"audio": base64.b64encode(b"\xff" * 1600).decode(),
+                    "alignment": {"chars": list("Hi there"), "char_start_times_ms": list(range(0, 160, 20)),
+                                  "char_durations_ms": [20] * 8}}))
+        if event.get("close_socket"):
+            self.events.put_nowait(json.dumps({"is_final": True}))
+
+    async def recv(self):
+        return await self.events.get()
 
 
 class VoiceHTTPTests(unittest.TestCase):
@@ -297,6 +321,122 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Desarrollo de sistemas", session["instructions"])
         self.assertEqual({t["name"] for t in session["tools"]},
                          {"transfer_to_fran", "save_message", "end_call"})
+
+
+class ElevenSpeechTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.cfg = Settings(PUBLIC, SID, TOKEN, NUMBER, FRAN, "synthetic-openai-key",
+            state_dir=Path(self.temp.name), voice_provider="elevenlabs", eleven_key="synthetic-eleven-key")
+        self.socket, self.ai, self.provider = FakeSocket(), FakeAI(), FakeSpeech()
+
+        @asynccontextmanager
+        async def speech_connector(settings):
+            yield self.provider
+
+        self.connector = speech_connector
+        self.bridge = Bridge(self.socket, self.ai, self.cfg, Call(CALL_SID, CALLER, "de"),
+                             Messages(Path(self.temp.name)), STREAM_SID, speech_connector)
+
+    async def asyncTearDown(self):
+        await self.bridge.speech.close()
+        self.temp.cleanup()
+
+    async def start_speech(self):
+        self.bridge.speech.feed("reply", "Hi there")
+        await asyncio.wait_for(self.socket.media_received.wait(), 1)
+
+    async def test_eleven_mode_keeps_openai_input_and_tools_without_openai_audio_output(self):
+        session = session_config(self.cfg, self.bridge.call)["session"]
+        self.assertEqual(session["output_modalities"], ["text"])
+        self.assertNotIn("output", session["audio"])
+        self.assertEqual(session["audio"]["input"]["format"], {"type": "audio/pcmu"})
+        self.assertEqual({tool["name"] for tool in session["tools"]},
+                         {"transfer_to_fran", "save_message", "end_call"})
+
+    async def test_partial_text_produces_phone_audio_before_model_response_finishes(self):
+        await self.start_speech()
+        self.assertEqual(self.provider.sent[1]["inputs"][0]["text"], "Hi there")
+        self.assertFalse(any(event.get("close_socket") for event in self.provider.sent))
+        self.assertEqual(self.socket.sent[0]["event"], "media")
+        self.assertEqual(self.bridge.generated_ms, 200)
+        self.bridge.speech.finish("reply")
+        await asyncio.wait_for(self.bridge.speech.entries["reply"].task, 1)
+        self.assertTrue(self.provider.sent[-1]["close_socket"])
+
+    async def test_interruption_clears_phone_and_removes_unheard_text_without_audio_truncate(self):
+        await self.start_speech()
+        self.bridge.timestamp = 45
+        await self.bridge.interrupt()
+        self.assertEqual(self.socket.sent[-1]["event"], "clear")
+        self.assertEqual(self.ai.sent[0], {"type": "conversation.item.delete", "item_id": "reply"})
+        self.assertEqual(self.ai.sent[1]["item"]["content"][0]["text"], "Hi [interrupted]")
+        self.assertNotIn("conversation.item.truncate", [event["type"] for event in self.ai.sent])
+        count = len(self.socket.sent)
+        await self.bridge.send_audio("reply", AUDIO)
+        self.bridge.speech.feed("reply", "obsolete text")
+        self.assertEqual(len(self.socket.sent), count)
+        self.assertTrue(self.bridge.speech.entries["reply"].cancelled)
+
+    async def test_interrupted_live_model_response_defers_history_repair_until_completion(self):
+        await self.start_speech()
+        self.bridge.active_response = "generating"
+        await self.bridge.interrupt()
+        self.assertFalse(self.ai.sent)
+        self.assertEqual(len(self.bridge.speech.repairs), 1)
+        self.bridge.active_response = None
+        await self.bridge.speech.repair_history()
+        self.assertEqual(self.ai.sent, [{"type": "conversation.item.delete", "item_id": "reply"}])
+
+    async def test_provider_generation_failure_is_observed_by_bridge_supervisor(self):
+        self.provider.error = True
+        self.bridge.speech.feed("reply", "Hi there")
+        with self.assertRaisesRegex(RuntimeError, "External speech"):
+            await asyncio.wait_for(self.bridge.speech.failure(), 1)
+        self.assertFalse(self.socket.sent)
+
+    async def test_readiness_probe_authenticates_without_generating_audio(self):
+        await probe_eleven(self.cfg, self.connector)
+        self.assertEqual(self.provider.sent, [{"voices": [self.cfg.eleven_voice]}, {"close_socket": True}])
+
+    async def test_readiness_probe_rejects_invalid_speech_access(self):
+        self.provider.events.put_nowait(json.dumps({"error": "missing_permissions"}))
+        with self.assertRaisesRegex(RuntimeError, "rejected"):
+            await probe_eleven(self.cfg, self.connector)
+
+    async def test_interrupted_heard_text_is_inserted_before_the_new_user_turn(self):
+        await self.start_speech()
+        self.bridge.previous_items["reply"] = "previous-user-question"
+        self.bridge.timestamp = 45
+        await self.bridge.interrupt()
+        self.assertEqual(self.ai.sent[1]["previous_item_id"], "previous-user-question")
+
+    async def test_clear_follows_an_audio_send_already_in_progress(self):
+        entered, release = asyncio.Event(), asyncio.Event()
+        original_send = self.socket.send_json
+
+        async def slow_send(event):
+            if event["event"] == "media":
+                entered.set()
+                await release.wait()
+            await original_send(event)
+
+        self.socket.send_json = slow_send
+        sender = asyncio.create_task(self.bridge.send_audio("packet-in-flight", AUDIO))
+        await asyncio.wait_for(entered.wait(), 1)
+        interrupter = asyncio.create_task(self.bridge.interrupt())
+        release.set()
+        await asyncio.wait_for(asyncio.gather(sender, interrupter), 1)
+        self.assertEqual([event["event"] for event in self.socket.sent], ["media", "mark", "clear"])
+
+    async def test_transfer_suppresses_queued_external_voice(self):
+        await self.start_speech()
+        self.assertTrue(await self.bridge.execute_tool({"name": "transfer_to_fran", "call_id": "transfer",
+                                                        "arguments": '{"language":"de"}'}))
+        count = len(self.socket.sent)
+        await self.bridge.send_audio("reply", AUDIO)
+        self.assertEqual(self.bridge.call.mode, "transfer")
+        self.assertEqual(len(self.socket.sent), count)
 
 
 class DeploymentGuardTests(unittest.TestCase):
