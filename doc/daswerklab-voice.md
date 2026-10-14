@@ -3,6 +3,31 @@
 Servicio propio en el Intel NUC, con Twilio Programmable Voice y OpenAI Realtime.
 Las llamadas entran por el número 089 5104 2000 / +49 89 5104 2000.
 
+## Estado verificado: 14 de octubre de 2026
+
+La implementación 8fc528d46294fe71bff97d8420995936fee098b0 está integrada en
+master e instalada en el NUC. El servicio está activo y Nginx pasa su validación.
+El recibo de instalación registra ese commit y los hashes de los archivos.
+
+La activación de llamadas sigue pendiente: no se ha creado ni instalado la
+clave de OpenAI y no se ha cambiado el enrutamiento de Twilio. El endpoint
+HTTPS /voice/healthz devuelve 503 con ready=false. El número continúa en IE1;
+el script de inspección confirma las credenciales disponibles para US1.
+
+Validación realizada:
+
+- 22 pruebas simuladas pasan en Python 3.10, también sobre master.
+- El webhook HTTPS rechaza peticiones sin firma con 403; una petición sintética
+  correctamente firmada devuelve 200 y un Dial al móvil configurado, con aviso
+  en español cuando el origen es el móvil de Fran.
+- El handshake WSS sin firma devuelve 403.
+- La configuración privada y la base de mensajes tienen permisos 0600.
+- Las páginas públicas española, inglesa y alemana continúan devolviendo 200.
+
+Estas verificaciones no colocaron llamadas reales ni consumieron voz de
+OpenAI. Falta validar con una llamada real la conversación en los tres idiomas
+y la transferencia telefónica después de completar la clave y la activación.
+
 ## Comportamiento
 
 - El asistente se identifica como IA, explica los servicios y conversa en
