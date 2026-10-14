@@ -99,6 +99,26 @@ the receipt after changing server readback from one full sync per group to
 one per batch, without purging any entry. SQLite integrity check returned
 `ok` after the cleanup.
 
+For copies with different usernames,
+[review_duplicates.py](../services/vaultwarden/review_duplicates.py) matches
+the same HTTP(S) host and exact password, ignoring usernames, URL paths,
+`www.` and default HTTP(S) ports. A URL-like item title also supplies a host.
+These are candidates for review, including potentially valid different
+accounts; the script does not choose the correct username or consolidate
+credentials. It moves **every member** of each matching group into the
+personal `Duplicados` folder, without deleting or merging anything. Wi-Fi,
+passkey-only logins without a password and organization-owned entries are
+excluded. All passkeys remain in their existing item IDs, even when their
+items are moved.
+
+Use the same private, user-unlocked official CLI workflow, with `--bw`,
+`--private-dir`, `--receipt` and optionally `--apply`. The script preserves
+each entire decrypted item (including usernames, credential private keys,
+notes and fields), verifies the content returned by each edit and then
+checks all server items after a final sync. Only folder IDs and modification
+timestamps may change. Its owner-only receipt records each previous folder
+ID so that the move can be undone without exposing credential contents.
+
 On 2026-10-14 the NUC resolver failed to resolve `passwords.beachlab.org`
 (`resolvectl query`: the CNAME target had no requested RR). HTTPS to the
 local Nginx with that hostname and certificate succeeded (HTTP 200 for
