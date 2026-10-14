@@ -30,7 +30,10 @@ def main():
     zone = api("/zones/mebuko.de")["zone"]
     if zone["name"] != "mebuko.de" or zone["mode"] != "primary":
         raise RuntimeError("Unexpected zone; no updates made")
-    route = f"/zones/{zone['id']}/rrsets/{quote('@', safe='')}/A"
+    # Hetzner's RRSet router expects the literal apex name @. The encoded
+    # %40 endpoint returned 404; the documented /rrsets/@/A returned the live
+    # RRSet on 2026-10-14. Keep @ while quoting other path characters.
+    route = f"/zones/{zone['id']}/rrsets/{quote('@', safe='@')}/A"
     rrset = api(route)["rrset"]
     if [r["value"] for r in rrset["records"]] == [ip]:
         print("Mebuko DNS already matches the NUC IPv4.")
