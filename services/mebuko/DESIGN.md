@@ -59,6 +59,13 @@ desktop panel. CUA's documented CDP capture was used for complete image evidence
 without changing the page content. Reference and browser captures were viewed
 with `view_image`. Temporary screenshots remain outside Git.
 
+The final public site was also checked at 1536 × 1024 CSS pixels and at
+390 × 844 CSS pixels, at normal scale. CDP captured the full page in both views;
+both captures were viewed with `view_image`. Mobile document width equalled
+390px, with no horizontal overflow, and no console errors/warnings were seen.
+The real public Spanish signup / received email / explicit confirmation /
+withdrawal flow passed; the owner-controlled test address was removed.
+
 | Comparison | Implementation and correction |
 | --- | --- |
 | Copy and date | German headline, audience, date, consent and CTA retained verbatim |

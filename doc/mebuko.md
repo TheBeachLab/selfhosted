@@ -19,6 +19,19 @@ The apex A record uses the NUC's verified public IPv4 (60s TTL); `www` is a
 CNAME to `mebuko.de.`. Domain registration is separate from creating a zone.
 Do not infer ownership from a successful DNS API request.
 
+Registration was subsequently completed in Robot on 2026-10-14. DENIC's live
+RDAP endpoint returned HTTP 200, `active`, and the three assigned nameservers:
+https://rdap.denic.de/domain/mebuko.de . Public recursive resolvers also returned
+the verified NUC IPv4. This is a dated registration/delegation observation.
+
+Contact verification follows Hetzner's process: new .de email addresses must
+follow the verification link within 14 days; already verified addresses may be
+verified automatically. The official sender/link domain is
+`your-emailverification.de`. Check for a pending verification after changing a
+registrar contact; do not infer its state from a DNS record or order receipt.
+Source, checked 2026-10-14:
+https://docs.hetzner.com/robot/domain-registration-robot/contact-information-verification/
+
 The registrar's Robot form quoted €3.90/year plus €2 setup, including 19% VAT.
 This is a dated quote; verify the checkout before any future purchase. Hetzner's
 DNS API manages records; its documented registration API is a PGP-signed email
@@ -114,27 +127,34 @@ Initialize the database as the service user, prepare the dedicated encrypted
 Restic repository/key, run `backup.py --verify-restore`, then start the service.
 Do not expose a signup form with a fake mail-success response.
 
-Deployment checkpoint, checked directly on the NUC on 2026-10-14:
+Deployment readback, checked directly on 2026-10-14:
 
-- Integrated release `0234071da376` is linked at `/opt/mebuko/current`;
-  all 27 packaged files matched the integrated Git archive before activation.
+- Integrated release `f08ce0f35011` is linked at `/opt/mebuko/current`;
+  all 28 packaged files matched the integrated Git archive before activation.
 - `mebuko.service` is running, bound only to `127.0.0.1:8099`;
-  `/_health` returned `{"ok": true}`. The subscriber database is empty.
+  `/_health` returned `{"ok": true}`. It and the DDNS, pruning and backup timers
+  are enabled. Each scoped maintenance service completed with exit status 0.
+- Public HTTPS returned the exact integrated HTML, JS, CSS, device image and
+  legal pages, with the expected security headers and no Set-Cookie header.
+  `www` redirects to the apex. Private source/env/database paths returned 404;
+  a cross-origin signup POST returned 403 without sending mail.
+- The certificate covers both names and expires on 2027-01-12. The existing
+  `certbot.timer` is active/enabled; the installed Mebuko deploy hook tests and
+  reloads Nginx only for this certificate lineage. Its live invocation passed.
+- An owner-controlled public browser test received the Spanish confirmation
+  email from `fran@daswerklab.de`. Opening the link left one pending row;
+  pressing confirmation created one confirmed row; the withdrawal button
+  removed it. The subscriber database is now empty. Temporary test links were
+  removed. No launch notification was sent.
 - The private environment and database have the permissions listed above.
-  Dedicated encrypted snapshot `6252ec17` passed restoration and integrity/hash
+  Dedicated encrypted snapshot `a42fef04` passed restoration and integrity/hash
   checks. A restricted recovery-key copy is under
   `/mnt/nas-downloads/backups/mebuko-recovery/` (0700; key 0600).
 - The scoped updater read the existing apex A record successfully and verified
   the NUC IPv4 without changing it. Hetzner expects the literal `@` in the
   RRSet endpoint; percent-encoding it as `%40` returned 404 in the live API.
-- Public registration, TLS and the public email-confirmation loop remain
-  unverified. The registrar session expired at the final purchase step and its
-  automatic access check remained stuck. DENIC RDAP returned 404; there is no
-  registration confirmation. No Mebuko Nginx vhost or timer is enabled yet.
 
-Reopen the registrar's domain list after restoring access before retrying the
-authorized registration; do not infer purchase success from the filled form.
-This checkpoint is dated evidence, not a replacement for a fresh readback.
+This dated readback is not a replacement for checking the current host state.
 
 Only after registration and delegation are verified, install this host's HTTP
 ACME vhost and obtain its certificate using the existing `/var/www/letsencrypt`
