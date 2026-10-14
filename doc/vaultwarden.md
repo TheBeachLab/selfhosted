@@ -99,6 +99,38 @@ the receipt after changing server readback from one full sync per group to
 one per batch, without purging any entry. SQLite integrity check returned
 `ok` after the cleanup.
 
+For copies with different usernames,
+[review_duplicates.py](../services/vaultwarden/review_duplicates.py) matches
+the same HTTP(S) host and exact password, ignoring usernames, URL paths,
+`www.` and default HTTP(S) ports. A URL-like item title also supplies a host.
+These are candidates for review, including potentially valid different
+accounts; the script does not choose the correct username or consolidate
+credentials. It moves **every member** of each matching group into the
+personal `Duplicados` folder, without deleting or merging anything. Wi-Fi,
+passkey-only logins without a password and organization-owned entries are
+excluded. All passkeys remain in their existing item IDs, even when their
+items are moved.
+
+Use the same private, user-unlocked official CLI workflow, with `--bw`,
+`--private-dir`, `--receipt` and optionally `--apply`. The official CLI
+selects candidates and creates the folder; it does not re-save login contents.
+[review_folder_links.py](../services/vaultwarden/review_folder_links.py)
+briefly stops Vaultwarden under the backup lock and changes only folder links
+and modification timestamps in one SQLite transaction. It checks ownership,
+original folder IDs and revisions before mutation, and verifies that every
+encrypted cipher column remains byte-for-byte identical except the
+modification timestamp. The CLI then syncs and checks all items. The
+owner-only receipt records previous folder IDs for undoing the move.
+
+The 2026-10-14 review grouped 91 entries in 44 groups under `Duplicados`,
+retaining 750 active items, all 29 passkeys and 162 Wi-Fi items. The initial
+CLI edit route omitted two encrypted username fields; the content guard
+stopped those edits. Those original encrypted fields were restored from
+pre-change Restic snapshot `c4b7802d`, after checking that account key
+material and the respective cipher keys were unchanged. The corrected
+folder-link route avoids credential serialization entirely. The private
+receipt is `/var/lib/vaultwarden-migration/review-duplicates-20261014-receipt.json`.
+
 On 2026-10-14 the NUC resolver failed to resolve `passwords.beachlab.org`
 (`resolvectl query`: the CNAME target had no requested RR). HTTPS to the
 local Nginx with that hostname and certificate succeeded (HTTP 200 for
