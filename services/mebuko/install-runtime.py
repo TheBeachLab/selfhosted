@@ -26,6 +26,10 @@ def main():
     for file in release.glob("*.timer"):
         shutil.copy2(file, "/etc/systemd/system/" + file.name)
     shutil.copy2(release / "mebuko.logrotate", "/etc/logrotate.d/mebuko")
+    hook = Path("/etc/letsencrypt/renewal-hooks/deploy/50-mebuko-nginx")
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(release / "mebuko-certbot-deploy.sh", hook)
+    os.chmod(hook, 0o755)
     link = Path("/opt/mebuko/current")
     if link.exists() and not link.is_symlink():
         raise RuntimeError("Refusing to replace a non-symlink runtime")

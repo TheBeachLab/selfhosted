@@ -50,7 +50,7 @@ def main():
     source.close(); dest.close()
     os.chmod(stage / "subscribers.sqlite3", 0o600)
     paths = [str(stage), "/etc/mebuko", "/etc/systemd/system/mebuko.service"]
-    for p in ("/etc/nginx/sites-available/mebuko.de", "/etc/letsencrypt/renewal/mebuko.de.conf", "/etc/letsencrypt/archive/mebuko.de"):
+    for p in ("/etc/nginx/sites-available/mebuko.de", "/etc/letsencrypt/renewal/mebuko.de.conf", "/etc/letsencrypt/archive/mebuko.de", "/etc/letsencrypt/renewal-hooks/deploy/50-mebuko-nginx"):
         if Path(p).exists(): paths.append(p)
     lines = restic("backup", "--json", "--tag", "mebuko", *paths)
     summary = next(json.loads(line) for line in lines.splitlines() if json.loads(line).get("message_type") == "summary")
