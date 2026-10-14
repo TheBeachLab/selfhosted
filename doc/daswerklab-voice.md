@@ -1,15 +1,24 @@
 # Das Werklab: recepcionista de voz
 
-Servicio propio en el Intel NUC, con Twilio Programmable Voice y OpenAI Realtime.
+Servicio propio en el Intel NUC, con Twilio Programmable Voice, OpenAI Realtime
+para la conversación y ElevenLabs para la voz.
 Las llamadas entran por el número 089 5104 2000 / +49 89 5104 2000.
 
-## Estado verificado: 14 de octubre de 2026
+## Estado verificado: 15 de octubre de 2026
 
-La implementación 65b541c38da8996ffb4f37ce57587f46f9ea62a3 está integrada en
+La implementación 213209f6e98d76206cea4cbe40a2ca67e461314b está integrada en
 master e instalada en el NUC. El servicio está activo y Nginx pasa su validación.
-El recibo update-65b541c38da8996ffb4f37ce57587f46f9ea62a3.json, en
+El recibo update-213209f6e98d76206cea4cbe40a2ca67e461314b.json, en
 /var/lib/daswerklab-voice/, registra ese commit y los hashes de los archivos.
 installation.json conserva el registro de la instalación inicial 8fc528d.
+
+La voz activa es Gesa Tess - Trustworthy Host, identificador
+cllvQaMvj0ZKxH88HGEn, con eleven_v4_turbo. La API de Voice Library identifica
+esta voz como femenina, alemana y de acento estándar, con rate=1.0 y
+fiat_rate=null, comprobado el 15 de octubre. OpenAI sigue usando
+gpt-realtime-2.1: recibe audio del cliente y produce texto y herramientas.
+ElevenLabs convierte ese texto en audio PCMU a 8000 Hz por streaming. No se ha
+creado un agente alojado en ElevenAgents.
 
 Las llamadas están configuradas para entrar al agente. La clave de OpenAI
 está instalada en la configuración privada del NUC y el endpoint HTTPS
@@ -27,9 +36,11 @@ conservan los estados anteriores y posteriores en
 
 Validación realizada:
 
-- 25 pruebas simuladas pasan en Python 3.10, también sobre master.
+- 35 pruebas simuladas pasan en Python 3.10, también sobre master. Incluyen
+  texto parcial a voz, cancelación de audio, orden de clear frente a envíos
+  pendientes, reparación del texto no escuchado y verificación de acceso a TTS.
 - El webhook HTTPS rechaza peticiones sin firma con 403.
-- OpenAI Realtime completa respuestas con audio PCMU sobre los servicios en
+- Antes del cambio de voz, OpenAI Realtime completó respuestas con audio PCMU sobre los servicios en
   español, inglés y alemán. En los tres idiomas selecciona transfer_to_fran
   con el idioma correcto al solicitar hablar con Fran.
 - Una llamada sintética firmada recorre HTTPS, WSS y el modelo real: recibe
@@ -44,9 +55,11 @@ Validación realizada:
   su Media Stream. No se llamó al móvil de Fran. El recibo es
   /Users/Papi/.config/recepcionista/twilio-selftest-ie1-20261014.json.
 - Los archivos desplegados coinciden por SHA-256 con el commit integrado.
-  La voz configurada es Cedar, con respuestas de audio verificadas en los
-  tres idiomas.
-- Bridge.run, ejecutado desde el código desplegado con el modelo real, genera
+  Las API reales de OpenAI y ElevenLabs completan el saludo alemán y
+  explicaciones de los servicios en español, inglés y alemán con Gesa Tess.
+  Al pedir «Pásame a Fran» seleccionan transfer_to_fran con language=es.
+  El NUC devuelve 200 y ready=true y permanece activo sin reinicios inesperados.
+- Antes del cambio a Gesa, Bridge.run, ejecutado desde el código desplegado con el modelo real, generó
   el saludo alemán «Hallo! Ich bin Frans virtueller Assistent bei Das Werklab».
   Después reconoce «Hola, pásame a Fran» y selecciona transfer_to_fran en
   español. La petición del saludo incluye explícitamente de-DE: las
@@ -61,11 +74,22 @@ Validación realizada:
   session.updated. En una comprobación real de la API, ruido sintético de bajo
   nivel no dispara speech_started y una frase alemana sintetizada sí lo hace.
   HTTPS /voice/healthz vuelve a devolver 200 y ready=true tras actualizar.
+- Con Gesa ya desplegada, una llamada sintética firmada recorre HTTPS y WSS,
+  recibe audio del saludo y envía audio PCMU real con «Hola, pásame a Fran,
+  por favor». Interrumpe el saludo y obtiene el anuncio español de transferencia
+  y Dial al móvil fijo. El callback no-answer devuelve una Media Stream con
+  un ticket nuevo. El callback completed elimina el contexto sintético. Esta
+  comprobación no ejecuta Dial en la red telefónica ni llama al móvil.
+- Una llamada telefónica interna creada en IE1 tras activar Gesa completa
+  sus dos tramos durante ocho segundos. El tramo entrante es
+  CAdbf88d9accdf01337d30cc41bffb0be0; el recibo privado es
+  /Users/Papi/.config/recepcionista/twilio-selftest-ie1-gesa-20261015.json.
 
 Estas verificaciones consumieron audio de OpenAI y una llamada interna de
-Twilio al número propio. La recepción desde el móvil de Fran está comprobada;
+Twilio al número propio. La recepción desde el móvil de Fran con Cedar está comprobada;
 quedan pendientes la evaluación humana del ajuste de ruido y la transferencia
-desde otro teléfono que haga sonar el móvil de Fran. La prueba con ruido
+desde otro teléfono que haga sonar el móvil de Fran, además de escuchar Gesa
+en una llamada humana. La prueba con ruido
 sintético no demuestra por sí sola una mejora con el ruido de su llamada.
 El anuncio de indisponibilidad comunicado en el primer intento humano no tuvo
 un registro entrante visible en US1; no se estableció su causa. La prueba
@@ -75,9 +99,13 @@ interna completada en IE1 no demuestra por sí sola la transferencia al móvil.
 
 - El asistente se identifica como Asistente de Fran, explica los servicios y conversa en
   español, inglés y alemán. El saludo empieza en alemán para clientes.
-- Usa Cedar y se presenta como asistente virtual de Fran. Cove no figura entre
+- Usa Gesa Tess de ElevenLabs y se presenta como asistente virtual de Fran.
+  La presentación se pide solo al principio; las respuestas habituales se
+  limitan en las instrucciones a veinte a cuarenta palabras. Cedar queda
+  configurada para VOICE_PROVIDER=openai. Cove no figura entre
   las voces de [Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
-  comprobado el 14 de octubre de 2026; el titular eligió Cedar.
+  comprobado el 14 de octubre de 2026; el titular eligió Cedar inicialmente
+  y Gesa Tess el 15 de octubre.
 - Filtra ruido de micrófono antes de detectar voz y conserva las interrupciones
   cuando detecta habla. VAD_THRESHOLD=0.8 e INPUT_NOISE_REDUCTION=near_field son
   los valores iniciales, ajustables en la configuración privada; no eliminan
@@ -107,13 +135,22 @@ fecha de inicio; no es un plazo para terminar cualquier proyecto.
 
 Twilio llama a HTTPS /voice/incoming. La respuesta conecta una Media Stream
 bidireccional a WSS /voice/media. El NUC conserva la configuración y las claves
-y envía audio PCMU a OpenAI. No se requiere Asterisk para este flujo.
+y envía audio PCMU a OpenAI. En VOICE_PROVIDER=elevenlabs, OpenAI emite
+output_text y las herramientas; el servidor envía cada fragmento de texto a
+ElevenLabs y devuelve sus fragmentos PCMU a Twilio. Las claves se envían solo
+en cabeceras desde el NUC. No se requiere Asterisk para este flujo.
+
+Al detectar habla, cancela la generación de voz pendiente y vacía el audio de
+Twilio. OpenAI item.truncate corresponde a audio: en este modo de texto se
+elimina el mensaje no escuchado y se conserva solo el prefijo cubierto por la
+alineación de voz. Si no hay alineación disponible se elimina el texto completo
+de esa respuesta interrumpida, en vez de suponer que el cliente la escuchó.
 
 Al solicitar la transferencia, el servidor cierra la conexión de audio y Twilio
 continúa en /voice/after-stream. La respuesta Dial llama al destino fijo. Si
 no responde, /voice/dial-ended permite volver a la IA.
 
-Fuentes oficiales consultadas el 14 de octubre de 2026:
+Fuentes oficiales consultadas el 14 y el 15 de octubre de 2026:
 
 - [Media Streams y mensajes WebSocket](https://www.twilio.com/docs/voice/media-streams/websocket-messages):
   audio mono μ-law a 8000 Hz; audio de salida, marcas de reproducción y clear.
@@ -128,6 +165,16 @@ Fuentes oficiales consultadas el 14 de octubre de 2026:
 - [OpenAI Realtime por WebSocket](https://developers.openai.com/api/docs/guides/voice-websockets?api=realtime)
   y [sesiones y herramientas](https://developers.openai.com/api/docs/guides/realtime-conversations):
   esquema GA, audio PCMU, detección de turnos, interrupción y function calling.
+- [ElevenLabs Text to Dialogue por WebSocket](https://elevenlabs.io/docs/eleven-api/guides/how-to/websockets/realtime-tdd):
+  eleven_v4_turbo admite una voz registrada, texto incremental y close_socket
+  para vaciar el texto restante. Requiere Text to Speech → Access en la clave.
+  La respuesta en ulaw_8000 y la alineación se han comprobado con la API real.
+- [Voice Library](https://elevenlabs.io/docs/api-reference/voices/voice-library/get-shared):
+  GET /v1/shared-voices?search=Gesa+Tess devuelve el identificador y los
+  metadatos de la voz elegida. Voices → Read permite seleccionarla.
+- [Eventos de conversación de OpenAI](https://developers.openai.com/api/reference/resources/realtime/client-events):
+  creación de mensajes output_text, posición previous_item_id y eliminación
+  del texto no escuchado cuando la voz externa se interrumpe.
 - [Regiones de Twilio](https://www.twilio.com/docs/global-infrastructure/inbound-processing-api):
   cada región tiene su propia configuración de webhooks y credenciales;
   cambiar la región puede tardar cinco minutos en aplicarse.
@@ -166,7 +213,21 @@ preserva la configuración web previa.
 
 Sin clave de OpenAI, /voice/healthz devuelve HTTP 503 y ready=false. Al disponer
 de la clave, reiniciar daswerklab-voice: el arranque verifica la configuración
-de Realtime, sin generar audio. Esta comprobación no sustituye una llamada real.
+de Realtime y, si está seleccionado ElevenLabs, la conexión con la voz elegida,
+sin generar audio. Esta comprobación no sustituye una llamada real.
+
+Configuración activa: VOICE_PROVIDER=elevenlabs, ELEVENLABS_VOICE_ID=
+cllvQaMvj0ZKxH88HGEn y ELEVENLABS_MODEL=eleven_v4_turbo. ELEVENLABS_API_KEY
+se conserva en el archivo privado del NUC y en el .env privado local. El Key ID
+del proveedor no sirve como API Key. No se necesitan STT, STS ni diccionarios
+de pronunciación para este flujo. Si falla la generación, se conserva la salida
+de indisponibilidad y transferencia al móvil configurado.
+
+El recibo de actualización registra una copia privada de la configuración
+anterior en /etc/daswerklab-voice.env.before-eleven-COMMIT. La actualización
+restaura tanto el código anterior como ese contenido si falla la comprobación
+de arranque. Los anuncios breves de transferencia e indisponibilidad siguen
+usando Say de Twilio.
 
 ## Activación de Twilio
 
