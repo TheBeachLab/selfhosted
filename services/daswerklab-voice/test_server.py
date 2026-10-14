@@ -170,6 +170,8 @@ class VoiceHTTPTests(unittest.TestCase):
             with self.assertRaises(WebSocketDisconnect):
                 socket.receive_json()
         config = self.ai_instances[0].sent[0]["session"]
+        greeting = next(event for event in self.ai_instances[0].sent if event["type"] == "response.create")
+        self.assertIn("de-DE", greeting["response"]["instructions"])
         self.assertEqual(config["audio"]["input"]["format"]["type"], "audio/pcmu")
         self.assertEqual(config["audio"]["output"]["format"]["type"], "audio/pcmu")
         self.assertIn({"type": "input_audio_buffer.append", "audio": AUDIO}, self.ai_instances[0].sent)

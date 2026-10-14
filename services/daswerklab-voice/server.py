@@ -304,9 +304,13 @@ class Bridge:
 
     async def run(self):
         await self.send_ai({"type": "response.create", "response": {
-            "instructions": "Saluda como Asistente de Fran, el asistente virtual de Das Werklab, en el idioma inicial. "
-                            + ("Fran no pudo atender; ofrece continuar o dejar un mensaje." if self.call.resumed
-                               else "Pregunta brevemente cómo puedes ayudar.")}})
+            # Per-response instructions override the session's instructions;
+            # include the actual language rather than referring to its default.
+            # https://developers.openai.com/api/reference/resources/realtime/client-events
+            "instructions": "Give this greeting entirely in " + LANGUAGES[self.call.language]
+                            + ". Introduce yourself as Fran's virtual assistant at Das Werklab. "
+                            + ("Fran could not answer; offer to continue or leave a message." if self.call.resumed
+                               else "Briefly ask how you can help.")}})
         remaining = max(0, self.settings.max_seconds - (time.monotonic() - self.call.started))
         tasks = [asyncio.create_task(self.receive_phone()), asyncio.create_task(self.receive_ai()),
                  asyncio.create_task(asyncio.sleep(remaining))]
