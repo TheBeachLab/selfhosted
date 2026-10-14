@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /confirm
+Disallow: /unsubscribe
+Disallow: /api/
+Disallow: /_health
+Sitemap: https://mebuko.de/sitemap.xml

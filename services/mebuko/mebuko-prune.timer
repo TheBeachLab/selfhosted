@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily retention enforcement for Mebuko
+
+[Timer]
+OnCalendar=*-*-* 02:05:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

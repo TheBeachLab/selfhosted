@@ -1,0 +1,11 @@
+[Unit]
+Description=Consistent encrypted Mebuko backup and restore check
+After=network-online.target
+RequiresMountsFor=/mnt/nas-downloads
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/mebuko/current/backup.py --verify-restore
+UMask=0077
+Nice=15
+IOSchedulingClass=idle

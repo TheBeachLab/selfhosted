@@ -117,3 +117,10 @@ and the legacy kernel's package requirements.
 - [Nextcloud](doc/cloud.md)
 - [Mail server (Postfix)](doc/mail.md) (incomplete)
 - [openHAB (BTicino/OpenWebNet and Apple Home)](doc/openhab.md)
+
+## Mebuko
+
+The multilingual bookkeeping launch page has its own public service, email
+confirmation list and private encrypted backups. It is separate from the
+owner-only accounting application. See [Mebuko deployment and privacy](doc/mebuko.md)
+and the [visual specification](services/mebuko/DESIGN.md).

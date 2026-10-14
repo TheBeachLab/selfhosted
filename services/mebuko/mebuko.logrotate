@@ -1,0 +1,14 @@
+/var/log/nginx/mebuko-access.log {
+    daily
+    rotate 6
+    maxage 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0640 www-data adm
+    sharedscripts
+    postrotate
+        /usr/sbin/nginx -s reopen >/dev/null 2>&1 || true
+    endscript
+}

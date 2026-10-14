@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily encrypted launch-list backup
+
+[Timer]
+OnCalendar=*-*-* 02:20:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Remove expired Mebuko launch sign-ups and transient rate data
+
+[Service]
+Type=oneshot
+User=mebuko
+Group=mebuko
+ExecStart=/usr/bin/python3 /opt/mebuko/current/server.py prune --env-file /etc/mebuko/private.env
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/mebuko

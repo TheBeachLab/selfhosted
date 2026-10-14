@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep Mebuko DNS pointing at the NUC
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

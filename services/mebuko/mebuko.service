@@ -1,0 +1,29 @@
+[Unit]
+Description=Mebuko public launch page and double-opt-in
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mebuko
+Group=mebuko
+WorkingDirectory=/opt/mebuko/current
+ExecStart=/usr/bin/python3 /opt/mebuko/current/server.py serve --env-file /etc/mebuko/private.env
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/mebuko
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=128M
+TasksMax=48
+
+[Install]
+WantedBy=multi-user.target
