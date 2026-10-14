@@ -55,6 +55,57 @@ To restore that mode, set both `SSO_ENABLED` and `SSO_ONLY` to `true` in the
 versioned Compose file, back up, recreate the container and verify a passkey
 sign-in. The retained provider and account association avoid another migration.
 
+## Consolidating imported copies
+
+[deduplicate.py](../services/vaultwarden/deduplicate.py) consolidates personal
+login copies through a user-unlocked official Bitwarden CLI. It matches both
+username and password plus a shared site or title, excluding the Wi-Fi folder.
+It retains every passkey-bearing item ID, unions the original URI variants,
+notes, custom fields and password history, and stores different titles as
+`Nombre anterior (importación)` fields. Conflicting OTPs, folders, unsupported
+data, attachments and groups with more than one passkey-bearing item are kept
+for review. A reused password on different sites alone is not a duplicate.
+
+Run a backup first. Install the official CLI in a task-specific private
+directory (0700), configure `https://passwords.beachlab.org`, then have the
+user run `bw login hola@beachlab.org --raw > session` with `umask 077`.
+The master password is entered interactively by the user, never recorded.
+The script uses an owner-only Unix socket for the CLI's local API; it does
+not open a TCP listener or disable origin protection. See the upstream
+[CLI reference](https://bitwarden.com/help/cli/) for login, edit, sync and
+soft deletion; the Unix-socket listener was checked in the installed CLI
+source (`ServeCommand`, `--hostname unix://...`).
+
+Pass `--bw`, `--private-dir`, `--baseline` and `--receipt`; preview is the
+default and `--apply` enables changes. The migration baseline's IDs prefer
+the newer import when neither copy has passkeys. The script reads decrypted
+data only into memory, verifies merged content before trashing any copy, and
+checks all protected passkeys and untouched items after a final sync. The
+receipt contains IDs and counts, without credential values or hashes.
+Delete only uses the recoverable Trash operation; it does not purge Trash.
+For retention and restore behavior, see [Bitwarden delete/restore](https://bitwarden.com/help/cli/#delete).
+Back up the result, retain the receipt in `/var/lib/vaultwarden-migration/`,
+log out the temporary CLI and remove its profile and session directory.
+
+The completed 2026-10-14 cleanup moved 676 copies in 553 groups to Trash,
+leaving 750 active items. All 29 passkey credentials (in their original item
+IDs), 162 Wi-Fi items and unrelated item contents were retained. A final
+preview found zero remaining groups under the above matching rules; this
+does not imply that every remaining password is unique across different
+services. The owner-only receipt is
+`/var/lib/vaultwarden-migration/dedup-20261014-receipt.json`; the pre-change
+encrypted Restic snapshot is `a72284ad`. Two verified runs were combined in
+the receipt after changing server readback from one full sync per group to
+one per batch, without purging any entry. SQLite integrity check returned
+`ok` after the cleanup.
+
+On 2026-10-14 the NUC resolver failed to resolve `passwords.beachlab.org`
+(`resolvectl query`: the CNAME target had no requested RR). HTTPS to the
+local Nginx with that hostname and certificate succeeded (HTTP 200 for
+`/api/config`). `/etc/hosts` now maps `passwords.beachlab.org` to
+`127.0.0.1` for NUC-local clients. Certificate validation remains enabled;
+this mapping does not change public DNS or other hosts.
+
 ## Paths and operation
 
 ```text
