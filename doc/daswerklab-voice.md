@@ -45,13 +45,12 @@ demuestran por sí solas esa conexión telefónica.
 
 ## Comportamiento
 
-- El asistente se identifica como IA, explica los servicios y conversa en
-  español, inglés y alemán. El saludo empieza en alemán para clientes y en
-  español cuando Fran llama desde su móvil configurado.
+- El asistente se identifica como Asistente de Fran, explica los servicios y conversa en
+  español, inglés y alemán. El saludo empieza en alemán para clientes.
 - Pedir hablar con Fran usa una herramienta con un destino fijo: el móvil
   profesional publicado, terminado en 0901. El modelo no puede elegir otro
   destino.
-- Si el móvil está ocupado o no responde, vuelve al asistente y ofrece guardar
+- Si el móvil está ocupado o no responde, vuelve al asistente y ofrece dejar
   un mensaje. El resumen se guarda en español después de que el cliente lo
   confirme. No se envían mensajes externos.
 - DIRECT_CALLERS permite que números aceptados pasen directamente al móvil.

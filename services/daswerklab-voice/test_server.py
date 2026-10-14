@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sqlite3
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from xml.etree import ElementTree as ET
@@ -118,9 +119,9 @@ class VoiceHTTPTests(unittest.TestCase):
         repeat = ET.fromstring(self.post("/incoming").text)
         self.assertEqual(repeat.find(".//Parameter").get("value"), ticket)
 
-    def test_caller_number_sets_initial_language_without_bypassing_agent(self):
+    def test_fran_mobile_starts_in_german_without_bypassing_agent(self):
         self.post("/incoming", dict(self.form, From=FRAN))
-        self.assertEqual(self.app.state.calls[CALL_SID].language, "es")
+        self.assertEqual(self.app.state.calls[CALL_SID].language, "de")
         self.assertEqual(self.app.state.calls[CALL_SID].mode, "ai")
 
     def test_no_api_key_routes_to_fixed_mobile_without_creating_realtime(self):
@@ -199,6 +200,31 @@ class VoiceHTTPTests(unittest.TestCase):
         self.assertEqual(self.post("/status", dict(self.form, CallStatus="completed")).status_code, 204)
         self.assertFalse(self.app.state.calls)
 
+    def test_peer_hangup_during_final_close_does_not_escape_the_endpoint(self):
+        self.post("/incoming")
+        start = self.start_event(self.app.state.calls[CALL_SID].ticket)
+        signature = RequestValidator(TOKEN).compute_signature(PUBLIC + "/media", {})
+
+        class HungUpSocket(FakeSocket):
+            url = SimpleNamespace(query="")
+            headers = {"x-twilio-signature": signature}
+
+            async def accept(self):
+                pass
+
+            async def receive_json(self):
+                if not hasattr(self, "started"):
+                    self.started = True
+                    return start
+                return {"event": "stop"}
+
+            async def close(self, **kwargs):
+                raise WebSocketDisconnect(code=1000)
+
+        endpoint = next(route.endpoint for route in self.app.routes if route.path == "/media")
+        asyncio.run(endpoint(HungUpSocket()))
+        self.assertFalse(self.app.state.calls[CALL_SID].stream_connected)
+
 
 class BridgeTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -272,6 +298,17 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
 
 
 class DeploymentGuardTests(unittest.TestCase):
+    def test_ie1_uses_its_own_auth_token_without_requiring_a_new_api_key(self):
+        env = {"TWILIO_ACCOUNT_SID": SID, "TWILIO_AUTH_TOKEN": "us1-token",
+               "TWILIO_IE1_AUTH_TOKEN": "ie1-token"}
+        self.assertEqual(configure_twilio.regional_credentials(env, "ie1"), (SID, "ie1-token"))
+
+    def test_ie1_never_authenticates_with_us1_credentials(self):
+        env = {"TWILIO_ACCOUNT_SID": SID, "TWILIO_AUTH_TOKEN": "us1-token",
+               "TWILIO_API_KEY": "us1-key", "TWILIO_API_SECRET": "us1-secret"}
+        with self.assertRaises(KeyError):
+            configure_twilio.regional_credentials(env, "ie1")
+
     def test_concurrent_nginx_edit_is_preserved(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "site.conf"

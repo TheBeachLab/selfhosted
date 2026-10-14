@@ -14,8 +14,23 @@ FIELDS = ("voice_url", "voice_method", "voice_fallback_url", "voice_fallback_met
           "status_callback", "status_callback_method")
 PARAMS = ("VoiceUrl", "VoiceMethod", "VoiceFallbackUrl", "VoiceFallbackMethod",
           "StatusCallback", "StatusCallbackMethod")
-REGIONS = {"us1": ("api.twilio.com", "TWILIO_API_KEY", "TWILIO_API_SECRET"),
-           "ie1": ("api.dublin.ie1.twilio.com", "TWILIO_IE1_API_KEY", "TWILIO_IE1_API_SECRET")}
+REGIONS = {"us1": ("api.twilio.com", "TWILIO_API_KEY", "TWILIO_API_SECRET", "TWILIO_AUTH_TOKEN"),
+           "ie1": ("api.dublin.ie1.twilio.com", "TWILIO_IE1_API_KEY", "TWILIO_IE1_API_SECRET",
+                   "TWILIO_IE1_AUTH_TOKEN")}
+
+
+def regional_credentials(env, region):
+    # Auth Tokens and API keys are region-specific; never fall back to another
+    # region's token. https://www.twilio.com/docs/global-infrastructure/manage-regional-api-credentials
+    _, key_var, secret_var, token_var = REGIONS[region]
+    key, secret = env.get(key_var), env.get(secret_var)
+    if bool(key) != bool(secret):
+        raise RuntimeError("Regional API key and secret must both be present.")
+    if key and secret:
+        return key, secret
+    if env.get(token_var):
+        return env["TWILIO_ACCOUNT_SID"], env[token_var]
+    raise KeyError(token_var)
 
 
 def read_env(path):
@@ -62,10 +77,11 @@ def main():
         raise RuntimeError("Number does not belong to the configured account.")
     active = before_route["voice_region"]
     selected = args.region or active
-    host, key_var, secret_var = REGIONS[selected]
+    host, key_var, secret_var, token_var = REGIONS[selected]
     if not args.activate:
         print(json.dumps({"number": args.number, "active_region": active, "target_region": selected,
-                          "regional_credentials_present": bool(env.get(key_var) and env.get(secret_var)),
+                          "regional_credentials_present": bool(env.get(key_var) and env.get(secret_var)
+                                                               or env.get(token_var)),
                           "activated": False}))
         return
     if not args.receipt or args.receipt.exists() or args.receipt.is_symlink():
@@ -73,7 +89,7 @@ def main():
     require_ready(args.base_url)
     if selected != active and not args.allow_region_change:
         raise RuntimeError("Region differs; explicit --allow-region-change is required.")
-    regional_creds = (env[key_var], env[secret_var])
+    regional_creds = regional_credentials(env, selected)
     root = "https://" + host + "/2010-04-01/Accounts/" + env["TWILIO_ACCOUNT_SID"]
     listing = api(root + "/IncomingPhoneNumbers.json?" +
                   urllib.parse.urlencode({"PhoneNumber": args.number}), regional_creds)

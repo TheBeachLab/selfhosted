@@ -67,7 +67,7 @@ class Settings:
     fran_number: str
     openai_key: str = field(default="", repr=False)
     model: str = "gpt-realtime-2.1"
-    voice: str = "marin"
+    voice: str = "cedar"
     state_dir: Path = Path("/var/lib/daswerklab-voice")
     max_seconds: int = 600
     max_calls: int = 4
@@ -95,7 +95,7 @@ class Settings:
             env["PUBLIC_BASE_URL"], env["TWILIO_ACCOUNT_SID"], env["TWILIO_AUTH_TOKEN"],
             env["TWILIO_PHONE_NUMBER"], env["FRAN_PHONE_NUMBER"], env.get("OPENAI_API_KEY", ""),
             env.get("OPENAI_REALTIME_MODEL", "gpt-realtime-2.1"),
-            env.get("OPENAI_REALTIME_VOICE", "marin"),
+            env.get("OPENAI_REALTIME_VOICE", "cedar"),
             Path(env.get("STATE_DIR", "/var/lib/daswerklab-voice")),
             int(env.get("MAX_CALL_SECONDS", "600")), int(env.get("MAX_CONCURRENT_CALLS", "4")),
             tuple(x.strip() for x in env.get("DIRECT_CALLERS", "").split(",") if x.strip()),
@@ -148,7 +148,7 @@ def instructions(call):
     text = (HERE / "prompt.md").read_text() + "\n" + json.dumps(knowledge, ensure_ascii=False)
     text += "\nIdioma inicial: " + call.language
     if call.resumed:
-        text += "\nFran no pudo atender la transferencia. Ofrece continuar o guardar un mensaje."
+        text += "\nFran no pudo atender la transferencia. Ofrece continuar o dejar un mensaje."
     return text
 
 
@@ -304,7 +304,7 @@ class Bridge:
 
     async def run(self):
         await self.send_ai({"type": "response.create", "response": {
-            "instructions": "Saluda como asistente de IA de Das Werklab en el idioma inicial. "
+            "instructions": "Saluda como Asistente de Fran, el asistente virtual de Das Werklab, en el idioma inicial. "
                             + ("Fran no pudo atender; ofrece continuar o dejar un mensaje." if self.call.resumed
                                else "Pregunta brevemente cómo puedes ayudar.")}})
         remaining = max(0, self.settings.max_seconds - (time.monotonic() - self.call.started))
@@ -409,7 +409,7 @@ def create_app(settings=None, connector=None, probe=True):
             if call.mode != "ai" or call.stream_connected:
                 raise HTTPException(409)
         else:
-            call = Call(sid, caller, "es" if caller == cfg.fran_number else "de")
+            call = Call(sid, caller, "de")
             calls[sid] = call
         if caller in cfg.direct_callers or not cfg.openai_key or len(calls) > cfg.max_calls:
             return dial(call, "transfer" if caller in cfg.direct_callers else "unavailable")
@@ -496,7 +496,7 @@ def create_app(settings=None, connector=None, probe=True):
                 call.stream_connected = False
             try:
                 await socket.close()
-            except RuntimeError:
+            except (RuntimeError, WebSocketDisconnect):
                 pass
 
     return app
