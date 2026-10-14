@@ -24,8 +24,8 @@ services:
     environment:
       DOMAIN: https://passwords.beachlab.org
       ADMIN_TOKEN: ${VAULTWARDEN_ADMIN_TOKEN:?admin token hash required}
-      SSO_ENABLED: "true"
-      SSO_ONLY: "true"
+      SSO_ENABLED: "false"
+      SSO_ONLY: "false"
       SSO_SIGNUPS_ALLOWED: "false"
       SSO_SIGNUPS_MATCH_EMAIL: "false"
       SSO_ALLOW_UNKNOWN_EMAIL_VERIFICATION: "false"

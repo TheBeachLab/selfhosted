@@ -1,14 +1,13 @@
 # Vaultwarden
 
 Open [passwords.beachlab.org](https://passwords.beachlab.org/) and use
-**hola@beachlab.org → Use single sign-on**. Authentik authenticates Fran with
-his existing passkey. On the first access, choose the vault's master password
-in Vaultwarden; it is still needed to decrypt the vault.
+**hola@beachlab.org → master password**. SSO is temporarily disabled from
+2026-10-14 to allow clients that do not implement SSO. Use the existing master
+password; the account and encrypted vault are retained.
 
 In each Bitwarden app or browser extension, choose **Self-hosted**, enter
-`https://passwords.beachlab.org`, and use **Single sign-on**. If a client asks
-for an organization identifier, Vaultwarden returns
-`00000000-01DC-01DC-01DC-000000000000` automatically.
+`https://passwords.beachlab.org`, and sign in with **hola@beachlab.org** and
+the existing master password.
 See [client configuration](https://bitwarden.com/help/change-client-environment/)
 and [Vaultwarden SSO](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-SSO-support-using-OpenId-Connect).
 
@@ -21,12 +20,15 @@ Nginx serves its dedicated host with a Let's Encrypt certificate. The existing
 `passwords` CNAME points to `beachlab.org`; Certbot renews the certificate and
 `50-vaultwarden-nginx` validates and reloads Nginx.
 
-`SSO_ONLY=true` disables password-only login. Public registration, SSO signup
+`SSO_ENABLED=false` and `SSO_ONLY=false` enable email and master-password login;
+see the upstream [SSO configuration](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-SSO-support-using-OpenId-Connect#configuration).
+Public registration, SSO signup
 without invitation and organization invitations are disabled. The local
 invitation for `hola@beachlab.org` permits the first account. Public `/admin`
 returns 404. SMTP and Bitwarden mobile push services are not configured.
 
-Authentik has a separate `passwords` OIDC application and provider, with a
+The disabled SSO configuration is retained for reactivation. Authentik has a
+separate `passwords` OIDC application and provider, with a
 single personal access binding for `fran`. It uses the existing
 `beachlab-passkey` flow, requiring WebAuthn and user verification, plus PKCE.
 Only authorization-code and refresh-token grants are enabled. Access tokens
@@ -48,7 +50,10 @@ provider or credential file. The configuration follows upstream
 [Vaultwarden's Authentik guidance](https://github.com/dani-garcia/vaultwarden/wiki/Enabling-SSO-support-using-OpenId-Connect#authentik)
 and [Authentik's OAuth2 provider](https://docs.goauthentik.io/add-secure-apps/providers/oauth2/).
 Interactive forward-auth redirects are not placed in front of the API;
-the native SSO flow enforces passkey authentication for Bitwarden clients.
+when enabled, the native SSO flow enforces passkey authentication for clients.
+To restore that mode, set both `SSO_ENABLED` and `SSO_ONLY` to `true` in the
+versioned Compose file, back up, recreate the container and verify a passkey
+sign-in. The retained provider and account association avoid another migration.
 
 ## Paths and operation
 
@@ -78,7 +83,7 @@ On the NUC (`ssh pink-sudo`):
 ```bash
 sudo docker compose --project-directory /opt/vaultwarden config --quiet
 sudo docker compose --project-directory /opt/vaultwarden ps
-sudo docker compose --project-directory /opt/vaultwarden restart
+sudo docker compose --project-directory /opt/vaultwarden up -d --force-recreate
 curl -fsS http://127.0.0.1:18080/alive
 sudo nginx -t
 ```
@@ -86,8 +91,8 @@ sudo nginx -t
 [install.py](../services/vaultwarden/install.py) is for a first installation
 only. It refuses existing paths, users and containers. Existing data and
 credentials must be preserved during upgrades; update the pinned image,
-back up first, then recreate the container. Enabling another person also
-requires an explicit Authentik binding and a suitable email mapping;
+back up first, then recreate the container. When SSO is enabled, another person
+also requires an explicit Authentik binding and a suitable email mapping;
 an invitation alone does not grant SSO access.
 
 ## Backup and recovery
@@ -129,9 +134,10 @@ sudo sqlite3 /var/tmp/vaultwarden-restore/var/lib/vaultwarden-backup/payload/dat
 Stop the container and preserve current data before a live restore. Recover
 `data/` as a whole, including its matching WAL if captured. Keep ownership with
 `vaultwarden`. Restore deployment secrets only when needed, then start the
-container and check `/alive` and SSO login. Do not mix a recovered database with
-the current WAL or overwrite newer data. Authentik and its signing key must also
-be available; this backup captures Vaultwarden, not the Authentik database.
+container and check `/alive` and the configured login method. Do not mix a
+recovered database with the current WAL or overwrite newer data. When SSO is
+enabled, Authentik and its signing key must also be available; this backup
+captures Vaultwarden, not the Authentik database.
 
 The initial capture was restored on 2026-10-13 into an isolated container with
 no network or published ports. SQLite integrity, database hash, signing keys,
