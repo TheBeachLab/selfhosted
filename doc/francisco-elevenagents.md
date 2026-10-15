@@ -36,6 +36,49 @@ Ese mensaje se observó al publicar desde el panel el 15 de octubre de 2026;
 no implica que su uso por la API de TTS del servicio actual del NUC falle.
 La selección de una voz compatible queda pendiente.
 
+### Horario de transferencias (15 de octubre, revisión posterior)
+
+El titular aclaró que el asistente debe atender siempre. Solo las transferencias
+a su móvil se limitan a lunes-viernes, 09:00–17:00, excluidos los festivos
+aplicables en Múnich. Se preparó la herramienta `check_frans_availability` y se
+actualizaron las instrucciones y condiciones de `transfer_to_number` para
+consultarla inmediatamente antes de cada intento; ante error o resultado falso
+deben continuar atendiendo sin transferir. La herramienta no ejecuta llamadas.
+La regla de uso se configura en ElevenLabs; todavía no se ha validado su
+cumplimiento con una conversación real.
+
+El [servicio de horario](../services/francisco-hours/README.md) está desplegado
+en el NUC desde el commit `9c204da`. La lectura pública de
+`https://daswerklab.de/voice/business-hours` confirmó la hora `Europe/Berlin`
+y `can_transfer` el 15 de octubre de 2026. Se verificaron por separado los
+límites de horario, fines de semana, festivos móviles y locales, cambios de hora
+y cambio de año mediante pruebas locales de calendario, sin llamadas ni LLM.
+El servicio telefónico existente conservó su release `213209f` y su fecha de
+arranque del 14 de octubre; no se modificó la ruta Twilio IE1.
+
+En el borrador se conservó la voz **Ben – Effortless and Casual** elegida por
+el titular, su nuevo saludo y su guion, limitando las modificaciones al horario
+y a los nombres reales de herramientas. La plantilla incompleta de Workflow
+se retiró: contenía una transferencia a otro agente sin destino y bloqueaba el
+guardado. El agente vuelve al flujo de conversación normal con sus herramientas.
+
+**Bloqueo de guardado observado en esta revisión:** el borrador local tiene
+`llm=custom-llm` y `custom_llm=null`. Abrir el selector provoca un error del
+cliente (`null.matchAll`) y publicar devuelve `Custom LLM must be defined`.
+No se ha establecido qué campo exacto dispara la excepción de interfaz.
+Architect indicó una reparación aplicada, pero la lectura posterior y el
+rechazo del guardado no la confirmaron: su escritura quedó bloqueada por los
+cambios locales aún sin sincronizar. No descartar ese borrador: contiene las
+ediciones del titular. La versión remota sigue siendo la base `My Agent`.
+
+La lectura de la API el 15 de octubre volvió a devolver HTTP 401,
+`missing_permissions: convai_read`. Se ha solicitado autorización para ampliar
+la clave existente `Fran Assistant` únicamente con lectura/escritura de
+ElevenAgents y reparar el campo mediante API. La solicitud queda pendiente;
+no se han cambiado permisos. La interfaz de permisos se dejó abierta en Safari.
+El calendario está desplegado, pero la configuración nueva de atención y
+transferencia de ElevenLabs aún no está publicada ni conectada al teléfono.
+
 ## Configuración preparada en el panel
 
 - Alemán como idioma inicial, español e inglés adicionales. Saludos revisados
