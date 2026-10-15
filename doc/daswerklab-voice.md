@@ -17,8 +17,12 @@ cllvQaMvj0ZKxH88HGEn, con eleven_v4_turbo. La API de Voice Library identifica
 esta voz como femenina, alemana y de acento estándar, con rate=1.0 y
 fiat_rate=null, comprobado el 15 de octubre. OpenAI sigue usando
 gpt-realtime-2.1: recibe audio del cliente y produce texto y herramientas.
-ElevenLabs convierte ese texto en audio PCMU a 8000 Hz por streaming. No se ha
-creado un agente alojado en ElevenAgents.
+ElevenLabs convierte ese texto en audio PCMU a 8000 Hz por streaming. Se ha
+creado por separado un [agente del despacho en ElevenAgents](francisco-elevenagents.md),
+todavía sin conectar al número de Twilio. Su configuración inicial está en
+borrador: ElevenLabs rechaza Gesa para agentes por `live moderation` y queda
+pendiente elegir una voz compatible. El titular editará el guion antes de
+autorizar pruebas. Ese trabajo no modifica este servicio del NUC.
 
 Las llamadas están configuradas para entrar al agente. La clave de OpenAI
 está instalada en la configuración privada del NUC y el endpoint HTTPS
