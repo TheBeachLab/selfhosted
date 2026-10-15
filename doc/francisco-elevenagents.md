@@ -24,7 +24,10 @@ internos se resumen en español.
 
 ## Estado de preparación
 
-Agente creado en el panel; configuración preparada y pendiente de guardar.
+Configuración publicada y leída de nuevo por API el 15 de octubre de 2026,
+versión `agtvrsn_4901m4zw9qnveenafn6w7aa5gp4k`. El guardado ya no devuelve
+`Custom LLM must be defined`; el formulario de OpenAI vuelve a abrir.
+Esto acredita la configuración guardada, no una respuesta correcta del LLM.
 El titular ha pedido expresamente no hacer pruebas hasta editarlo: no ejecutar
 Preview, Test Connection, simulaciones ni llamadas de prueba por ahora.
 Este agente no está conectado al número de Twilio. El servicio del NUC y la
@@ -34,7 +37,8 @@ El primer intento de guardar fue rechazado por ElevenLabs: la voz Gesa Tess
 (`cllvQaMvj0ZKxH88HGEn`) tiene `live moderation` y no se permite en agentes.
 Ese mensaje se observó al publicar desde el panel el 15 de octubre de 2026;
 no implica que su uso por la API de TTS del servicio actual del NUC falle.
-La selección de una voz compatible queda pendiente.
+Posteriormente, el titular eligió **Ben – Effortless and Casual**
+(`aTTiK3YzK3dXETpuDE2h`); ElevenLabs aceptó el guardado con esa voz.
 
 ### Horario de transferencias (15 de octubre, revisión posterior)
 
@@ -62,24 +66,59 @@ y a los nombres reales de herramientas. La plantilla incompleta de Workflow
 se retiró: contenía una transferencia a otro agente sin destino y bloqueaba el
 guardado. El agente vuelve al flujo de conversación normal con sus herramientas.
 
-**Bloqueo de guardado observado en esta revisión:** el borrador local tiene
-`llm=custom-llm` y `custom_llm=null`. Abrir el selector provoca un error del
-cliente (`null.matchAll`) y publicar devuelve `Custom LLM must be defined`.
-No se ha establecido qué campo exacto dispara la excepción de interfaz.
-Architect indicó una reparación aplicada, pero la lectura posterior y el
-rechazo del guardado no la confirmaron: su escritura quedó bloqueada por los
-cambios locales aún sin sincronizar. No descartar ese borrador: contiene las
-ediciones del titular. La versión remota sigue siendo la base `My Agent`.
+### Reparación y lectura posterior (15 de octubre)
 
-La lectura de la API el 15 de octubre volvió a devolver HTTP 401,
-`missing_permissions: convai_read`. Se ha solicitado autorización para ampliar
-la clave existente `Fran Assistant` únicamente con lectura/escritura de
-ElevenAgents y reparar el campo mediante API. La solicitud queda pendiente;
-no se han cambiado permisos. La interfaz de permisos se dejó abierta en Safari.
-El calendario está desplegado, pero la configuración nueva de atención y
-transferencia de ElevenLabs aún no está publicada ni conectada al teléfono.
+El borrador tenía `llm=custom-llm` con `custom_llm=null`. El panel fallaba al
+abrirlo (`null.matchAll`) y el guardado rechazaba la conexión vacía. Tras la
+autorización expresa del titular, se amplió la clave existente `Fran Assistant`
+con **ElevenAgents Write** (incluye lectura), manteniendo los demás permisos.
+Las operaciones oficiales GET y PATCH de Agents devolvieron HTTP 200.
 
-## Configuración preparada en el panel
+Se reparó el objeto Custom LLM por API. Inicialmente el panel mostró la versión
+base `My Agent`; **Sync Now** recuperó el borrador con las ediciones del titular
+y combinó la conexión reparada. No se descartó el borrador. La acción **Copy
+agent JSON config** exportó la versión publicada, no las ediciones pendientes;
+no debe usarse como prueba de respaldo de un borrador sin comparar su contenido.
+Se publicó el borrador recuperado desde **Review Changes** y después se leyó
+la versión completa mediante GET. La copia privada de recuperación está en
+`~/.config/recepcionista/eleven-repair-20261015/published-final.json` (0600).
+No almacenar claves ni exportaciones privadas en Git.
+
+La lectura posterior confirmó nombre, guion de 5.341 caracteres, Ben,
+alemán/español/inglés, saludos del titular, base de conocimientos, zona
+Europe/Berlin, autenticación privada, audio sin grabación y retención de siete
+días. La API de secretos confirmó que la referencia del modelo corresponde al
+secreto existente `OPENAI_API_KEY`; no se creó ni sustituyó ninguna clave.
+El endpoint, modelo y secreto están configurados; no se ha ejecutado una
+inferencia ni se ha probado la validez de la clave frente al modelo.
+
+El procedimiento anterior **Transfer Call** tenía una condición inferida por
+LLM con cierre a las 18:00 y pasos que solo hablaban: no ejecutaba la consulta
+de horario ni la transferencia. Se reemplazó en el borrador por un procedimiento
+editable de texto, con referencias explícitas a la herramienta de horario y a
+`transfer_to_number`; el original permanece recuperable en la versión anterior.
+La API no permite cambiar el tipo de un procedimiento existente, por lo que
+se creó el reemplazo y se retiró el anterior del conjunto de trabajo del
+borrador, antes de publicar ambos cambios juntos.
+
+- Procedimiento vigente: `agtprc_7401m4zw7wmpeyj89r1psk19atkk`.
+- Herramienta de horario: `tool_4901m4zsr177emrtg0x9j09579ra`, GET al servicio
+  del NUC, sin parámetros, con `can_transfer` asignado conservando tipo a
+  `is_business_hours`.
+- Las instrucciones, el procedimiento y la condición de transferencia exigen
+  una consulta nueva y satisfactoria antes de cada intento. Ante error o
+  `false`, el asistente sigue atendiendo. Es una regla de uso del agente;
+  todavía no se ha probado su cumplimiento conversacional ni es un bloqueo
+  del operador telefónico.
+- Workflow guardado: solo nodo inicial, sin la plantilla incompleta.
+- La respuesta GET contiene `phone_numbers=[]`: este agente aún no atiende el
+  número de Twilio. No se modificó la ruta IE1 ni se reinició el servicio de voz.
+
+No se ejecutaron Preview, Test Connection, simulaciones, audio ni llamadas.
+La siguiente validación de conversación queda pendiente de autorización del
+titular tras revisar el agente.
+
+## Configuración guardada en el panel
 
 - Alemán como idioma inicial, español e inglés adicionales. Saludos revisados
   manualmente; las traducciones automáticas antiguas quedan como metadatos,
@@ -102,7 +141,7 @@ transferencia de ElevenLabs aún no está publicada ni conectada al teléfono.
 - Máximo de cuatro conversaciones simultáneas; bursting desactivado.
 
 El panel es la fuente de configuración: los valores de esta sección describen
-la preparación inicial y pueden cambiar cuando el titular edite el agente.
+la lectura posterior al guardado y pueden cambiar cuando el titular edite el agente.
 El guardado de configuración no acredita calidad de audio, latencia,
 respuesta del modelo, comportamiento de herramientas ni compatibilidad de la
 transferencia telefónica. Esas comprobaciones quedan pendientes por petición
@@ -129,6 +168,13 @@ Referencias de configuración consultadas el 15 de octubre de 2026:
 - [Transferencia a un número](https://elevenlabs.io/docs/eleven-agents/customization/tools/system-tools/transfer-to-number):
   las transferencias reales requieren un canal telefónico compatible.
 
-La clave local de ElevenLabs tiene acceso a voces/TTS, pero la lectura de
-agentes devolvió `missing_permissions: convai_read`. La creación se realiza
-desde la sesión autenticada del panel, sin ampliar permisos de esa clave.
+- [Actualizar un agente](https://elevenlabs.io/docs/api-reference/agents/update):
+  reparación parcial del objeto Custom LLM, seguida de lectura GET.
+- [Procedimientos de texto](https://elevenlabs.io/docs/eleven-agents/customization/procedures/free-form-procedures):
+  referencias `[tool id="..."]` y `[system_tool id="transfer_to_number"]`.
+- [Procedimientos estructurados](https://elevenlabs.io/docs/eleven-agents/customization/procedures/structured-procedures):
+  los pasos Tell no pueden ejecutar herramientas; solo los pasos Tool pueden.
+
+La autorización de lectura/escritura de Agents ya se aplicó a la clave existente;
+las restricciones de no realizar pruebas y no cambiar la ruta telefónica
+siguen vigentes.
