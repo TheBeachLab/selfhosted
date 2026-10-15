@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-10-15T05:18:43.007418+00:00",
+  "finished_at": "2026-10-15T05:20:27.355459+00:00",
+  "region": "ie1",
+  "edge": "dublin",
+  "dependencies": {
+    "cloudflared_version": "2026.10.0",
+    "cloudflared_sha256": "72edfd3eea463aef4d5cb89e2e209cecb048cc756c2b01915de2e0ad7cb39830",
+    "voice_sdk_version": "2.18.5",
+    "voice_sdk_sha256": "35d3cb1b22e309f9884724a89250aecd2de4f1556ad7b67a7bc5e06c73dcb74a"
+  },
+  "variants": [
+    {
+      "name": "baseline",
+      "requested_attributes": {},
+      "received_format": {
+        "encoding": "audio/x-mulaw",
+        "sampleRate": 8000,
+        "channels": 1
+      },
+      "audio_bytes": 94720,
+      "duration_seconds": 12,
+      "status": "completed",
+      "xml_validation_warnings": []
+    },
+    {
+      "name": "invalid_control",
+      "requested_attributes": {
+        "audioFormat": "hd_probe_invalid",
+        "sampleRate": "12345"
+      },
+      "received_format": {
+        "encoding": "audio/x-mulaw",
+        "sampleRate": 8000,
+        "channels": 1
+      },
+      "audio_bytes": 95360,
+      "duration_seconds": 12,
+      "status": "completed",
+      "xml_validation_warnings": [
+        "Attribute 'audioFormat' is not allowed to appear in element 'Stream'.",
+        "Attribute 'sampleRate' is not allowed to appear in element 'Stream'."
+      ]
+    },
+    {
+      "name": "l16_16000",
+      "requested_attributes": {
+        "audioFormat": "audio/x-l16",
+        "sampleRate": "16000"
+      },
+      "received_format": {
+        "encoding": "audio/x-mulaw",
+        "sampleRate": 8000,
+        "channels": 1
+      },
+      "audio_bytes": 93920,
+      "duration_seconds": 12,
+      "status": "completed",
+      "xml_validation_warnings": [
+        "Attribute 'audioFormat' is not allowed to appear in element 'Stream'.",
+        "Attribute 'sampleRate' is not allowed to appear in element 'Stream'."
+      ]
+    },
+    {
+      "name": "pcm_16000",
+      "requested_attributes": {
+        "audioFormat": "pcm",
+        "sampleRate": "16000"
+      },
+      "received_format": {
+        "encoding": "audio/x-mulaw",
+        "sampleRate": 8000,
+        "channels": 1
+      },
+      "audio_bytes": 77120,
+      "duration_seconds": 12,
+      "status": "completed",
+      "xml_validation_warnings": [
+        "Attribute 'audioFormat' is not allowed to appear in element 'Stream'.",
+        "Attribute 'sampleRate' is not allowed to appear in element 'Stream'."
+      ]
+    },
+    {
+      "name": "pcm16_16000",
+      "requested_attributes": {
+        "audioFormat": "pcm16",
+        "sampleRate": "16000"
+      },
+      "received_format": {
+        "encoding": "audio/x-mulaw",
+        "sampleRate": 8000,
+        "channels": 1
+      },
+      "audio_bytes": 94880,
+      "duration_seconds": 12,
+      "status": "completed",
+      "xml_validation_warnings": [
+        "Attribute 'audioFormat' is not allowed to appear in element 'Stream'.",
+        "Attribute 'sampleRate' is not allowed to appear in element 'Stream'."
+      ]
+    }
+  ],
+  "source": {
+    "kind": "synthetic WebRTC Voice SDK client",
+    "audio_context_sample_rate": 48000,
+    "observed_codec": "audio/opus",
+    "rtp_clock_rate": 48000,
+    "tones_hz": [
+      1000,
+      5500,
+      6500
+    ],
+    "microphone_used": false
+  },
+  "phone_number_called": false,
+  "production": {
+    "before_config_sha256": "cb73d54fd5fdaf0a220bb0c2cd00e5b20af5301f3d7df6548e4597b25b50803e",
+    "after_config_sha256": "cb73d54fd5fdaf0a220bb0c2cd00e5b20af5301f3d7df6548e4597b25b50803e",
+    "configuration_unchanged": true,
+    "deployed_release_unchanged": "213209f6e98d76206cea4cbe40a2ca67e461314b",
+    "main_pid_before": 3743756,
+    "main_pid_after": 3743756,
+    "service_restarts_before": 0,
+    "service_restarts_after": 0,
+    "ready_before": true,
+    "ready_after": true
+  },
+  "cleanup": {
+    "all_10_test_calls_finished": true,
+    "all_destinations_temporary_clients": true,
+    "temporary_keys_remaining": 0,
+    "tunnel_stopped": true,
+    "local_listeners_closed": true,
+    "browser_device_destroyed": true
+  },
+  "initial_attempt": {
+    "call_count": 5,
+    "audio_result_used_for_conclusion": false,
+    "reason": "WSS signature scheme handling corrected before the valid comparison"
+  },
+  "billing": {
+    "call_prices_incomplete": true,
+    "exact_total_not_yet_available": true
+  }
+}

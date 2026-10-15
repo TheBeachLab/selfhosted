@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="referrer" content="no-referrer">
+<title>Prueba aislada de audio — Irlanda</title>
+<style>body{font:17px system-ui;max-width:850px;margin:60px auto;color:#18332d;background:#f4f7f5}button{font:inherit;padding:12px 20px}pre{white-space:pre-wrap;background:white;padding:20px;border-radius:12px}</style>
+<h1>Prueba aislada de audio en Irlanda</h1>
+<p>Cliente temporal de Twilio. Tonos sintéticos a 1.000, 5.500 y 6.500 Hz.</p>
+<p>No utiliza micrófono ni llama a ningún número de teléfono.</p>
+<button id="start">Iniciar cliente de prueba</button><pre id="status">Preparado.</pre>
+<script src="/sdk.js"></script>
+<script>
+const cap='__CAP__'; const out=document.querySelector('#status');
+const pcs=[]; let device,context,destination,finished=false;
+const log=text=>{out.textContent+='\n'+text;};
+const report=event=>fetch('/report?cap='+cap,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(event)});
+const clean=async()=>{if(finished)return;finished=true;device?.destroy();await context?.close();await report({kind:'destroyed'});log('Cliente temporal cerrado.');};
+window.addEventListener('pagehide',()=>{device?.destroy();context?.close();});
+document.querySelector('#start').addEventListener('click',async()=>{
+ document.querySelector('#start').disabled=true;
+ try{
+  context=new AudioContext({sampleRate:48000});await context.resume();
+  destination=context.createMediaStreamDestination();destination.channelCount=1;
+  for(const frequency of [1000,5500,6500]){const osc=context.createOscillator();const gain=context.createGain();osc.frequency.value=frequency;gain.gain.value=0.04;osc.connect(gain).connect(destination);osc.start();}
+  const config=await(await fetch('/config?cap='+cap)).json();
+  class ProbePC extends RTCPeerConnection{constructor(...args){super(...args);pcs.push(this);}}
+  device=new Twilio.Device(config.token,{
+   edge:'dublin',codecPreferences:['opus'],maxAverageBitrate:64000,logLevel:'error',
+   enumerateDevices:async()=>[{deviceId:'default',groupId:'probe',kind:'audioinput',label:'Synthetic tones',toJSON(){return{};}}],
+   getUserMedia:async()=>destination.stream.clone(),RTCPeerConnection:ProbePC,
+   enableImprovedSignalingErrorPrecision:true,
+  });
+  device.audio.incoming(false);device.audio.outgoing(false);device.audio.disconnect(false);
+  device.on('error',error=>{log('Error de cliente: '+error.code+' '+error.message);report({kind:'error',code:error.code,message:error.message});});
+  device.on('incoming',call=>{
+   log('Llamada de laboratorio recibida.');report({kind:'incoming',call_sid:call.parameters.CallSid});
+   call.on('audio',audio=>{audio.muted=true;audio.volume=0;});
+   call.on('accept',()=>{log('Audio sintético conectado.');report({kind:'accepted',call_sid:call.parameters.CallSid});});
+   call.on('error',error=>report({kind:'error',code:error.code,message:error.message}));
+   call.accept();
+  });
+  await device.register();log('Cliente registrado en Irlanda, edge Dublin.');await report({kind:'registered',audio_context_sample_rate:context.sampleRate});
+  const timer=setInterval(async()=>{
+   try{
+    for(const pc of pcs.filter(x=>x.connectionState!=='closed')){
+     const stats=await pc.getStats();
+     for(const row of stats.values())if(row.type==='outbound-rtp'&&row.kind==='audio'){
+      const codec=stats.get(row.codecId);if(codec)await report({kind:'codec',mime_type:codec.mimeType,clock_rate:codec.clockRate,channels:codec.channels,packets_sent:row.packetsSent});
+     }
+    }
+    const state=await(await fetch('/result?cap='+cap)).json();
+    if(state.done){clearInterval(timer);log(JSON.stringify(state.variants,null,2));await clean();}
+   }catch(error){clearInterval(timer);log('Control local terminado.');device.destroy();context.close();}
+  },1500);
+ }catch(error){log('Error: '+error.message);await report({kind:'error',message:error.message});}
+});
+</script></html>

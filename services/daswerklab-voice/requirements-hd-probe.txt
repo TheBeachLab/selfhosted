@@ -1,0 +1,3 @@
+# Isolated laboratory utility only; not part of the production service.
+aiohttp==3.14.5
+twilio==9.12.0

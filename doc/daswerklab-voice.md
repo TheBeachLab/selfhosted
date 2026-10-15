@@ -133,6 +133,13 @@ fecha de inicio; no es un plazo para terminar cualquier proyecto.
 
 ## Conexión y fuentes técnicas
 
+La [prueba aislada de HD en IE1 del 15 de octubre de 2026](daswerklab-hd-probe-20261015.md)
+recibió μ-law a 8000 Hz en cinco conexiones, también al solicitar 16000 Hz con
+los atributos recientes del SDK. Twilio devolvió advertencias XML 12200 para
+`audioFormat` y `sampleRate`. No se modificó ni desplegó el recepcionista, y no
+se llamó al número contratado. El resultado se limita a esta cuenta, región e
+interfaz Connect/Stream; no demuestra la disponibilidad de HD por SIP.
+
 Twilio llama a HTTPS /voice/incoming. La respuesta conecta una Media Stream
 bidireccional a WSS /voice/media. El NUC conserva la configuración y las claves
 y envía audio PCMU a OpenAI. En VOICE_PROVIDER=elevenlabs, OpenAI emite
