@@ -1,0 +1,22 @@
+[Unit]
+Description=Read-only Munich business hours for Francisco's assistant
+After=network.target
+
+[Service]
+DynamicUser=yes
+ExecStart=/usr/bin/python3 /opt/francisco-hours/current/server.py
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryMax=64M
+TasksMax=8
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
