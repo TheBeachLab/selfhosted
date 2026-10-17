@@ -154,6 +154,14 @@ Vaultwarden has its own encrypted repository at
 `/mnt/nas-downloads/backups/vaultwarden-restic` and a daily 02:10 Europe/Madrid
 timer. Capture, retention and recovery commands are in [Vaultwarden](vaultwarden.md#backup-and-recovery).
 
+## Obsidian synchronisation backups
+
+Strategy's CouchDB database has a separate encrypted repository at
+`/mnt/nas-downloads/backups/obsidian-sync-restic`. The daily
+`obsidian-sync-backup.timer` runs at 02:55 Europe/Madrid, briefly stopping only
+its container for a consistent capture. See [Obsidian](obsidian.md#backups-and-recovery)
+for restore checks and the separately required device encryption key.
+
 ## Msgvault archive backups
 
 Msgvault has a separate encrypted repository at

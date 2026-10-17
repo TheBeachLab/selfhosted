@@ -1,0 +1,22 @@
+services:
+  couchdb:
+    image: couchdb:3.5.3@sha256:3611ce43bd32fe2368997fd41ec6e7270ec8d84aa5fc13c9828e5b15fd6bafe8
+    container_name: obsidian-couchdb
+    user: "5984:5984"
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:15984:5984"
+    volumes:
+      - /var/lib/obsidian-sync/data:/opt/couchdb/data
+      - /var/lib/obsidian-sync/etc:/opt/couchdb/etc/local.d
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

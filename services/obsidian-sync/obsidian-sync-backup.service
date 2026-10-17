@@ -1,0 +1,15 @@
+[Unit]
+Description=Back up Obsidian CouchDB to the encrypted NAS repository
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+RequiresMountsFor=/mnt/nas-downloads
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/obsidian-sync/backup.py
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=45min
