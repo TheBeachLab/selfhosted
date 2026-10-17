@@ -8,6 +8,41 @@ Gmail address as an Apple sign-in identifier does not connect Google mail.
 | --- | --- | --- | --- |
 | 1 | iCloud IMAP | `daswerklab@icloud.com` | `*/15 * * * *` |
 | 2 | Gmail API | `daswerklab@gmail.com` | `*/15 * * * *` |
+| 3 | Gmail API | Personal Gmail account | `*/15 * * * *` |
+
+## Additional Gmail accounts
+
+The personal Gmail account is connected as **source 3**, with the display name
+**Seacrets**. Its Google grant contains only `gmail.readonly`, and its refresh
+token is stored with mode 0600. The source has an enabled 15-minute schedule.
+Its address remains in the private account configuration and Strategy vault.
+
+Google reported **27,898 messages** before the first import on 2026-10-17.
+The initial full import runs as `msgvault-seacrets-initial-20261017.service`;
+this provider count is not an imported-message count. Check the native source
+status and the service result before treating that import as complete.
+
+The Fab Foundation account is still pending. Continue its Google authorization
+in Safari's **Fab Foundation** profile, using the same OAuth application and
+requesting `--readonly`. Permission to connect both additional accounts with
+read-only access was given on 2026-10-17.
+
+Run account commands **from `/var/lib/msgvault` as `msgvault`**, as well as
+passing `--home /var/lib/msgvault`. Starting from `/home/pink` can save the
+OAuth token but fail the daemon's registration subprocess with a working
+directory permission error. Re-running from the correct directory reuses the
+saved token; a new Google grant is unnecessary.
+
+Register the schedule through `POST /api/v1/accounts` **before** starting the
+first full sync. During this connection, schedule registration returned HTTP
+503 while the CLI sync was running and succeeded after that job was stopped.
+The full sync was then resumed through the same service.
+
+Private connection receipts, provider totals, and the configuration backup are
+in `/var/lib/msgvault-backup/gmail-extra-20261017/`. The permission and schedule
+statements above come from the stored token metadata, Gmail's `users/me/profile`,
+and the native `/api/v1/accounts` readback. See also the
+[read-only OAuth workflow](https://github.com/kenn-io/msgvault/blob/v0.21.0/docs/guides/oauth-setup.md#read-only-access).
 
 ## Google application and permissions
 
