@@ -9,6 +9,7 @@ Gmail address as an Apple sign-in identifier does not connect Google mail.
 | 1 | iCloud IMAP | `daswerklab@icloud.com` | `*/15 * * * *` |
 | 2 | Gmail API | `daswerklab@gmail.com` | `*/15 * * * *` |
 | 3 | Gmail API | Personal Gmail account | `*/15 * * * *` |
+| 4 | Gmail API | Fab Foundation account | `*/15 * * * *` |
 
 ## Additional Gmail accounts
 
@@ -32,11 +33,28 @@ all three accounts and 30,800 messages. Do not interpret an empty search
 against a stale cache as missing mail. The completion receipt is
 `/var/lib/msgvault-backup/gmail-extra-20261017/seacrets-import-complete.json`.
 
-The Fab Foundation account is still pending. Continue its Google authorization
-in the user's existing Safari session signed in to that account; verify the
-Google account address rather than relying on the Safari profile name. Use the
-same OAuth application and request `--readonly`. Permission to connect both
-additional accounts with read-only access was given on 2026-10-17.
+The Fab Foundation account is connected as **source 4**, with the display name
+**Fab Foundation**. Gmail's profile endpoint confirmed the mailbox, and the
+saved grant contains only `gmail.readonly`, with a refresh token owned by
+`msgvault` and mode 0600. Its enabled 15-minute schedule was registered before
+the initial import. Both additional read-only grants were approved by the owner
+on 2026-10-17.
+
+Google reported **5,563 messages** before the Fab Foundation import. Native
+sync **1181** started at **17:10:48 UTC on 2026-10-17** through
+`msgvault-fabfoundation-initial-20261017.service`, with a 2 GiB memory limit and
+200% CPU quota on the CLI unit. The first readback showed the sync running with
+no reported errors and **137 GiB free** on the NUC. The provider total is not an
+imported-message count; check the native source status and service result before
+treating this import as complete. Private receipts are
+`fabfoundation-authorization.json`, `fabfoundation-provider-profile.json`,
+`fabfoundation-schedule.json`, and `fabfoundation-import-started.json` in the
+connection receipt directory below.
+
+For future authorization, use the user's existing Safari session signed in to
+the intended account. Verify the Google account address rather than relying on
+the Safari profile name, and pass `--readonly` for these two accounts. Close the
+temporary callback tab and loopback SSH tunnel after the grant is saved.
 
 Run account commands **from `/var/lib/msgvault` as `msgvault`**, as well as
 passing `--home /var/lib/msgvault`. Starting from `/home/pink` can save the
@@ -48,6 +66,9 @@ Register the schedule through `POST /api/v1/accounts` **before** starting the
 first full sync. During this connection, schedule registration returned HTTP
 503 while the CLI sync was running and succeeded after that job was stopped.
 The full sync was then resumed through the same service.
+
+The native API currently listens on `127.0.0.1:8096` on the NUC; use its configured
+owner authentication locally rather than an old Tailscale listener address.
 
 Private connection receipts, provider totals, and the configuration backup are
 in `/var/lib/msgvault-backup/gmail-extra-20261017/`. The permission and schedule
