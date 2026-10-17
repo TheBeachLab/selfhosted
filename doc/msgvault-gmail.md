@@ -10,6 +10,7 @@ Gmail address as an Apple sign-in identifier does not connect Google mail.
 | 2 | Gmail API | `daswerklab@gmail.com` | `*/15 * * * *` |
 | 3 | Gmail API | Personal Gmail account | `*/15 * * * *` |
 | 4 | Gmail API | Fab Foundation account | `*/15 * * * *` |
+| 5 | Gmail API | Hexxan account | `*/15 * * * *` |
 
 ## Additional Gmail accounts
 
@@ -40,20 +41,34 @@ saved grant contains only `gmail.readonly`, with a refresh token owned by
 the initial import. Both additional read-only grants were approved by the owner
 on 2026-10-17.
 
-Google reported **5,563 messages** before the Fab Foundation import. Native
-sync **1181** started at **17:10:48 UTC on 2026-10-17** through
-`msgvault-fabfoundation-initial-20261017.service`, with a 2 GiB memory limit and
-200% CPU quota on the CLI unit. The first readback showed the sync running with
-no reported errors and **137 GiB free** on the NUC. The provider total is not an
-imported-message count; check the native source status and service result before
-treating this import as complete. Private receipts are
+The Fab Foundation full import completed at **18:01:13 UTC on 2026-10-17**:
+native sync **1181** processed and added **5,563 messages**, with zero errors
+or skipped messages. `msgvault-fabfoundation-initial-20261017.service` reported
+1,892.97 MB downloaded and exited successfully. A later scheduled sync completed
+at 19:00 UTC. The initial CLI unit had a 2 GiB memory limit and 200% CPU quota.
+Private receipts are
 `fabfoundation-authorization.json`, `fabfoundation-provider-profile.json`,
-`fabfoundation-schedule.json`, and `fabfoundation-import-started.json` in the
-connection receipt directory below.
+`fabfoundation-schedule.json`, `fabfoundation-import-started.json`, and
+`fabfoundation-import-complete.json` in the connection receipt directory below.
+
+The Hexxan account is connected as **source 5**, with the display name **Hexxan**.
+The owner approved its read-only grant on 2026-10-17. Gmail's profile endpoint
+confirmed the intended mailbox; the saved grant contains only `gmail.readonly`
+and a refresh token, owned by `msgvault` with mode 0600. The native account API
+confirmed an enabled 15-minute schedule before the first full import started.
+
+Google reported **35,681 messages** before that import. Native sync **1202**
+started at **19:10:57 UTC on 2026-10-17** through
+`msgvault-hexxan-initial-20261017.service`, with a 2 GiB memory limit and 200%
+CPU quota on the CLI unit. The disk preflight showed **134.4 GiB free**. This
+records the start of the import, not its completion. Check the service result
+and source 5's native sync status before treating the archive as complete.
+Private authorization, provider-profile, schedule and import receipts are in
+`/var/lib/msgvault-backup/hexxan-20261017/`.
 
 For future authorization, use the user's existing Safari session signed in to
 the intended account. Verify the Google account address rather than relying on
-the Safari profile name, and pass `--readonly` for these two accounts. Close the
+the Safari profile name, and pass `--readonly` for these additional accounts. Close the
 temporary callback tab and loopback SSH tunnel after the grant is saved.
 
 Run account commands **from `/var/lib/msgvault` as `msgvault`**, as well as
