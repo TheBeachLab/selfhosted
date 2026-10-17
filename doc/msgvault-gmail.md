@@ -17,15 +17,26 @@ The personal Gmail account is connected as **source 3**, with the display name
 token is stored with mode 0600. The source has an enabled 15-minute schedule.
 Its address remains in the private account configuration and Strategy vault.
 
-Google reported **27,898 messages** before the first import on 2026-10-17.
-The initial full import runs as `msgvault-seacrets-initial-20261017.service`;
-this provider count is not an imported-message count. Check the native source
-status and the service result before treating that import as complete.
+The initial full import completed on **2026-10-17 at 16:10:23 UTC** through
+`msgvault-seacrets-initial-20261017.service`: **27,898 found, 27,898 added,
+zero skipped**, with 4,047.74 MB downloaded in 3h49m29s. A later readback
+showed **27,901** messages and a successful scheduled sync at 16:45 UTC.
+One old message had a MIME parsing warning; its original raw message remains
+archived. A separate implausible date header was replaced using a received
+date. The unit finished with `Result=success`.
+
+During the long initial CLI sync, MCP search still used the preceding cache.
+Exact-message reads and read-only queries of the main SQLite archive could
+already access imported messages. After completion, MCP statistics reflected
+all three accounts and 30,800 messages. Do not interpret an empty search
+against a stale cache as missing mail. The completion receipt is
+`/var/lib/msgvault-backup/gmail-extra-20261017/seacrets-import-complete.json`.
 
 The Fab Foundation account is still pending. Continue its Google authorization
-in Safari's **Fab Foundation** profile, using the same OAuth application and
-requesting `--readonly`. Permission to connect both additional accounts with
-read-only access was given on 2026-10-17.
+in the user's existing Safari session signed in to that account; verify the
+Google account address rather than relying on the Safari profile name. Use the
+same OAuth application and request `--readonly`. Permission to connect both
+additional accounts with read-only access was given on 2026-10-17.
 
 Run account commands **from `/var/lib/msgvault` as `msgvault`**, as well as
 passing `--home /var/lib/msgvault`. Starting from `/home/pink` can save the
