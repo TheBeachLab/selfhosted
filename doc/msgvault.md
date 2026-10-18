@@ -785,6 +785,8 @@ systemctl show msgvault-backup.service -p Result -p ExecMainStatus
 sudo journalctl -u msgvault-backup.service -n 30 --no-pager
 ```
 
+### Restore the mail archive
+
 For a restore test, run in a root Bash shell and restore into a new private NAS
 directory. This Synology export rejects Restic's `Lchown` with `operation not
 permitted`; use `dump` and extract with NAS ownership, then verify every native
@@ -793,12 +795,17 @@ pack before restoring the database. This does not change export permissions.
 ```bash
 set -euo pipefail
 umask 077
+restic -r /mnt/nas-downloads/backups/msgvault-restic \
+  --password-file /root/.config/thebeachlab-backup/restic-password \
+  snapshots --tag msgvault
+read -r -p 'Msgvault snapshot ID: ' msgvault_snapshot
+test -n "$msgvault_snapshot"
 backup_restore_dir=$(mktemp -d /mnt/nas-downloads/backups/msgvault-staging/restore-XXXXXX)
 mkdir -m 700 "$backup_restore_dir/restic"
 restic -r /mnt/nas-downloads/backups/msgvault-restic \
   --password-file /root/.config/thebeachlab-backup/restic-password \
   --cache-dir /var/lib/msgvault-backup/restic-cache \
-  dump latest --tag msgvault /mnt/nas-downloads/backups/msgvault-staging/payload \
+  dump "$msgvault_snapshot" /mnt/nas-downloads/backups/msgvault-staging/payload \
   | tar --extract --file - --directory "$backup_restore_dir/restic" \
       --no-same-owner --no-same-permissions
 msgvault --home /var/lib/msgvault --no-log-file backup verify \
@@ -818,6 +825,36 @@ Snapshots from the previous staging layout require dumping their old
 under `restic/var/lib/msgvault/backup-staging/payload/archive` instead.
 See [Restic restore](https://restic.readthedocs.io/en/v0.12.1/050_restore.html)
 and the native restore contract above.
+
+For a real recovery, check capacity for both the preserved live archive and the
+restored copy before starting. The database, attachments and native metadata must
+be restored together. To activate the validated copy:
+
+1. Stop `msgvault-backup.timer`, wait for any running backup to finish, then stop
+   `msgvault-mcp.service` and `msgvault.service`. Preserve `/var/lib/msgvault/`
+   in a separate private directory on the same filesystem.
+2. Copy the restored native archive into a fresh `/var/lib/msgvault/`, preserving
+   its contents and modes. Set its ownership to `msgvault:msgvault`. Inspect
+   `config.toml` for machine-specific `database_url`, `data_dir` and `remote.url`
+   before use; an old remote URL must not send checks to the wrong host.
+3. Restore needed `host-files` entries selectively, including MCP configuration,
+   service units/drop-ins and Nginx settings. Keep keys and tokens private.
+   Restore compatible binaries, run `systemctl daemon-reload`, and validate Nginx
+   before reloading it. Start `msgvault.service` before `msgvault-mcp.service`.
+4. Check SQLite integrity and source/message/attachment counts against the native
+   manifest, open a known attachment and verify authenticated API and MCP reads.
+   Read the real SQLite database as user `msgvault` in read-only mode; analytics
+   caches may lag and are not the authoritative archive.
+5. Restore the backup script's repository identity record on a replacement host
+   as described in [backup recovery state](personal-knowledge.md#the-nuc-or-a-service-database-was-lost).
+   Resume the backup timer and incremental account sync once paths and accounts
+   are correct. Keep the preserved live copy until the recovered service passes
+   these checks. Updates after the capture may need to be fetched from the mail
+   providers, if they still exist there.
+
+Msgvault is a source archive for [Strategy](personal-knowledge.md), not its
+maintained profile. Recovering the mail does not restore the Markdown vault or
+the source catalogue on the Mac.
 
 Verified on 2026-10-10: encrypted snapshot **e26ba98c**, full Restic data check,
 native repository verification, temporary restore and SQLite `integrity_check`

@@ -95,8 +95,9 @@ and the legacy kernel's package requirements.
 
 ### AI and GPU
 
-- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) (WIP)
+- [Personal knowledge: Strategy, sources and recovery](doc/personal-knowledge.md)
   - [Obsidian](doc/obsidian.md)
+- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) (experiments)
   - [LangGraph](doc/langgraph.md)
   - [Graphiti](doc/graphiti.md)
   - [Neo4j Community and Browser](doc/neo4j.md)

@@ -4,6 +4,9 @@ Strategy syncs between the Mac and mobile Obsidian through CouchDB on the NUC.
 The desktop app opens the existing Markdown vault; the NUC stores the encrypted
 synchronisation database. There is no remote desktop installation of Obsidian.
 
+[Personal knowledge: Strategy](personal-knowledge.md) explains the authoritative
+notes, source catalogue, Msgvault archive and complete recovery requirements.
+
 | Item | Location |
 | --- | --- |
 | Mac vault | `/Users/Papi/Repositories/project-knowledge/vaults/strategy/` |
@@ -112,16 +115,74 @@ in [Backups](backups.md). The daily timer runs at 02:55 Europe/Madrid with up to
 five minutes of jitter. Retention is 7 daily, 4 weekly and 6 monthly snapshots.
 
 ```bash
-sudo python3 /opt/obsidian-sync/backup.py --verify-restore
 sudo cat /var/lib/obsidian-sync-backup/last-success.json
 sudo journalctl -u obsidian-sync-backup.service -n 50 --no-pager
 ```
 
-For recovery, restore the selected snapshot into a separate directory first.
-Stop `obsidian-couchdb` before replacing its live data with the selected
-`payload/couchdb` capture, restore UID 5984 ownership, then restart and verify
-HTTPS authentication. Retain the devices' encryption key: the server backup
-alone cannot decrypt the notes. See
+To create a new backup and test its restored files, run
+`sudo python3 /opt/obsidian-sync/backup.py --verify-restore` during an agreed
+maintenance window. This briefly stops CouchDB; it is not a read-only check of
+the last snapshot. The scheduled run does not pass this option. Its private
+local capture remains under `/var/lib/obsidian-sync-backup/payload/`.
+
+### Restore CouchDB
+
+Keep Obsidian clients disconnected and save their local vaults before recovering
+an older sync database. In a root Bash shell on the NUC, restore an explicit
+snapshot into a fresh directory:
+
+```bash
+set -euo pipefail
+umask 077
+export RESTIC_REPOSITORY=/mnt/nas-downloads/backups/obsidian-sync-restic
+export RESTIC_PASSWORD_FILE=/root/.config/thebeachlab-backup/restic-password
+restic snapshots --tag obsidian-sync
+read -r -p 'CouchDB snapshot ID: ' obsidian_snapshot
+test -n "$obsidian_snapshot"
+obsidian_restore_dir=$(mktemp -d /var/tmp/obsidian-restore-XXXXXX)
+restic restore "$obsidian_snapshot" --target "$obsidian_restore_dir"
+obsidian_payload="$obsidian_restore_dir/var/lib/obsidian-sync-backup/payload"
+test -d "$obsidian_payload/couchdb/data"
+```
+
+The payload contains:
+
+- `couchdb/`: all of `/var/lib/obsidian-sync/`, including database shards and
+  `etc/10-livesync.ini` and CouchDB's generated configuration.
+- `deployment/`: `/opt/obsidian-sync/`, including Compose and its private `.env`.
+- `administration/`: `/root/.config/obsidian-sync/`, including the matching
+  administrator and device accounts.
+- `nginx.conf`: the `/etc/nginx/snippets/obsidian-sync.conf` proxy snippet.
+
+After inspecting the restored capture, activate it in a maintenance window:
+
+1. Stop `obsidian-sync-backup.timer` and wait for any running backup service to
+   finish. Stop `obsidian-couchdb`. Preserve the current data, deployment and
+   administrator directories by moving them to a private recovery directory;
+   do not merge a restored database into live files.
+2. Copy the three payload directories back to their corresponding locations
+   with `cp -a`. Restore ownership with
+   `chown -R 5984:5984 /var/lib/obsidian-sync/data /var/lib/obsidian-sync/etc`.
+   Preserve the root-only modes on `.env` and administrator files.
+3. Restore/review the proxy snippet, keep its include in the API vhost and run
+   `nginx -t` before reloading Nginx. On a replacement NUC, also recover its TLS
+   configuration and the backup units from the general server backup or
+   [service files](../services/obsidian-sync/).
+4. Run `docker compose -f /opt/obsidian-sync/compose.yaml up -d --force-recreate couchdb`.
+   Check container health, authenticated access to `strategy` and a 401 response
+   without credentials. Credentials must come from the restored private files;
+   never paste them into documentation or a chat.
+5. Fetch into a new empty Obsidian vault using the saved device encryption key.
+   Check `Fran` and representative notes, then reconcile newer edits from the
+   preserved device copies before reconnecting the other clients.
+6. Restore the backup script's repository identity record before restarting
+   `obsidian-sync-backup.timer` on a replacement host; see
+   [backup recovery state](personal-knowledge.md#the-nuc-or-a-service-database-was-lost).
+   Keep the previous live directories until validation is complete.
+
+The server backup cannot decrypt notes without the devices' separate encryption
+key. It also excludes the Mac's source catalogue, Git history and linked external
+documents. See [complete recovery](personal-knowledge.md#recovering-the-system) and
 [CouchDB backups](https://docs.couchdb.org/en/stable/maintenance/backups.html).
 
 ## Verification on 2026-10-18

@@ -1,5 +1,11 @@
 # Knowledge graphs and agent loops
 
+The maintained personal graph is [Strategy](personal-knowledge.md): linked
+Markdown on the Mac, searched by `pk` and synchronised through CouchDB on the
+NUC. That runbook describes its source of truth, backup coverage and recovery.
+The agent-loop architecture below is experimental and is separate from reading
+or editing those notes.
+
 <!-- vim-markdown-toc GFM -->
 
 - [What I want](#what-i-want)
@@ -16,9 +22,10 @@ I want to write notes, connect ideas, run an agent loop and see where it gets
 stuck. Then fix it and continue. I also want the memory to keep the original
 source and remember when things changed.
 
-This setup is still WIP. Graphviz and Node-RED are already on the NUC. Obsidian
-is installed on the Mac; I couldn't find it in the NUC services or application
-folders. LangGraph, Graphiti and Neo4j still need their own setup there.
+The agent-loop setup is still WIP. Graphviz and Node-RED are on the NUC.
+Obsidian opens local files on the Mac; the NUC runs its CouchDB sync backend,
+not the desktop app. LangGraph, Graphiti and Neo4j have not been deployed there
+as this integrated agent loop.
 
 ## The pieces
 
@@ -81,5 +88,6 @@ Keep each project's database and credentials separate. Graphiti's
 `group_id` filters results, but it is not an access control boundary.
 
 Put code and original notes in Git. Keep databases, checkpoints, credentials
-and ingestion receipts in a private data directory, with a backup. Generated
-notes and diagrams come from their sources: fix the source and regenerate.
+and ingestion receipts in a private data directory, with a backup. Strategy's
+curated micronotes are edited directly. Only generated material, such as
+Hariburi's `Fuentes/` pages, should be rebuilt from its sources.
