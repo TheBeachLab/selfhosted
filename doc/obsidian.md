@@ -98,8 +98,9 @@ read server configuration. Keep port 15984 private.
 
 ## Backups and recovery
 
-A complete Mac vault archive was taken before enabling LiveSync. It is retained
-in the private Mac directory above as `strategy-before-livesync-*.tar.gz`.
+The graph backup is captured on the NUC from CouchDB and stored as encrypted
+Restic snapshots on the NAS. It contains the vault files that LiveSync has
+synchronised, including the links between notes.
 
 [backup.py](../services/obsidian-sync/backup.py) stops only the CouchDB container
 briefly, copies its data and configuration, and restarts it in a `finally`

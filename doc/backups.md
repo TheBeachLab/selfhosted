@@ -12,7 +12,6 @@
 - [Vaultwarden backups](#vaultwarden-backups)
 - [Obsidian synchronisation backups](#obsidian-synchronisation-backups)
 - [Msgvault archive backups](#msgvault-archive-backups)
-- [Personal knowledge on the Mac](#personal-knowledge-on-the-mac)
 - [Minecraft USB backups](#minecraft-usb-backups)
 
 <!-- vim-markdown-toc -->
@@ -165,6 +164,8 @@ Strategy's CouchDB database has a separate encrypted repository at
 `obsidian-sync-backup.timer` runs at 02:55 Europe/Madrid, briefly stopping only
 its container for a consistent capture. See [Obsidian](obsidian.md#backups-and-recovery)
 for restore checks and the separately required device encryption key.
+[Strategy](personal-knowledge.md#what-is-backed-up) describes what this graph
+backup contains, how to check it on the NUC and how to recover the notes.
 
 ## Msgvault archive backups
 
@@ -176,20 +177,6 @@ live archive coherently before the encrypted transfer and keeps 7 daily,
 and recovery copy above. The general server backup remains separate.
 See [Msgvault storage and restore procedure](msgvault.md#storage-and-encrypted-backups)
 for the source files and the verified initial restore.
-
-## Personal knowledge on the Mac
-
-The Strategy notes and source catalogue live in
-`/Users/Papi/Repositories/project-knowledge/`. Private exports, indexes and
-LiveSync onboarding keys live in
-`/Users/Papi/Library/Application Support/ProjectKnowledge/`. The NUC backups
-above do not contain these complete Mac directories or external linked originals.
-
-Both directories are included in the Mac's configured Time Machine backup, but
-its destination currently fails to mount when checking the latest backup.
-Project Knowledge has no Git remote. A recent complete Mac recovery copy and
-an independent backup of the NAS source folders therefore remain unconfirmed.
-See [Strategy backup coverage and recovery](personal-knowledge.md#what-is-backed-up).
 
 ## Minecraft USB backups
 

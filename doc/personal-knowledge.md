@@ -87,167 +87,125 @@ experimental components.
 
 ## What is backed up
 
-**CouchDB:** `obsidian-sync-backup.timer` runs daily at 02:55 Europe/Madrid,
-with up to five minutes of delay. It briefly stops its container, captures data,
-configuration and deployment files, restarts it, then encrypts the capture into
-`obsidian-sync-restic` on the NAS. Retention is 7 daily, 4 weekly and 6 monthly
-snapshots. [CouchDB recovery](obsidian.md#backups-and-recovery) explains the payload
-and the separate device encryption key.
+The NUC backs up the graph from CouchDB's **`strategy` database**, which holds
+LiveSync's encrypted representation of the vault. It captures the files that
+have reached the server, together with the database users, configuration and
+deployment files needed to restore the service. Note links are part of the
+Markdown and return with the notes.
 
-**Msgvault:** `msgvault-backup.timer` runs daily at 02:30 Europe/Madrid, also
-with up to five minutes of delay. Msgvault creates a coherent native archive of
-its database, attachments and recovery configuration before Restic transfers it
-to `msgvault-restic`. Retention is 7 daily, 4 weekly and 6 monthly snapshots.
-The native staging archive is private but unencrypted; the script removes it
-only after the encrypted backup and checks succeed. See
-[mail archive recovery](msgvault.md#storage-and-encrypted-backups).
+```text
+NUC live data:       /var/lib/obsidian-sync/
+NUC capture/state:   /var/lib/obsidian-sync-backup/
+Versioned backup:   /mnt/nas-downloads/backups/obsidian-sync-restic
+NAS native path:    /volume1/synology/backups/obsidian-sync-restic
+```
 
-These are separate repositories from the
-[general NUC backup](backups.md#current-production-setup-restic). That backup
-includes server configuration and other services; it does not capture the Mac's
-Project Knowledge directory or replace either service-specific backup.
+The NUC creates the backup; the NAS stores the encrypted versions. The local
+`payload/` directory is staging for the most recent capture and is replaced on
+the next run. It is not the retained snapshot history.
 
-A backup's useful recovery point is when its source was captured, not when the
-upload finished. Compare the successful snapshot with the service receipt before
-assuming that a recent import or note edit is included:
+`obsidian-sync-backup.timer` runs daily at **02:55 Europe/Madrid**, with up to
+five minutes of delay. The script briefly stops only `obsidian-couchdb`, copies
+its data and configuration, restarts it, then writes the capture through Restic.
+Retention is **7 daily, 4 weekly and 6 monthly snapshots**. It checks the expected
+NAS mount and repository identity before writing.
+
+LiveSync continuously changes the server replica as devices synchronise. Restic
+provides earlier recovery points if notes are deleted or corrupted, or the NUC
+fails. Changes still waiting on a device are not in a server backup: the recovery
+point is the data present when CouchDB was captured.
+
+### Check the graph backup
 
 ```bash
 ssh pink-sudo
-systemctl list-timers msgvault-backup.timer obsidian-sync-backup.timer
-sudo cat /var/lib/msgvault-backup/last-success.json
+systemctl list-timers obsidian-sync-backup.timer
+systemctl show obsidian-sync-backup.service -p Result -p ExecMainStatus
 sudo cat /var/lib/obsidian-sync-backup/last-success.json
-df -h /var/lib/msgvault /mnt/nas-downloads
 ```
 
-In a root Bash shell on the NUC, inspect the actual encrypted snapshots:
+In a root Bash shell on the NUC, list the snapshots that actually exist on the
+NAS:
 
 ```bash
 export RESTIC_PASSWORD_FILE=/root/.config/thebeachlab-backup/restic-password
-restic -r /mnt/nas-downloads/backups/msgvault-restic snapshots --tag msgvault
 restic -r /mnt/nas-downloads/backups/obsidian-sync-restic snapshots --tag obsidian-sync
 ```
 
-The Restic password has a recovery copy at
-`/mnt/nas-downloads/backups/thebeachlab-restic-password`, protected by NAS share
-permissions. This password opens the backup repositories; it is not LiveSync's
-note-encryption key. A replacement NUC needs both NAS access and the appropriate
-keys before recovery can begin.
+Match the successful receipt's snapshot ID to this list. Its `files` field counts
+physical database and configuration files, not individual notes. `restored: false`
+means that run did not include the optional restore test; it does not mean the
+backup failed. The [Obsidian runbook](obsidian.md#backups-and-recovery) explains
+how to run that test and inspect a failed service.
 
-### Mac files and remaining gaps
+### Keys and backup coverage
 
-Time Machine is configured for the DiskStation `backups` share. Both the
-Project Knowledge repository and its Application Support directory are included.
-However, `tmutil latestbackup` currently fails to mount that destination, so a
-recent complete Mac backup has not been established.
+Restic uses `/root/.config/thebeachlab-backup/restic-password`, with a recovery
+copy at `/mnt/nas-downloads/backups/thebeachlab-restic-password`, protected by
+NAS share permissions. This opens the backup repository.
 
-```bash
-tmutil destinationinfo
-tmutil isexcluded /Users/Papi/Repositories/project-knowledge \
-  "$HOME/Library/Application Support/ProjectKnowledge"
-tmutil latestbackup
-```
+Reading the recovered notes also requires the separate **LiveSync encryption
+key** held by the devices. The private setup file is
+`/Users/Papi/Library/Application Support/ProjectKnowledge/obsidian-sync/mobile-connection-private.txt`.
+The server backup includes CouchDB account credentials but not this note key.
+Keep the key available for recovery without placing it in the vault or Git.
 
-The Project Knowledge Git repository currently has **no remote**. Its local
-history protects against ordinary edits, but does not provide a second-device
-copy. A complete Mac recovery needs the repository, including `.git` and the
-catalogue, the private Application Support directory, and the linked original
-documents. LiveSync excludes hidden configuration files and does not sync
-external linked files or the source catalogue.
+The graph backup covers the synced vault. Linked external documents, the source
+catalogue, Git history and the Msgvault mail archive are separate material.
+[Msgvault's own backup](msgvault.md#storage-and-encrypted-backups) runs on the NUC
+at 02:30 Europe/Madrid and writes to `msgvault-restic` on the same NAS. It restores
+the underlying mail and attachments, rather than the maintained notes.
 
-The LiveSync setup material is private at
-`~/Library/Application Support/ProjectKnowledge/obsidian-sync/`.
-`mobile-connection-private.txt` contains the device credentials, note-encryption
-key and Setup URI password. That key is not in the NUC CouchDB backup. Retain
-it in a separate protected recovery location; losing every device and this
-Mac copy would leave only an encrypted replica. The local
-`strategy-before-livesync-*.tar.gz` is a one-off vault snapshot, not a scheduled
-full-system backup.
+`pk backup strategy` belongs to the separate local Neo4j pilot. It does not run
+this CouchDB backup and is not needed to recover the Obsidian graph. The general
+NUC backup is also separate from these service-specific captures.
 
-`pk backup strategy` is also narrower than its name might suggest: it stops the
-local Strategy Neo4j instance, dumps the database, copies its events and ingestion
-data under `strategy/exports/<timestamp>/`, then restarts it. It does **not**
-back up the whole vault, catalogue, original documents, existing private exports
-or credentials, and its output remains on the Mac unless copied elsewhere.
-
-The NAS repositories are another-device protection for the NUC. They are not an
-off-site copy. Hyper Backup is installed on the NAS, but the inspected job
-configuration contains no tasks; no independent backup of these repositories
-or the NAS source-document folders has been established.
+The NAS protects against loss of the NUC's disk. No independent off-site copy of
+the NAS repositories has been established.
 
 ## Recovering the system
 
-### A note was changed or deleted
-
-For one note, inspect Git history and recover its earlier contents into a
-temporary file before editing the current note:
-
-```bash
-cd /Users/Papi/Repositories/project-knowledge
-git log -- 'vaults/strategy/Private/Personal/PiBot.md'
-umask 077
-note_recovery_file=$(mktemp /tmp/PiBot-recovered-XXXXXX)
-git show 'COMMIT:vaults/strategy/Private/Personal/PiBot.md' > "$note_recovery_file"
-```
-
-Replace `COMMIT` with the chosen revision. Compare with current work, restore the
-needed content through the normal feature-branch workflow, and let LiveSync
-propagate the deliberate edit. Git only contains committed versions. For an
-uncommitted deleted file, check Obsidian recovery/Trash and other devices before
-they propagate the deletion.
-
-### The Mac or its disk was lost
-
-1. Preserve every remaining device's local vault before reconnecting sync.
-   Restore the repository and Application Support directory from a known-good
-   Mac backup into a separate location first. Recover linked originals from
-   their own backups too.
-2. If only CouchDB survives, recover the device configuration and encryption key,
-   create an empty vault and follow [the new-device procedure](obsidian.md#mac-and-mobile).
-   This recovers the synced notes, not Git history, the catalogue, private exports
-   or external originals.
-3. Put the recovered repository at the canonical Mac path, inspect its Git state
-   and source links, and follow its README to restore the `pk` environment.
-   Retrieve a familiar topic with `pk query strategy ... --documents-only` to
-   refresh and check search. Do not substitute old Neo4j output for missing notes.
-4. Reconcile any newer notes from the preserved device copies. Re-enable other
-   clients one at a time after checking `Fran`, private notes and representative
-   links. Confirm an intentional edit travels in both directions.
-
 ### The NUC or a service database was lost
 
-Recover NAS access and Restic credentials first. Choose explicit snapshots and
-restore into fresh private directories. Use the focused procedures for
-[CouchDB](obsidian.md#restore-couchdb) and
-[Msgvault](msgvault.md#restore-the-mail-archive), preserving the existing live
-directories until the replacements pass their checks. Keep Obsidian clients
-disconnected while deciding which copy contains the newest notes.
+1. Recover NAS access and the Restic password. Select an explicit graph snapshot
+   and restore it into a fresh private directory on the NUC, following
+   [Restore CouchDB](obsidian.md#restore-couchdb).
+2. Keep Obsidian clients disconnected and preserve their vaults. Stop the backup
+   timer and CouchDB, preserve the current server directories, and put the
+   recovered data, deployment and credentials in their documented locations.
+3. Restore ownership, start CouchDB and check authenticated access through
+   `https://api.beachlab.org/obsidian-sync`. Keep the previous directories until
+   the recovered service passes validation.
+4. Connect a new empty Obsidian vault with the saved device configuration and
+   LiveSync encryption key. Fetch the recovered notes, then check `Fran`, its
+   links and representative private notes. Reconcile any newer device edits
+   before reconnecting other clients.
+5. Restore backup operation and confirm the next run succeeds.
 
-Recovering CouchDB restores sync. Recovering Msgvault restores the source mail
-and attachments. Neither operation restores the Mac catalogue or Git history.
-Only resume normal syncing after comparing the selected recovery point with
-newer device edits and any mail received after the archive capture.
+This recovers the graph through its NUC service and NAS snapshot. No full Mac
+restore is involved. If CouchDB is healthy and only a client vault needs replacing,
+use [the new-device procedure](obsidian.md#mac-and-mobile) to fetch the current
+server copy.
 
-Both backup scripts also require their repository identity files:
-`/var/lib/msgvault-backup/repository.json` and
-`/var/lib/obsidian-sync-backup/repository.json`. Preserve these private state
-directories during recovery. They are outside the service snapshot payloads.
-On a replacement host without them, first verify the expected NFS mount,
-unlock the correct existing Restic repository and inspect its known snapshots.
-Then save that repository's `restic cat config` output as the corresponding
-root-only `repository.json`, in a mode-0700 state directory. Do not overwrite an
-existing identity record or initialise a new repository in place of a missing
-one. Check the first resumed backup succeeds before treating automatic protection
-as restored.
+The graph backup script also requires
+`/var/lib/obsidian-sync-backup/repository.json`. Preserve that private state
+directory during recovery; it is outside the snapshot payload. On a replacement
+host without the identity file, first verify the expected NFS mount, unlock the
+correct existing Restic repository and inspect its known snapshots. Then save
+that repository's `restic cat config` output as the root-only `repository.json`
+in a mode-0700 state directory. Do not overwrite an existing identity record or
+initialise a new repository in place of a missing one.
+
+Msgvault recovery is independent: follow
+[Restore the mail archive](msgvault.md#restore-the-mail-archive). Its backup
+identity file is `/var/lib/msgvault-backup/repository.json` and is recovered by
+the same identity-check procedure for the `msgvault-restic` repository.
 
 ### Only search stopped working
 
-Check that the canonical vault is accessible and run the normal `pk query`
-command. It refreshes the derived index from the saved Markdown. If the SQLite
-index itself is damaged, preserve the entire `strategy/ingestion/` directory,
-move it aside while no `pk` operation is running, and run the query again.
-Keep the old directory until search works; never delete the vault to rebuild
-an index.
-
-Historical Neo4j recovery is a separate task using a compatible database dump
-and the Project Knowledge README. It is not a prerequisite for reading,
-editing or searching Strategy's notes.
+Check that the canonical vault is accessible and run `pk query strategy ...
+--documents-only`. It refreshes the derived index from the saved Markdown.
+If the SQLite index itself is damaged, preserve the entire `strategy/ingestion/`
+directory, move it aside while no `pk` operation is running, and run the query
+again. Keep the old directory until search works; the notes themselves do not
+need restoring to rebuild an index.
