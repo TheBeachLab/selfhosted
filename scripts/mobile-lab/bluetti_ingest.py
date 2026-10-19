@@ -31,7 +31,7 @@ FLUSH_INTERVAL = int(os.getenv("FLUSH_INTERVAL", "30"))  # seconds
 
 INSERT_SQL = """
 INSERT INTO public.bluetti_stats (
-  time, device_id, field_received_at,
+  time, device_id, field_received_at, network,
   battery_percent,
   dc_input_power, ac_input_power,
   ac_output_power, dc_output_power,
@@ -54,7 +54,7 @@ INSERT INTO public.bluetti_stats (
   obd_fuel_level_pct, obd_fuel_rail_pressure_kpa, obd_maf_gps,
   obd_runtime_s, obd_voltage_v, obd_dtc_count, obd_connected
 ) VALUES (
-  %(time)s, %(device_id)s, %(field_received_at)s,
+  %(time)s, %(device_id)s, %(field_received_at)s, %(network)s,
   %(battery_percent)s,
   %(dc_input_power)s, %(ac_input_power)s,
   %(ac_output_power)s, %(dc_output_power)s,
@@ -142,6 +142,7 @@ def flush():
     # snapshots have the same unique key and cannot manufacture new history.
     for device_id, fields, received_at, sample_time in state.snapshots():
         row = {
+            "network":          to_json(fields.get("network")),
             "time":             sample_time,
             "field_received_at": json.dumps(received_at),
             "device_id":        device_id,

@@ -28,6 +28,30 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(finite_float('0'),0)
 
 class AdapterTests(unittest.TestCase):
+    def test_network_is_atomic_timestamped_and_whitelisted(self):
+        import json
+        now=datetime(2026,10,19,tzinfo=timezone.utc)
+        data=dict(ts=now.isoformat(),connection='Shadow',kind='wifi',state='Online',
+                  downlink_mbps=0,uplink_mbps=1,ping_ms=5,ping_drop_rate=0,
+                  password='must not persist',ip='192.0.2.1')
+        fields=gml_fields('gml/network',json.dumps(data),now=now)
+        self.assertEqual(set(fields),{'network'})
+        self.assertEqual(fields['network']['connection'],'Shadow')
+        self.assertEqual(fields['network']['downlink_mbps'],0)
+        self.assertNotIn('password',fields['network'])
+        self.assertNotIn('ip',fields['network'])
+        self.assertEqual(gml_fields('gml/network',json.dumps(data),now=now+timedelta(seconds=301)),{})
+        del data['ts']
+        self.assertEqual(gml_fields('gml/network',json.dumps(data),now=now),{})
+    def test_network_rejects_impossible_metrics_and_clears_previous_fields(self):
+        import json
+        now=datetime(2026,10,19,tzinfo=timezone.utc)
+        payload=json.dumps(dict(ts=now.isoformat(),state='Offline',downlink_mbps=-1,ping_ms='NaN',ping_drop_rate=2))
+        fields=gml_fields('gml/network',payload,now=now)['network']
+        self.assertIsNone(fields['connection'])
+        self.assertIsNone(fields['downlink_mbps'])
+        self.assertIsNone(fields['ping_ms'])
+        self.assertIsNone(fields['ping_drop_rate'])
     def test_privacy_rounding_and_no_raw_payload(self):
         row=gml_fields('gml/nav','{"lat":41.234567,"lon":1.798765,"secret":"never store"}')
         self.assertEqual(row['gps_lat'],41.23)

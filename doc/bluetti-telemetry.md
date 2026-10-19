@@ -59,7 +59,37 @@ journalctl -u bluetti-ingest -n 30 --no-pager
 
 ## MQTT topics
 
-All under `bluetti/state/<device_id>/` where device_id is `AC200M-2241000242252`.
+Power uses `bluetti/state/<device_id>/` where device_id is `AC200M-2241000242252`.
+The current combined sensor messages use the whitelisted `gml/` topics in
+[`observation_state.py`](../scripts/mobile-lab/observation_state.py).
+
+### Active network
+
+`gml/network` carries one atomic observation: source `ts`, `state`, `connection`
+(active SSID or Ethernet), `interface`, `kind`, `downlink_mbps`, `uplink_mbps`,
+`ping_ms` and `ping_drop_rate`. The ingestor stores only these whitelisted fields
+in `bluetti_stats.network` (JSONB), with one `field_received_at.network` delivery
+timestamp. Source timestamps are required; queued observations older than five
+minutes and retained broker replay cannot become fresh measurements. A null
+field in a new observation clears the previous field rather than inheriting a
+value from the last network.
+
+The web panel expires this whole observation after 90 seconds and uses it for
+Internet and Network traffic. Dish telemetry remains separate. Mbps measures
+the Pi's active interface byte deltas, including LAN traffic, rather than all
+devices behind the router. Latency/loss measure three ICMP probes to `1.1.1.1`;
+100% loss is Offline, and probe errors are Unknown. The publisher currently
+selects the IPv4 uplink. Details and primary counter/NM references are in the
+[Pi operations manual](../../bluetti-starlink-mqtt/docs/ops.md#active-network-telemetry-and-camera-roles).
+
+The additive [`002-network.sql`](../scripts/mobile-lab/002-network.sql) migration
+adds the column and appends it to the installed `bluetti_latest` definition,
+preserving existing fields and grants. Apply it to database **`sensors`** before
+activating the companion ingestor and Pi publisher. Live schema inspection on
+2026-10-19 confirmed `sensors.public.bluetti_stats` and `bluetti_latest`; the
+pre-change server scripts matched the repository's parent revision by SHA-256.
+Validation of the new schema and repeat execution used a separate local
+PostgreSQL instance with a copy of that schema and view, not production data.
 
 ### Power (from bluetti-mqtt, BLE)
 

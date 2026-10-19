@@ -46,6 +46,7 @@ def finite_float(value):
 
 # Whitelisted public fields only. Combined messages never store raw payloads.
 GML_FIELDS = {
+    'gml/network': {},
     'gml/nav': {'lat':'gps_lat', 'lon':'gps_lon', 'speed_kmh':'gps_speed_kmh',
                 'satellites':'gps_satellites', 'fix':'gps_fix',
                 'gps_altitude_m':'gps_altitude_m', 'altitude_m':'altitude_m',
@@ -63,17 +64,30 @@ def gml_fields(topic, payload, now=None):
     """Translate supported public readings, rejecting old store-and-forward nav."""
     import json
     mapping = GML_FIELDS.get(topic)
-    if not mapping:
+    if mapping is None:
         return {}
     try:
         data = json.loads(payload)
         if not isinstance(data, dict):
+            return {}
+        if topic == 'gml/network' and 'ts' not in data:
             return {}
         if 'ts' in data:
             time = datetime.fromisoformat(data['ts'].replace('Z', '+00:00'))
             age = ((now or datetime.now(timezone.utc)) - time).total_seconds()
             if not 0 <= age <= TTL_SECONDS:
                 return {}
+        if topic == 'gml/network':
+            # One atomic, timestamped observation: rates never outlive their SSID.
+            network = {'ts': data['ts']}
+            for field in ('interface', 'kind', 'connection'):
+                value = data.get(field)
+                network[field] = value[:128] if isinstance(value, str) else None
+            network['state'] = data.get('state') if data.get('state') in ('Online', 'Offline', 'Unknown') else 'Unknown'
+            for field in ('downlink_mbps', 'uplink_mbps', 'ping_ms', 'ping_drop_rate'):
+                value = finite_float(data.get(field))
+                network[field] = value if value is not None and value >= 0 and (field != 'ping_drop_rate' or value <= 1) else None
+            return {'network': network}
         result = {target: data.get(source) for source, target in mapping.items()}
         for field in ('gps_lat', 'gps_lon'):
             if field in result:
