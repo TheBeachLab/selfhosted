@@ -91,6 +91,13 @@ pre-change server scripts matched the repository's parent revision by SHA-256.
 Validation of the new schema and repeat execution used a separate local
 PostgreSQL instance with a copy of that schema and view, not production data.
 
+Activated on 2026-10-19 after explicit deployment authorization. The running
+ingestor files matched revision `b2f92cb` by SHA-256; new public API rows included
+Shadow measurements at `09:21:39`, `09:22:21` and `09:23:46` UTC. Existing table
+and view grants were unchanged. Pre-deployment scripts, schema and website files
+are preserved in `/var/backups/mobile-lab/network-20261019-b2f92cb/`. Rollback can
+restore the previous code while keeping the additive nullable `network` field.
+
 ### Power (from bluetti-mqtt, BLE)
 
 | Topic | Type | Notes |
