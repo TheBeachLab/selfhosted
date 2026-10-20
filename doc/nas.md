@@ -102,3 +102,37 @@ The same filter behavior is documented in
 `/tmp` is a 122 MiB RAM filesystem on this NAS. Stage large packages in a
 private directory under `/volume1/@tmp`, verify their checksums there, and
 remove only the task's own temporary files after validation.
+
+## Mac Time Machine backup
+
+The Mac uses the existing `backups` share on DiskStation over SMB. In DSM
+6.2, **Control Panel → File Services → Advanced** has Bonjour discovery and
+**Bonjour Time Machine broadcast via SMB** enabled, with `backups` selected
+in **Set Time Machine Folders**. The share maps to `/volume1/backups`.
+
+Configured on 2026-10-20 in macOS Time Machine settings:
+
+- Destination: `smb://unix@DiskStation._smb._tcp.local/backups`.
+- Automatic hourly backups, with a **1,000 GB Time Machine quota**.
+- **No backup encryption**, explicitly chosen by Fran.
+- The internal Mac storage is included. The attached `/Volumes/1TB` remains
+  excluded; NAS shares are not backup sources.
+
+Verification: `tmutil destinationinfo` reported SMB and the 1 TB quota;
+`/Library/Preferences/com.apple.TimeMachine.plist` reported `AutoBackup = 1`
+and `QuotaGB = 1000`; `tmutil isexcluded` confirmed the external-drive
+exclusion. The active mount negotiated SMB 3.1.1. On the NAS,
+`/etc/avahi/services/tm.service` advertises `backups` through `_adisk._tcp`.
+The first backup was started; this configuration check does not establish
+that a full backup has completed or that a restore has been tested. Check
+`tmutil status` and `tmutil latestbackup` for the current result.
+
+The old AFP destination was forgotten in Time Machine settings without
+removing files. A root diagnostic confirmed that `/volume1/lost+found` was
+empty and `/volume1/backups` contained only metadata before the new backup
+was configured. Historical dates shown by the old Mac configuration were
+cached records, not proof that the old backup files still existed. The DSM
+task `TM read-only check 20261020` remains disabled; its diagnostic output
+is `/volume1/@tmp/tm-readonly-20261020-01a15934.txt`.
+
+Setup reference: [Synology Time Machine guide](https://kb.synology.com/en-ca/DSM/tutorial/How_to_back_up_files_from_Mac_to_Synology_NAS_with_Time_Machine).
