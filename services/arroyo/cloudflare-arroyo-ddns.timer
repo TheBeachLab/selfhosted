@@ -1,0 +1,8 @@
+[Unit]
+Description=Keep arroyo.ing pointing at the NUC
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=150s
+Persistent=true
+[Install]
+WantedBy=timers.target

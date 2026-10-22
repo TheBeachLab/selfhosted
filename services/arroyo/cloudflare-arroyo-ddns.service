@@ -1,0 +1,11 @@
+[Unit]
+Description=Update arroyo.ing IPv4 on Cloudflare
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/arroyo/ddns.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
