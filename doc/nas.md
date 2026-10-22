@@ -112,22 +112,27 @@ in **Set Time Machine Folders**. The share maps to `/volume1/backups`.
 
 Current configuration, verified on 2026-10-22:
 
-- Destination: `smb://unix@diskstation.tail520737.ts.net/backups`.
+- Destination: `smb://unix@NAS-Tailscale/backups`, displayed in Time Machine
+  as **backups – NAS-Tailscale**.
 - Automatic hourly backups, with a **1,000 GB Time Machine quota**.
 - **No backup encryption**, explicitly chosen by Fran.
 - The internal Mac storage is included. The attached `/Volumes/1TB` remains
   excluded; NAS shares are not backup sources.
 
-The destination uses the NAS's Tailscale hostname so the same share is
-reachable at home and from other networks. Keep Tailscale connected on both
-the Mac and NAS. The former Bonjour address
+The Mac's `/etc/hosts` maps the friendly alias `NAS-Tailscale` to the NAS's
+Tailscale IP, `100.92.107.45`. The same share is reachable at home and from
+other networks. Keep Tailscale connected on both the Mac and NAS. The NAS's
+MagicDNS name remains `diskstation.tail520737.ts.net`; the friendly alias
+is local to this Mac. Recreate the host entry when migrating the Mac, and
+update it if the NAS is re-registered with a different Tailscale IP.
+The former Bonjour address
 `DiskStation._smb._tcp.local` depended on local-network discovery.
 
 Verification: `tmutil destinationinfo` reported SMB and the 1 TB quota;
 `/Library/Preferences/com.apple.TimeMachine.plist` reported `AutoBackup = 1`
 and `QuotaGB = 1000`; `tmutil isexcluded` confirmed the external-drive
 exclusion. A manual connection test mounted the existing
-`Fran Macbook.sparsebundle` from the Tailscale hostname and entered Time
+`Fran Macbook.sparsebundle` from the friendly alias and entered Time
 Machine's verification phase. `smbutil statshares -a` reported that hostname
 and SMB 3.1.1; `netstat -anv -p tcp` showed an established connection to
 `100.92.107.45:445`, routed through `utun4`. The test was stopped after
