@@ -52,11 +52,18 @@ For this host, the maintenance unit selects the verified Node 24 runtime under
 through `sudo` when npm installs the package. The managed Gateway unit is
 regenerated with the same Node executable. The system Node remains available
 for Node-RED. Obtain the runtime from an official
-[Node.js release archive](https://nodejs.org/en/download/archive/v24.21.0)
+[Node.js release archive](https://nodejs.org/en/download/archive/v24.22.1)
 and verify its tarball against that release's `SHASUMS256.txt` before use.
 The updater fixes npm's global prefix to `/usr`: without this, running npm
 under the private Node installs OpenClaw into that Node tree while the managed
 `/usr/bin/openclaw` and Gateway package stay at the older version.
+
+The 2026-10-22 security update selected Node `24.22.1`: `current` points to
+`v24.22.1`, and the generated user Gateway unit's `ExecStart` and PATH both use
+that versioned directory. OpenClaw remains `2026.10.5`; its configuration content
+was unchanged and the restarted Gateway passed `status --require-rpc`.
+The NUC's separate Node-RED runtime is `22.23.4`. See the
+[Node security procedure and validation](nodejs.md#security-updates).
 
 Run and inspect maintenance manually:
 
