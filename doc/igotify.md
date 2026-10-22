@@ -17,8 +17,7 @@ Create or edit `/srv/gotify/docker-compose.yml` with the following content:
 ```yaml
 services:
   gotify:
-    # Keep this pinned until iGotify supports Gotify 3.x.
-    image: gotify/server:2.9.1
+    image: gotify/server:3.1.1@sha256:44fc5bbd1c0618878e33073d38c2c13126b48f245c3fe12236b1da48eb203b86
     container_name: gotify
     restart: unless-stopped
     volumes:
@@ -211,17 +210,26 @@ notify "Backup failed" "Disk full" 10
 
 ### iGotify compatibility
 
-Keep Gotify pinned to `2.9.1` while the installed iGotify app does not support
-Gotify 3.x. With Gotify `3.0.0`, APNs notifications can still arrive while the
-Notifications view remains stuck loading because the app cannot complete the
-new authenticated message-list workflow.
+Gotify is pinned to **3.1.1** and the deployed iGotify bridge is **1.6.0.1**
+(2026-10-22). The upstream
+[compatibility issue](https://github.com/androidseb25/iGotify-Notification-Assistent/issues/250)
+was closed with iGotify 1.6.0; the iOS app also needs 1.6.0 or newer to use
+Gotify 3's authenticated message-list workflow. Older iOS versions can receive
+pushes while failing to display the message list.
 
-See the [iGotify compatibility issue](https://github.com/androidseb25/iGotify-Notification-Assistent/issues/250)
-before moving to [Gotify 3](https://github.com/gotify/server/releases/tag/v3.0.0).
+The update from 2.9.1 closes
+[password-change authorization](https://github.com/gotify/server/security/advisories/GHSA-3hcj-9m7p-wwm9),
+[WebSocket denial of service](https://github.com/gotify/server/security/advisories/GHSA-78w7-2h8c-8252)
+and [user-creation elevation](https://github.com/gotify/server/security/advisories/GHSA-phfm-q6fr-wv34)
+issues. Follow the [Gotify 3 migration guide](https://gotify.net/docs/migrate-to-3)
+for new clients and privileged operations. Existing application and client tokens
+remain usable.
 
-Before upgrading beyond `2.9.1`, confirm compatibility in the upstream iGotify
-project and take a consistent backup of `/srv/gotify/gotify-data` while the
-Gotify container is stopped.
+Both containers were stopped for the consistent backup at
+`/var/backups/selfhosted/services-security-20261022/gotify.tgz`. The migrated
+database retained one user, three applications and six clients. The health
+endpoint returned green, and the existing bridge forwarded a normal safeguard
+notification with HTTP 200.
 
 ### Manual update
 

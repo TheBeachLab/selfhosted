@@ -1,6 +1,21 @@
 # Passkey access with Authentik
 
-The September 2026 setup uses Authentik 2026.8.2 instead of Nginx HTTP Basic.
+The deployment uses Authentik 2026.8.5 with passkey authentication.
+
+The 2026-10-22 patch replaced both server and worker images, preserving the
+existing flows, brand, proxy providers and PostgreSQL 16 volume. The
+[2026.8 release notes](https://docs.goauthentik.io/releases/2026.8/) document the
+2026.8.5 dependency updates following the eMudhra CA incident. The pulled image
+digest was `sha256:602227a86455d6772e3d16b7d852713c4f864f40df5df894abd1285bb53979a5`.
+Both containers passed their health checks; the live endpoint returned 200 and
+the database retained 5 users and 16 flows.
+
+Before future updates, stop the server and worker, save a PostgreSQL custom
+dump, verify it with `pg_restore -l`, and back up `/opt/authentik` privately.
+The 2026-10-22 copies are `authentik.dump` and `authentik-config.tgz` under
+`/var/backups/selfhosted/services-security-20261022/`. Update both tags together
+and check `/-/health/live/` after activation. The branding helper retains its
+2026.8.2 version guard: review its CSS/API assumptions before using it again.
 Open [auth.beachlab.org](https://auth.beachlab.org/) to sign in.
 
 | Application | URL |

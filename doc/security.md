@@ -1,5 +1,58 @@
 # Setup and secure remote ssh access
 
+## Service maintenance
+
+Security maintenance on 2026-10-22 used complete signed APT indexes and the
+vendors' application releases. Before future maintenance, refresh **all**
+configured sources, simulate the selected package set, save configuration and
+consistent application databases privately, then verify the running service
+and ordinary public requests after activation. For a deliberately scoped APT
+refresh, set `APT::Get::List-Cleanup=false` to preserve other cached indexes.
+
+| NUC component | Activated version | Vendor security source |
+| --- | --- | --- |
+| Nginx | 1.31.8 | [Security advisories](https://nginx.org/en/security_advisories.html): CVE-2026-15176, 93479, 95101, 97629 and 97205 |
+| Docker / containerd | 29.9.2 / 2.4.2 | [Docker 29 notes](https://docs.docker.com/engine/release-notes/29/): containerd CVE-2026-95839, Go HTTP/2 and CA revocation fixes |
+| Tailscale | 1.104.2 | [Changelog](https://tailscale.com/changelog): TS-2026-013; also applied on the VPS |
+| Headscale | 0.29.5 / Go 1.26.10 | [Sequential migrations and runtime rebuild](headscale.md) |
+| openHAB | 5.2.3 | [Core advisories](https://github.com/openhab/openhab-core/security/advisories): SSRF, forwarded-IP authentication, OAuth redirect/PKCE and XSS fixes in 5.2.2; 5.2.3 fixes the proxy regression |
+| Nextcloud / PHP | 33.0.10 / 8.4.27 | [Deployment and recovery](cloud.md) |
+| Node-RED | 5.0.9 | [Runtime and custom dependency maintenance](nodejs.md) |
+| Authentik | 2026.8.5 | [Deployment and recovery](authentik.md) |
+| Grafana | 13.0.11 | [Deployment and recovery](grafana.md) |
+| Gotify | 3.1.1 | [iGotify compatibility and recovery](igotify.md) |
+| TimescaleDB / PgBouncer | 2.31.0 / 1.26.1 | [Database migration and recovery](postgres.md) |
+
+The private NUC recovery directory is
+`/var/backups/selfhosted/services-security-20261022/`. Stop SQLite-backed
+services before archiving their data; use native PostgreSQL dumps and validate
+their table of contents. The NAS Restic job completed successfully, including
+its repository check, before the Nextcloud 33 migration.
+
+The NUC reboot at 08:59 UTC activated the updated libraries across services.
+After boot, systemd reported `running` with no failed units, all ten containers
+returned, the NAS mounted, Node-RED started its flows and MQTT connection, and
+Watson's Gateway passed its read-only RPC check. Public Nextcloud, Authentik,
+Grafana, Gotify, Node-RED, Vaultwarden, Headscale and openHAB endpoints responded.
+`needrestart` still lists PHP 8.4 because OPcache maps an executable
+`/anon_hugepage (deleted)` segment. Inspection found only anonymous shared memory,
+no deleted file-backed libraries, and the active FPM executable matched the
+installed package SHA-256. Repeated restarts are not a remedy for that mapping.
+
+openHAB's package hold remains intentional: review a specific patch release,
+use `--allow-change-held-packages` for that reviewed update, and preserve the
+hold afterwards. Its pre-update configuration and data are in `openhab.tgz`.
+The runtime returned HTTP 200 on loopback port 8080 after activation.
+
+Vaultwarden 1.37.4, CouchDB 3.5.3, taskchampion-sync 0.7.1 and the iGotify
+1.6.0.1 bridge were already at the reviewed vendor releases. The installed
+TiTiler rio-tiler 9.3.0 exceeds the patched 9.1 floor in its
+[expression advisory](https://github.com/developmentseed/titiler/security/advisories/GHSA-9cfx-96xx-wmh9).
+PostgreSQL 18.6 on the host and 16.15 in Authentik were current. Both hosts had
+no newer installed-package revision from the Ubuntu security pockets after
+the full index refresh. Ordinary `-updates` releases remain eligible for their
+normal maintenance schedule.
+
 <!-- vim-markdown-toc GFM -->
 
 - [Setup and secure remote ssh access](#setup-and-secure-remote-ssh-access)

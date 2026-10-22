@@ -3,6 +3,22 @@
 Grafana OSS visualizes read-only TimescaleDB data behind the server's TLS reverse
 proxy.
 
+Current deployment (2026-10-22): **13.0.11**, pinned in
+`/srv/grafana/docker-compose.yml` to
+`grafana/grafana:13.0.11@sha256:2abd2114bb65e4d6f0614206b7c882c1e7c6a992827ba08396aa5afc23ca07f5`.
+This replaces 13.0.2 and includes the fixes for
+[CVE-2026-93294](https://grafana.com/security/security-advisories/cve-2026-93294/),
+[CVE-2026-76154](https://grafana.com/security/security-advisories/cve-2026-76154/)
+and [CVE-2026-15815](https://grafana.com/security/security-advisories/cve-2026-15815/).
+The image is published under `grafana/grafana`; `grafana/grafana-oss:13.0.11`
+was unavailable.
+
+Stop Grafana before archiving its SQLite data and deployment configuration.
+The pre-update copy is
+`/var/backups/selfhosted/services-security-20261022/grafana.tgz`.
+After migration the database retained one user, one data source and zero saved
+dashboards; `https://grafana.beachlab.org/api/health` returned database `ok`.
+
 ## Architecture
 
 ```text

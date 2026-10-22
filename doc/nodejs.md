@@ -10,11 +10,44 @@ Live verification on 2026-10-22:
 | NUC / Watson OpenClaw | `/home/pink/.local/share/openclaw-node/current/bin/node` | `24.22.1` |
 | Liderflor VPS / Flora OpenClaw | `/usr/bin/node` | `24.22.1` (`24.22.1-1nodesource1`) |
 
-Node-RED remains `3.0.2`; both OpenClaw deployments remain `2026.10.5`.
-Their installed package metadata declares Node `>=14` and
+Node-RED is `5.0.9`; both OpenClaw deployments remain `2026.10.5`.
+Their installed package metadata declares Node `>=22.9.0` and
 `>=24.16.0 <25 || >=26.1.0`, respectively. The system and private NUC runtimes
 serve different applications; keep that separation when applying updates.
 See [Watson maintenance](watson-openclaw-runtime.md).
+
+### Node-RED application maintenance
+
+The 2026-10-22 maintenance advanced Node-RED 3.0.2 → 4.1.17 → 5.0.9.
+The complete 4.1.17 dependency tree still contained high-severity advisories in
+the palette installer's npm/pacote chain. The 5.0.9 production tree and the
+active custom-node tree both returned zero advisories from `npm audit --omit=dev`.
+Node remains on the patched 22.23.4 branch, preserving its native-module ABI.
+
+The custom node tree was repaired in a private copy with `npm audit fix`
+without `--force`; Dashboard advanced to 3.6.6. Five packages with no references
+in any current flow or configuration were removed from the active palette:
+`node-red-contrib-chatbot`, `node-red-contrib-homekit-bridged`,
+`node-red-contrib-openhab3`, `node-red-contrib-web-worldmap` and
+`node-red-node-openweathermap`. Chatbot and OpenHAB3 registered HTTP handlers
+when loaded even without flow instances. The complete former installation is
+retained in the private backup below. Reinstall only after reviewing the
+package and its dependencies against current advisories.
+
+Staging used `--safe --no-telemetry`, a copied user directory and loopback port
+1881. It loaded the installed node types and served HTTPS successfully without
+starting flows. Activation preserved the live flows, credentials, runtime key,
+settings and context; only the global package, custom `node_modules`,
+`package.json` and lockfile changed. The active service logged started flows and
+its MQTT broker connection. Backups are under
+`/var/backups/selfhosted/services-security-20261022/`, including
+`nodered-global.tgz`, `nodered-userdata.tgz` and `nodered-node_modules-pre5`.
+
+The legacy [Dashboard](https://github.com/node-red/node-red-dashboard) is
+deprecated; 3.6.6 preserves the existing dashboard nodes. Its
+[changelog](https://github.com/node-red/node-red-dashboard/blob/master/CHANGELOG.md)
+records removal of old bundled jQuery files in 3.6.5. A future dashboard
+replacement needs its own UI migration.
 
 ## Security updates
 
@@ -35,9 +68,11 @@ For future maintenance:
 1. Inventory **running executables** through `/proc/<pid>/exe` and their systemd
    units, not just the shell's `node --version`. Include private runtimes and
    child processes. Check the application's installed `engines.node`.
-2. Refresh the existing signed NodeSource index for the same major and simulate
+2. Refresh all configured signed APT indexes, then simulate
    `apt-get install --only-upgrade nodejs=<reviewed-version>`. Back up service
    configuration and the package inventory privately before applying it.
+   If a scoped index refresh is required, set `APT::Get::List-Cleanup=false`
+   so it does not discard the other repositories' cached indexes.
 3. For Watson, download the official Node archive into a new versioned directory
    and verify its exact filename against the release's `SHASUMS256.txt`. Hold
    the existing `openclaw-maintenance-update.lock` while switching `current`,

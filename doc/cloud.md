@@ -1,6 +1,6 @@
 # Nextcloud
 
-Nextcloud 32 running on Nginx + PHP 8.1 FPM + PostgreSQL.
+Nextcloud 33 running on Nginx + PHP 8.4 FPM + PostgreSQL.
 URL: `https://cloud.beachlab.org`
 
 <!-- vim-markdown-toc GFM -->
@@ -19,37 +19,61 @@ URL: `https://cloud.beachlab.org`
 
 | Item | Value |
 |---|---|
-| Version | 32.0.14 (live `occ status` and HTTPS status, 2026-10-21) |
+| Version | 33.0.10 (live `occ status` and HTTPS status, 2026-10-22) |
 | URL | https://cloud.beachlab.org |
-| Files | `/var/www/nextcloud` (9.4 GB) |
+| Files | `/var/www/nextcloud` |
 | Data dir | `/var/www/nextcloud/data` |
 | Config | `/var/www/nextcloud/config/config.php` |
 | Nginx vhost | `/etc/nginx/sites-available/nextcloud` |
-| PHP | 8.1 FPM (`php8.1-fpm`), Ubuntu package `8.1.2-1ubuntu2.28` |
+| PHP | 8.4 FPM (`php8.4-fpm`), `8.4.27-1+ubuntu22.04.1+deb.sury.org+1` |
 | Database | PostgreSQL `nextcloud` DB |
 
 History: was running NC 24.0.3, dormant for a while, resurrected and upgraded to NC 31 on 2026-03-30.
+
+### Migration to 33
+
+On 2026-10-22, the official updater advanced 32.0.14 → 32.0.15 → 33.0.10,
+verifying each download before replacing code and migrating PostgreSQL. The
+owner approved PHP 8.4 from the maintained
+[Ondřej Surý PPA](https://launchpad.net/~ondrej/+archive/ubuntu/php).
+[PHP 8.4.27](https://www.php.net/releases/8_4_27.php) includes the October
+security release. Nextcloud 33 requires PHP 8.2 or later; see the
+[33 upgrade notes](https://docs.nextcloud.com/server/33/admin_manual/release_notes/upgrade_to_33.html).
+
+After migration, 65 applications are enabled, including all 18 additional apps.
+Required compatibility updates were
+Deck 1.17.7, External sites 8.0.1, Notes 6.1.0 and Office 10.3.2. Maps retains
+PHP EXIF; CODE 26.4.402 remains on x86_64. The updater also installed compatible
+stable releases of Analytics, Contacts, Forms, GitHub integration and Tasks.
+Check future app compatibility against the
+[official platform feed](https://apps.nextcloud.com/api/v1/platform/33.0.10/apps.json).
+
+Private recovery copies are in
+`/var/backups/selfhosted/services-security-20261022/`: `nextcloud.dump` and
+`nextcloud-code.tgz` precede 32.0.15; `nextcloud-pre33.dump` and
+`nextcloud-code-pre33.tgz` precede 33. Data is covered by the successful NAS
+Restic backup. Restore code, database and data from a consistent point together.
 
 ## Quick checks
 
 ```bash
 # Status
-sudo -u www-data php /var/www/nextcloud/occ status
+sudo -u www-data php8.4 /var/www/nextcloud/occ status
 
 # Maintenance mode
-sudo -u www-data php /var/www/nextcloud/occ maintenance:mode
+sudo -u www-data php8.4 /var/www/nextcloud/occ maintenance:mode
 
 # Background jobs
-sudo -u www-data php /var/www/nextcloud/occ background:cron
+sudo -u www-data php8.4 /var/www/nextcloud/occ background:cron
 
 # Logs (last 20 lines)
-sudo -u www-data php /var/www/nextcloud/occ log:tail --lines=20
+sudo -u www-data php8.4 /var/www/nextcloud/occ log:tail --lines=20
 
 # HTTP check
 curl -sI https://cloud.beachlab.org | head -3
 
 # PHP FPM
-systemctl status php8.1-fpm
+systemctl status php8.4-fpm
 ```
 
 ## Updating Nextcloud
@@ -58,15 +82,15 @@ Nextcloud can only advance one major version per update. Use the built-in update
 
 ```bash
 # 1. Enable maintenance mode
-sudo -u www-data php /var/www/nextcloud/occ maintenance:mode --on
+sudo -u www-data php8.4 /var/www/nextcloud/occ maintenance:mode --on
 
 # 2. Run updater (repeats one major version at a time)
-sudo -u www-data php /var/www/nextcloud/updater/updater.phar --no-interaction
+sudo -u www-data php8.4 /var/www/nextcloud/updater/updater.phar --no-interaction
 
 # 3. Repeat step 2 until "No update available" or target version reached
 
 # 4. Confirm version
-sudo -u www-data php /var/www/nextcloud/occ status
+sudo -u www-data php8.4 /var/www/nextcloud/occ status
 ```
 
 The updater runs `occ upgrade` and disables maintenance mode automatically when using `--no-interaction`.
@@ -86,9 +110,9 @@ sudo ln -s /etc/nginx/sites-available/nextcloud /etc/nginx/sites-enabled/nextclo
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-The vhost uses PHP 8.1 FPM socket: `unix:/run/php/php8.1-fpm.sock`
+The vhost uses PHP 8.4 FPM socket: `unix:/run/php/php8.4-fpm.sock`.
 
-SSL cert: Let's Encrypt, valid until 2026-05-18 (auto-renews via certbot).
+TLS certificates auto-renew through Certbot.
 
 ```bash
 # Renew cert manually if needed
@@ -97,9 +121,25 @@ sudo certbot renew --nginx -d cloud.beachlab.org
 
 ## PHP
 
-PHP 8.1 installed. Required modules already active: `pdo_pgsql`, `imagick`, `gd`, `curl`, `zip`, `xml`, `mbstring`, `intl`, `bcmath`, `gmp`.
+PHP 8.4 is the active CLI and FPM runtime. The www-data cron explicitly uses
+`/usr/bin/php8.4`. Required modules include `pdo_pgsql`, `imagick`, `gd`, `curl`,
+`zip`, `xml`, `mbstring`, `intl`, `bcmath`, `gmp`, `redis`, `apcu` and `exif`.
+PHP 8.1 remains installed for recovery with its FPM service disabled.
 
-### Critical PHP security maintenance
+The PPA source is HTTPS and scoped with
+`signed-by=/usr/share/keyrings/ondrej-php.gpg`; the verified key fingerprint is
+`B8DC7E53946656EFBCE4C1DD71DAEAAB4AD4CAB6`. Preference
+`/etc/apt/preferences.d/nextcloud-php84` gives `php8.4*`, `php-common` and
+`libgd3` priority 500, and other PPA packages priority 50. Keep this scope so a
+PHP update does not replace unrelated Ubuntu packages. The `php-imagick` dummy
+metapackage was removed to avoid pulling PHP 8.5; the actual 8.1 extension remains.
+
+The existing pool settings and Nextcloud overrides were copied to `/etc/php/8.4/`:
+512 MiB FPM memory, 256 MiB OPcache, 32 MiB interned strings, 128 MiB APCu,
+CLI APCu enabled, and the existing pool environment. Validate `php-fpm8.4 -t`
+and `nginx -t` before restarting FPM or reloading Nginx.
+
+### PHP 8.1 security maintenance history (2026-10-21)
 
 Ubuntu 22.04 requires **at least `8.1.2-1ubuntu2.28`** for
 [CVE-2026-109618](https://ubuntu.com/security/CVE-2026-109618) and
@@ -190,10 +230,10 @@ Only needed if starting from scratch — skip if Nextcloud is already installed.
 # SSL cert
 sudo certbot certonly --nginx -d cloud.beachlab.org
 
-# PHP 8.1 modules
-sudo apt install php8.1-fpm php8.1-pgsql php8.1-gd php8.1-curl php8.1-zip \
-  php8.1-xml php8.1-mbstring php8.1-intl php8.1-bcmath php8.1-gmp \
-  php8.1-imagick imagemagick
+# PHP 8.4 modules (configure the scoped PPA described above first)
+sudo apt install php8.4-fpm php8.4-pgsql php8.4-gd php8.4-curl php8.4-zip \
+  php8.4-xml php8.4-mbstring php8.4-intl php8.4-bcmath php8.4-gmp \
+  php8.4-imagick php8.4-apcu php8.4-redis imagemagick
 
 # Download Nextcloud
 wget https://download.nextcloud.com/server/releases/latest.zip

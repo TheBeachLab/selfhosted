@@ -16,10 +16,10 @@
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| PostgreSQL | 18.3 | Active cluster on port 5432 |
-| TimescaleDB | 2.25.2 | Extensions for PG 17 and 18 |
+| PostgreSQL | 18.6 | Active cluster on port 5432 |
+| TimescaleDB | 2.31.0 | Packages for PG 17/18; active extension in `postgres`, `iot`, `sensors` |
 | PostGIS | 3.6.2 | For PG 18 |
-| pgBouncer | active | Connection pooler |
+| pgBouncer | 1.26.1 | Connection pooler |
 | pgAdmin | 9.13 | Web UI via Apache on port 5050 |
 
 Databases:
@@ -34,6 +34,26 @@ Databases:
 | `fmcu` | FMCU project |
 
 Config path: `/etc/postgresql/18/main/`
+
+On 2026-10-22, TimescaleDB packages advanced 2.30.2 → 2.31.0, and the actual
+database extensions advanced **2.24.0 → 2.31.0**. Package installation alone
+does not migrate existing extensions. The vendor releases address
+[job-owner validation](https://github.com/timescale/timescaledb/releases/tag/2.31.0),
+[permission checks](https://github.com/timescale/timescaledb/security/advisories/GHSA-hcfx-29v5-2rcw)
+and [upgrade search paths](https://github.com/timescale/timescaledb/security/advisories/GHSA-vgp2-jj5c-828m).
+
+Before updating, save each affected database with `pg_dump -Fc` and validate
+the dump's table of contents. The copies are
+`/var/backups/selfhosted/services-security-20261022/timescale-{postgres,iot,sensors}.dump`.
+After package activation, use a fresh `psql -X` session for
+`ALTER EXTENSION timescaledb UPDATE TO '2.31.0'`, then reconnect consumers.
+Read back `pg_extension.extversion` in every affected database. The migration
+retained the 0/0/3 hypertables in postgres/iot/sensors and the telemetry consumers
+returned active.
+
+[PgBouncer 1.26.1](https://www.pgbouncer.org/changelog.html) fixes
+CVE-2026-107350, CVE-2026-107349 and CVE-2026-107348. Restart the pooler after
+installing its package and verify the running version as well as PostgreSQL.
 
 ## Quick checks
 
