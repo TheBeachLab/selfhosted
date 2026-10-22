@@ -110,22 +110,50 @@ The Mac uses the existing `backups` share on DiskStation over SMB. In DSM
 **Bonjour Time Machine broadcast via SMB** enabled, with `backups` selected
 in **Set Time Machine Folders**. The share maps to `/volume1/backups`.
 
-Configured on 2026-10-20 in macOS Time Machine settings:
+Current configuration, verified on 2026-10-22:
 
-- Destination: `smb://unix@DiskStation._smb._tcp.local/backups`.
+- Destination: `smb://unix@diskstation.tail520737.ts.net/backups`.
 - Automatic hourly backups, with a **1,000 GB Time Machine quota**.
 - **No backup encryption**, explicitly chosen by Fran.
 - The internal Mac storage is included. The attached `/Volumes/1TB` remains
   excluded; NAS shares are not backup sources.
 
+The destination uses the NAS's Tailscale hostname so the same share is
+reachable at home and from other networks. Keep Tailscale connected on both
+the Mac and NAS. The former Bonjour address
+`DiskStation._smb._tcp.local` depended on local-network discovery.
+
 Verification: `tmutil destinationinfo` reported SMB and the 1 TB quota;
 `/Library/Preferences/com.apple.TimeMachine.plist` reported `AutoBackup = 1`
 and `QuotaGB = 1000`; `tmutil isexcluded` confirmed the external-drive
-exclusion. The active mount negotiated SMB 3.1.1. On the NAS,
+exclusion. A manual connection test mounted the existing
+`Fran Macbook.sparsebundle` from the Tailscale hostname and entered Time
+Machine's verification phase. `smbutil statshares -a` reported that hostname
+and SMB 3.1.1; `netstat -anv -p tcp` showed an established connection to
+`100.92.107.45:445`, routed through `utun4`. The test was stopped after
+connection verification; automatic hourly scheduling
+remains enabled. Use `tmutil status` and `tmutil latestbackup` to check backup
+progress and completed backups.
+
+To change this network destination, stop the active backup with
+`tmutil stopbackup`, then use `sudo tmutil setdestination -p` with the SMB
+URL; supply the password through the hidden prompt. If the previous image
+is still mounted, unmount its backup volume and eject the corresponding
+disk image before testing the new connection. Use normal unmount/eject
+operations and resolve a busy mount before proceeding. Once Time Machine
+has recognised the existing APFS backup image at the new destination,
+stop the connection test and wait for `tmutil status` to report
+`Running = 0`. Then restore the quota with
+`sudo tmutil setquota <destination-id> 1000` and read it back
+with `tmutil destinationinfo`. The new destination ID comes from that same
+command. `setquota` requires the destination to have been recognised as
+APFS; before the first mount it reports “Destination must be an APFS
+destination.” A quota set during initial image verification was overwritten
+when the test stopped; setting it after stopping persisted. Source: local
+`man tmutil` and the 2026-10-22 command readbacks.
+
+On the NAS,
 `/etc/avahi/services/tm.service` advertises `backups` through `_adisk._tcp`.
-The first backup was started; this configuration check does not establish
-that a full backup has completed or that a restore has been tested. Check
-`tmutil status` and `tmutil latestbackup` for the current result.
 
 The old AFP destination was forgotten in Time Machine settings without
 removing files. A root diagnostic confirmed that `/volume1/lost+found` was
