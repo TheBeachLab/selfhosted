@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Source: /Users/Papi/Repositories/strategy/websites/arroyo, commit c0cc2e6.
+Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 49b1832792d1757acb7752be08751da8745190ef. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
 
 ## Runtime
 
@@ -46,26 +46,28 @@ immediate check. Initial and subsequent scheduled service runs succeeded.
 Keep website changes local by default; publish only after explicit user
 authorization. Before each authorized content deployment, make a new
 UTC-stamped full copy of /var/www/arroyo.ing under /var/backups/arroyo.ing/
-with cp -a. The full snapshot used for the 2026-10-23 rollback is
-/var/backups/arroyo.ing/20261023114001Z; it contains the previously published
-source at commit c0cc2e6.
+with cp -a. The full snapshot made before the 2026-10-23 publication is
+/var/backups/arroyo.ing/20261023175318Z. It is a recoverable copy of the complete
+public root as it existed immediately before that deployment.
 
-From the strategy checkout, copy the top-level allowlisted files and assets
-in separate rsync calls. Keeping assets/ as the destination subdirectory is
-required: passing assets/ as a peer source with the top-level files flattens
-its contents into the web root. These commands preserve existing permissions
-and ownership, create no deletion set, and leave unrelated remote files alone:
+Stage the exact authorized source commit into a clean directory containing only
+the five top-level allowlisted files and assets/. Copy the five files in one
+rsync call, then copy the assets tree in a separate call to the explicit remote
+assets/ directory. Never pass assets/ as a peer source with the top-level files:
+that flattens its contents into the web root. These commands preserve existing
+permissions and ownership, create no deletion set, and leave unrelated remote
+files alone:
 
 ```sh
 rsync -a --no-perms --no-owner --no-group --omit-dir-times \
   --rsync-path='sudo rsync' -e 'ssh -o BatchMode=yes -o ConnectTimeout=12' \
-  websites/arroyo/index.html websites/arroyo/impressum.html \
-  websites/arroyo/datenschutz.html websites/arroyo/styles.css \
-  websites/arroyo/site.js pink-sudo:/var/www/arroyo.ing/
+  <staging-root>/index.html <staging-root>/impressum.html \
+  <staging-root>/datenschutz.html <staging-root>/styles.css \
+  <staging-root>/site.js pink-sudo:/var/www/arroyo.ing/
 
 rsync -a --no-perms --no-owner --no-group --omit-dir-times \
   --rsync-path='sudo rsync' -e 'ssh -o BatchMode=yes -o ConnectTimeout=12' \
-  websites/arroyo/assets/ pink-sudo:/var/www/arroyo.ing/assets/
+  <staging-root>/assets/ pink-sudo:/var/www/arroyo.ing/assets/
 ```
 
 Compare the complete live file list and SHA-256 hashes with the source allowlist,
@@ -75,22 +77,28 @@ every asset URL. To restore the full saved tree, run
 with the selected snapshot directory. This removes files that are absent from
 that full snapshot.
 
-## Verification
+## Current published version and verification
 
-2026-10-23 contact update changed the address to fran@arroyo.ing in
-index.html, site.js, impressum.html and datenschutz.html. This applies only
-the email replacement to the published c0cc2e6 site; the source change is
-strategy a65ee9d, which also updates the separate local review proposal.
-The pre-change full snapshot is /var/backups/arroyo.ing/20261023153643Z.
-All 13 other public files retain their hashes. Restore this snapshot only
-with the intended contact address reapplied.
+Published 2026-10-23 from strategy commit
+49b1832792d1757acb7752be08751da8745190ef. The public root contains the five
+allowlisted top-level files and 17 files under assets/ (22 files total). The
+complete live file list and SHA-256 manifest matched the staged source with no
+missing, extra, or mismatched files. The five project entries are Hotel MiM
+Sitges, Passeig de la Ribera 46, Passeig Marítim 59, Mirador de Can Pei, and
+Josep Carbonell. The public contact is fran@arroyo.ing.
 
-2026-10-23 rollback restored source commit c0cc2e6 from the full snapshot
-above. Apex and www HTTPS returned 200; HTTP redirected to HTTPS. All 17 live
-files matched the source and snapshot hashes, with no missing, extra or
-mismatched files. All 12 asset URLs returned 200. The original hero markup
-renders “Ideen werden Wirklichkeit.” and the page contains its two scenes:
-“hero scene” and “orbita scene”.
+Apex and www HTTPS returned 200; both HTTP hostnames returned 301 to their
+matching HTTPS hostname. All 17 asset URLs returned 200. The served stylesheet
+contains the 32 × 8 px gallery indicator, 28–32 px responsive slide gap,
+project-specific image aspect ratios, and automatic image height sizing. The
+full file-level readback and rollback command are recorded in
+`arroyo-deployment-readback.md` in the Codex task artifacts.
+
+The earlier 2026-10-23 rollback restored commit c0cc2e6 from
+/var/backups/arroyo.ing/20261023114001Z before this publication. It verified the
+original two-scene hero and 17-file state at that time. The earlier contact
+update had changed the address to fran@arroyo.ing in index.html, site.js,
+impressum.html and datenschutz.html; the current source retains that address.
 
 Initial hosting verification on 2026-10-22 passed Nginx syntax, JavaScript
 syntax, systemd unit validation, Certbot dry-run renewal for both hostnames
