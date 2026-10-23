@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Source: /Users/Papi/Repositories/strategy/websites/arroyo, commit c0cc2e6.
+Source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 0815ceee90ae23c8a518f9205f070bcea6a59513.
 
 ## Runtime
 
@@ -40,13 +40,48 @@ Inspect with systemctl status cloudflare-arroyo-ddns.timer and
 journalctl -u cloudflare-arroyo-ddns.service. Restarting the service performs an
 immediate check. Initial and subsequent scheduled service runs succeeded.
 
+## Publishing updates
+
+Before each content deployment, make a new UTC-stamped full copy of
+/var/www/arroyo.ing under /var/backups/arroyo.ing/ with cp -a. The current
+pre-deployment snapshot is /var/backups/arroyo.ing/20261023114001Z.
+
+From the strategy checkout, copy the top-level allowlisted files and assets
+in separate rsync calls. Keeping assets/ as the destination subdirectory is
+required: passing assets/ as a peer source with the top-level files flattens
+its contents into the web root. These commands preserve existing permissions
+and ownership, create no deletion set, and leave unrelated remote files alone:
+
+```sh
+rsync -a --no-perms --no-owner --no-group --omit-dir-times \
+  --rsync-path='sudo rsync' -e 'ssh -o BatchMode=yes -o ConnectTimeout=12' \
+  websites/arroyo/index.html websites/arroyo/impressum.html \
+  websites/arroyo/datenschutz.html websites/arroyo/styles.css \
+  websites/arroyo/site.js pink-sudo:/var/www/arroyo.ing/
+
+rsync -a --no-perms --no-owner --no-group --omit-dir-times \
+  --rsync-path='sudo rsync' -e 'ssh -o BatchMode=yes -o ConnectTimeout=12' \
+  websites/arroyo/assets/ pink-sudo:/var/www/arroyo.ing/assets/
+```
+
+Compare the complete live file list and SHA-256 hashes with the source allowlist,
+then read back both HTTPS hostnames, the HTTP redirect, homepage content and
+every asset URL. To restore the full saved tree, run
+`ssh pink-sudo 'sudo rsync -a --delete /var/backups/arroyo.ing/<snapshot>/ /var/www/arroyo.ing/'`
+with the selected snapshot directory. This removes files that are absent from
+that full snapshot.
+
 ## Verification
 
-Public HTTPS returned 200 for both names, and HTTP redirected to HTTPS.
-All 17 published files matched their local source hashes. README.md,
-SOURCES.md, DESIGN.md, design-qa.md, design/approved.png and .git/config
-were inaccessible. Nginx syntax, JavaScript syntax and systemd unit validation
-passed. Certbot dry-run renewal succeeded for both hostnames. The DDNS result was independently read back from the Cloudflare API.
+2026-10-23 deployment from source commit
+0815ceee90ae23c8a518f9205f070bcea6a59513: HTTPS returned 200 for apex and www;
+HTTP redirected to HTTPS. All 20 published files matched source SHA-256 hashes,
+all 15 asset URLs returned 200, and homepage hero, project names and LinkedIn
+link were confirmed. The pre-deployment snapshot is recorded above.
+
+Initial hosting verification on 2026-10-22 passed Nginx syntax, JavaScript
+syntax, systemd unit validation, Certbot dry-run renewal for both hostnames
+and independent Cloudflare DDNS readback.
 
 Official API: https://developers.cloudflare.com/api/resources/dns/subresources/records/
 DDNS: https://developers.cloudflare.com/dns/manage-dns-records/how-to/managing-dynamic-ip-addresses/
