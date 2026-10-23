@@ -85,3 +85,18 @@ new join page. Invalid unauthenticated access remains HTTP 401.
 
 Readback evidence: Mac `~/.config/cloudflare/orbita-redirect-verification.json`,
 Cloudflare DNS API, saved GitHub application settings, and the live browser.
+
+## Links from the other websites
+
+Arroyo (`arroyo.ing`), Beach Lab (`beachlab.org`) and all three Das Werklab
+landing locales (`daswerklab.de/de/`, `/en/`, `/es/`) link directly to
+`https://orbita.arroyo.ing/`. The 2026-10-23 update used source commits
+`1193518` in strategy, `943a0a0` in website and `ffe4fe3` in daswerklab.
+Public HTTPS responses from apex and www matched each updated source file;
+all ten pages exposed the new destination and no old Orbita-domain links.
+The destination returned 200. Readback evidence is saved on the Mac at
+`~/.config/cloudflare/orbita-inbound-links-20261023.json`.
+
+Pre-update production backups are under each site's `/var/backups/<domain>/`
+`orbita-links-20261023T201850Z/` directory. Beach Lab was published through
+its existing Git post-receive hook, retaining its tracked production history.

@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 49b1832792d1757acb7752be08751da8745190ef. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
+Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 1193518c988d7756983f4516bcccf0df6ba5f188. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
 
 ## Runtime
 
@@ -82,8 +82,14 @@ that full snapshot.
 
 ## Current published version and verification
 
+The Órbita name in its section links directly to `https://orbita.arroyo.ing/`.
+The link update was published on 2026-10-23 with all 22 public files matching
+the staged source. Before-update backup:
+`/var/backups/arroyo.ing/orbita-links-20261023T201850Z/site/`.
+Apex and www HTTPS readbacks matched the new index byte for byte.
+
 Published 2026-10-23 from strategy commit
-49b1832792d1757acb7752be08751da8745190ef. The public root contains the five
+1193518c988d7756983f4516bcccf0df6ba5f188. The public root contains the five
 allowlisted top-level files and 17 files under assets/ (22 files total). The
 complete live file list and SHA-256 manifest matched the staged source with no
 missing, extra, or mismatched files. The five project entries are Hotel MiM
