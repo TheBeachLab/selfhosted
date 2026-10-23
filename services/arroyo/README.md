@@ -20,6 +20,9 @@ DNS-only with TTL 60 seconds. The Cloudflare web proxy is disabled.
 Nginx configuration: /etc/nginx/sites-available/arroyo.ing, enabled by symlink.
 nginx.conf here is the live configuration; nginx-http.conf is the bootstrap
 configuration used before issuing the first certificate.
+The public `location /` sends `Cache-Control: no-cache` on successful and error
+responses so browsers revalidate HTML, JavaScript, stylesheets and assets; it
+does not disable storage (`no-store`).
 
 Let's Encrypt certificate covers both names. Initial expiry: 2027-01-20.
 HTTP redirects to HTTPS; the existing Certbot Nginx renewal service manages
