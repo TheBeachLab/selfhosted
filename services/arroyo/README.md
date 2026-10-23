@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 0815ceee90ae23c8a518f9205f070bcea6a59513.
+Source: /Users/Papi/Repositories/strategy/websites/arroyo, commit c0cc2e6.
 
 ## Runtime
 
@@ -42,9 +42,12 @@ immediate check. Initial and subsequent scheduled service runs succeeded.
 
 ## Publishing updates
 
-Before each content deployment, make a new UTC-stamped full copy of
-/var/www/arroyo.ing under /var/backups/arroyo.ing/ with cp -a. The current
-pre-deployment snapshot is /var/backups/arroyo.ing/20261023114001Z.
+Keep website changes local by default; publish only after explicit user
+authorization. Before each authorized content deployment, make a new
+UTC-stamped full copy of /var/www/arroyo.ing under /var/backups/arroyo.ing/
+with cp -a. The full snapshot used for the 2026-10-23 rollback is
+/var/backups/arroyo.ing/20261023114001Z; it contains the previously published
+source at commit c0cc2e6.
 
 From the strategy checkout, copy the top-level allowlisted files and assets
 in separate rsync calls. Keeping assets/ as the destination subdirectory is
@@ -73,11 +76,12 @@ that full snapshot.
 
 ## Verification
 
-2026-10-23 deployment from source commit
-0815ceee90ae23c8a518f9205f070bcea6a59513: HTTPS returned 200 for apex and www;
-HTTP redirected to HTTPS. All 20 published files matched source SHA-256 hashes,
-all 15 asset URLs returned 200, and homepage hero, project names and LinkedIn
-link were confirmed. The pre-deployment snapshot is recorded above.
+2026-10-23 rollback restored source commit c0cc2e6 from the full snapshot
+above. Apex and www HTTPS returned 200; HTTP redirected to HTTPS. All 17 live
+files matched the source and snapshot hashes, with no missing, extra or
+mismatched files. All 12 asset URLs returned 200. The original hero markup
+renders “Ideen werden Wirklichkeit.” and the page contains its two scenes:
+“hero scene” and “orbita scene”.
 
 Initial hosting verification on 2026-10-22 passed Nginx syntax, JavaScript
 syntax, systemd unit validation, Certbot dry-run renewal for both hostnames
