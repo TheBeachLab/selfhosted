@@ -11,6 +11,21 @@ The NUC runs `cloudflare-nuc-ddns.timer` every 150 seconds. It updates only
 IPv4 returned by ipify. `liderflorapi.beachlab.org` remains a fixed A record.
 The existing `cloudflare-arroyo-ddns.timer` continues to manage Arroyo separately.
 
+## Registrations
+
+The Cloudflare Registrar API confirmed both transfers completed on 2026-10-23:
+
+| Domain | Registrar | Expiry |
+| --- | --- | --- |
+| beachlab.org | Cloudflare | 2027-12-28 |
+| hexxan.com | Cloudflare | 2027-11-26 |
+| orbita.you | Namecheap | 2027-03-04 |
+
+Both transferred domains are active, transfer-locked and use contact redaction.
+Each retained its remaining term and gained one year. Automatic renewal remains
+off, matching the prior setting. Orbita remains locked at Namecheap because
+Cloudflare Registrar does not support `.you`.
+
 ## Installed configuration
 
 - `/usr/local/lib/cloudflare-ddns/ddns.py`: this updater.
