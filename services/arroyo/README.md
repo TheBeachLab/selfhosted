@@ -103,6 +103,10 @@ no-cache; the versioned CSS and JS bodies matched their full source SHA-256
 hashes. All 17 asset URLs returned 200 on both hosts. HTTP redirects to matching
 HTTPS hosts remain 301.
 
+A normal Safari Cmd+R reload then showed the five controls; selecting the Ribera 46
+dot changed the image, and autoplay continued between Hotel and Mirador. The
+full browser capture is `arroyo-safari-cache-fixed.png` in the Codex task artifacts.
+
 The 2026-10-24 predeployment snapshot is
 /var/backups/arroyo.ing/20261023223207Z. The complete live file-level manifest,
 versioned URL checks and rollback command are recorded in
