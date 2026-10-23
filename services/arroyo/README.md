@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 1193518c988d7756983f4516bcccf0df6ba5f188. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
+Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit f4ace99fc1af92d3aaae70054aab7746672f2c00. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
 
 ## Runtime
 
@@ -49,9 +49,9 @@ immediate check. Initial and subsequent scheduled service runs succeeded.
 Keep website changes local by default; publish only after explicit user
 authorization. Before each authorized content deployment, make a new
 UTC-stamped full copy of /var/www/arroyo.ing under /var/backups/arroyo.ing/
-with cp -a. The full snapshot made before the 2026-10-23 publication is
-/var/backups/arroyo.ing/20261023175318Z. It is a recoverable copy of the complete
-public root as it existed immediately before that deployment.
+with cp -a. The full snapshot made immediately before the 2026-10-24 cache-busting
+publication is /var/backups/arroyo.ing/20261023223207Z. It is a recoverable copy
+of the complete public root as it existed immediately before deployment.
 
 Stage the exact authorized source commit into a clean directory containing only
 the five top-level allowlisted files and assets/. Copy the five files in one
@@ -82,31 +82,35 @@ that full snapshot.
 
 ## Current published version and verification
 
-The Órbita name in its section links directly to `https://orbita.arroyo.ing/`.
-The link update was published on 2026-10-23 with all 22 public files matching
-the staged source. Before-update backup:
-`/var/backups/arroyo.ing/orbita-links-20261023T201850Z/site/`.
-Apex and www HTTPS readbacks matched the new index byte for byte.
+Published 2026-10-24 from strategy commit
+f4ace99fc1af92d3aaae70054aab7746672f2c00. The public root has the five
+allowlisted top-level files and 17 files under assets/ (22 files total); all
+live SHA-256 hashes match the staged source with no missing, extra or mismatched
+files. Only index.html, impressum.html and datenschutz.html changed from the
+previous published commit 1193518c988d7756983f4516bcccf0df6ba5f188. The CSS,
+JavaScript and all assets retain their exact prior bytes. The Órbita section
+still links to https://orbita.arroyo.ing/.
 
-Published 2026-10-23 from strategy commit
-1193518c988d7756983f4516bcccf0df6ba5f188. The public root contains the five
-allowlisted top-level files and 17 files under assets/ (22 files total). The
-complete live file list and SHA-256 manifest matched the staged source with no
-missing, extra, or mismatched files. The five project entries are Hotel MiM
-Sitges, Passeig de la Ribera 46, Passeig Marítim 59, Mirador de Can Pei, and
-Josep Carbonell. The public contact is fran@arroyo.ing.
+The Safari cache issue was observed after the updated HTML was live: an existing
+Safari tab showed the latest page markup with stale CSS and JavaScript from
+unversioned URLs; Option-Command-R fetched the current presentation. The
+Cache-Control: no-cache response makes browsers revalidate but does not replace
+old cached resources already stored under the same URL. The three HTML pages now
+request styles.css?v=f05d9e60da49, and the homepage requests
+site.js?v=b3eee4f6d407, so the browser fetches the reviewed CSS and carousel code
+under new URLs. GET readbacks on apex and www returned 200 with Cache-Control:
+no-cache; the versioned CSS and JS bodies matched their full source SHA-256
+hashes. All 17 asset URLs returned 200 on both hosts. HTTP redirects to matching
+HTTPS hosts remain 301.
 
-Apex and www HTTPS returned 200; both HTTP hostnames returned 301 to their
-matching HTTPS hostname. All 17 asset URLs returned 200. The served stylesheet
-contains the 32 × 8 px gallery indicator, 28–32 px responsive slide gap,
-project-specific image aspect ratios, and automatic image height sizing. The
-full file-level readback and rollback command are recorded in
+The 2026-10-24 predeployment snapshot is
+/var/backups/arroyo.ing/20261023223207Z. The complete live file-level manifest,
+versioned URL checks and rollback command are recorded in
 `arroyo-deployment-readback.md` in the Codex task artifacts.
 
 The earlier 2026-10-23 rollback restored commit c0cc2e6 from
-/var/backups/arroyo.ing/20261023114001Z before this publication. It verified the
-original two-scene hero and 17-file state at that time. The earlier contact
-update had changed the address to fran@arroyo.ing in index.html, site.js,
+/var/backups/arroyo.ing/20261023114001Z before the later publications. The earlier
+contact update changed the address to fran@arroyo.ing in index.html, site.js,
 impressum.html and datenschutz.html; the current source retains that address.
 
 Initial hosting verification on 2026-10-22 passed Nginx syntax, JavaScript
