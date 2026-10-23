@@ -10,7 +10,8 @@ Nginx serves /var/www/arroyo.ing. Only index.html, impressum.html,
 datenschutz.html, styles.css, site.js and assets/ are public. Internal source
 and design documentation are excluded. The privacy and imprint pages describe
 the live hosting. Both HTTP and HTTPS visitor access/error logging are disabled.
-The existing public contact email and phone are preserved.
+The public contact address is fran@arroyo.ing (iCloud Mail); the existing
+public phone is preserved.
 
 Cloudflare zone arroyo.ing (acc70087bb85ea5da695e277bf0f2d1d) uses an apex
 A record for the NUC public IPv4 and a www CNAME to arroyo.ing. Both are
@@ -75,6 +76,14 @@ with the selected snapshot directory. This removes files that are absent from
 that full snapshot.
 
 ## Verification
+
+2026-10-23 contact update changed the address to fran@arroyo.ing in
+index.html, site.js, impressum.html and datenschutz.html. This applies only
+the email replacement to the published c0cc2e6 site; the source change is
+strategy a65ee9d, which also updates the separate local review proposal.
+The pre-change full snapshot is /var/backups/arroyo.ing/20261023153643Z.
+All 13 other public files retain their hashes. Restore this snapshot only
+with the intended contact address reapplied.
 
 2026-10-23 rollback restored source commit c0cc2e6 from the full snapshot
 above. Apex and www HTTPS returned 200; HTTP redirected to HTTPS. All 17 live
