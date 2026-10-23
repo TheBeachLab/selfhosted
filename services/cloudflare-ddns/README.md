@@ -2,9 +2,11 @@
 
 Cloudflare is authoritative for `beachlab.org`, `hexxan.com` and `orbita.you`.
 The Free zones use `jakub.ns.cloudflare.com` and `keira.ns.cloudflare.com`.
-All 48 records (34 + 7 + 7) are DNS-only, with the original values and MX
-priorities retained. TTL is 1800 seconds. The imported mail records continue
-to route Beach Lab and Órbita to iCloud and Hexxan to Google.
+The migration retained all 48 records (34 + 7 + 7) as DNS-only, with the
+original values and MX priorities. TTL is 1800 seconds. Beach Lab mail routes
+to iCloud and Hexxan to Google. Orbita's five iCloud mail records were later
+removed at Fran's request; its zone now contains the two web records for the
+redirect to `orbita.arroyo.ing`.
 
 The NUC runs `cloudflare-nuc-ddns.timer` every 150 seconds. It updates only
 `beachlab.org`, `hs.beachlab.org`, `hexxan.com` and `orbita.you` to the public

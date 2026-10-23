@@ -17,7 +17,29 @@ The published content remains under `/var/www/orbita.you`; the new virtual host
 preserves the original API, authentication, upload and static-image locations.
 Nginx rewrites the old absolute web URLs in HTML, sitemaps and robots.txt.
 It also substitutes the old public Turnstile site key in JavaScript responses.
-Email addresses in the content are unchanged.
+Public contact is `fran@arroyo.ing`. The footer, About pages and structured
+organization metadata attribute the project to **Arroyo Ingenieurbüro**, linking
+to `https://arroyo.ing`, in English, German and Spanish.
+
+`update_contact.py` applies these approved text replacements to published HTML
+with a fresh backup directory. Run it after rebuilding an older frontend that
+still contains the previous contact or attribution:
+
+```sh
+sudo python3 update_contact.py --backup /var/backups/orbita-contact-NEW-UNIQUE-ID
+```
+
+The 2026-10-23 publication changed 29 HTML pages, backed up under
+`/var/backups/orbita-contact-20261023/`. Public HTTPS readback verified all 29.
+GitHub repository identifiers and the `maps.beachlab.org` map service remain
+valid technical dependencies.
+
+Cloudflare no longer publishes the two iCloud MX records, SPF TXT, Apple
+verification TXT or `sig1._domainkey` CNAME for `orbita.you`. Its A record and
+`www` CNAME continue serving the redirect. The email address/domain removal
+inside iCloud is being handled by Fran. Private before/after DNS snapshots and
+page readbacks are in the Mac
+`~/.config/cloudflare/orbita-contact-20261023/` directory.
 
 The new certificate is `/etc/letsencrypt/live/orbita.arroyo.ing/`, issued using
 `certbot certonly --webroot -w /var/www/letsencrypt -d orbita.arroyo.ing`.
