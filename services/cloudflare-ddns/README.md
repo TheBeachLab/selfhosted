@@ -25,6 +25,8 @@ Both transferred domains are active, transfer-locked and use contact redaction.
 Each retained its remaining term and gained one year. Automatic renewal remains
 off, matching the prior setting. Orbita remains locked at Namecheap because
 Cloudflare Registrar does not support `.you`.
+The site now uses [orbita.arroyo.ing](../orbita/README.md); the old domain
+redirects there and its automatic renewal is off.
 
 ## Installed configuration
 
