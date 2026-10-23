@@ -1,0 +1,12 @@
+[Unit]
+Description=Retire Namecheap DDNS after Cloudflare DNS migration grace period
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/var/lib/cloudflare-namecheap-retired
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/cloudflare-ddns/retire_namecheap.py
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true

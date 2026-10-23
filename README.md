@@ -46,6 +46,7 @@ and the legacy kernel's package requirements.
 - [Securing SSH access](doc/security.md)
 - [Backups](doc/backups.md)
 - [Web server (Nginx)](doc/web.md)
+- [Cloudflare DNS and NUC dynamic IP updates](services/cloudflare-ddns/README.md)
 - [Passkey access (Authentik)](doc/authentik.md)
 - [Service administration](doc/admin-panel.md)
 - [Git server](doc/git.md)

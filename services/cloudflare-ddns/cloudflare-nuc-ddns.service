@@ -1,0 +1,13 @@
+[Unit]
+Description=Update migrated NUC domains on Cloudflare
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/cloudflare-ddns/ddns.py
+TimeoutStartSec=120
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

@@ -1,0 +1,10 @@
+[Unit]
+Description=Keep migrated Cloudflare domains pointing at the NUC
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=150s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

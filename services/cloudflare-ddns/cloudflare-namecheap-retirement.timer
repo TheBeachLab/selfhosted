@@ -1,0 +1,10 @@
+[Unit]
+Description=Finish DNS migration after old 48-hour delegation caches expire
+
+[Timer]
+OnCalendar=2026-10-25 18:30:00 UTC
+Persistent=true
+Unit=cloudflare-namecheap-retirement.service
+
+[Install]
+WantedBy=timers.target
