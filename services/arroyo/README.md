@@ -2,7 +2,7 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit f4ace99fc1af92d3aaae70054aab7746672f2c00. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
+Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 6095520bf7231022438b3ff44580d6e00b19abd4. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
 
 ## Runtime
 
@@ -49,9 +49,9 @@ immediate check. Initial and subsequent scheduled service runs succeeded.
 Keep website changes local by default; publish only after explicit user
 authorization. Before each authorized content deployment, make a new
 UTC-stamped full copy of /var/www/arroyo.ing under /var/backups/arroyo.ing/
-with cp -a. The full snapshot made immediately before the 2026-10-24 cache-busting
-publication is /var/backups/arroyo.ing/20261023223207Z. It is a recoverable copy
-of the complete public root as it existed immediately before deployment.
+with cp -a. The full snapshot made immediately before the 2026-10-24 site publication is
+/var/backups/arroyo.ing/20261024083832Z. It is a recoverable copy of the complete
+public root as it existed immediately before deployment.
 
 Stage the exact authorized source commit into a clean directory containing only
 the five top-level allowlisted files and assets/. Copy the five files in one
@@ -83,33 +83,28 @@ that full snapshot.
 ## Current published version and verification
 
 Published 2026-10-24 from strategy commit
-f4ace99fc1af92d3aaae70054aab7746672f2c00. The public root has the five
-allowlisted top-level files and 17 files under assets/ (22 files total); all
-live SHA-256 hashes match the staged source with no missing, extra or mismatched
-files. Only index.html, impressum.html and datenschutz.html changed from the
-previous published commit 1193518c988d7756983f4516bcccf0df6ba5f188. The CSS,
-JavaScript and all assets retain their exact prior bytes. The Órbita section
-still links to https://orbita.arroyo.ing/.
+6095520bf7231022438b3ff44580d6e00b19abd4. The public root has the five
+allowlisted top-level files and 19 files under assets/ (24 files total); every
+live SHA-256 matches the staged source with no missing, extra or mismatched
+files. The published homepage includes the five-image project gallery, the
+Bauleitung/Projektmanagement/Wohnimmobilien service tabs and their concept image,
+the unaccented Orbita destination link, and the exact footer portrait with its
+biography. The legal pages carry the same versioned stylesheet reference.
 
-The Safari cache issue was observed after the updated HTML was live: an existing
-Safari tab showed the latest page markup with stale CSS and JavaScript from
-unversioned URLs; Option-Command-R fetched the current presentation. The
-Cache-Control: no-cache response makes browsers revalidate but does not replace
-old cached resources already stored under the same URL. The three HTML pages now
-request styles.css?v=f05d9e60da49, and the homepage requests
-site.js?v=b3eee4f6d407, so the browser fetches the reviewed CSS and carousel code
-under new URLs. GET readbacks on apex and www returned 200 with Cache-Control:
-no-cache; the versioned CSS and JS bodies matched their full source SHA-256
-hashes. All 17 asset URLs returned 200 on both hosts. HTTP redirects to matching
-HTTPS hosts remain 301.
+The prior Safari issue came from a browser reusing old CSS and JavaScript under
+unchanged URLs after it received newer HTML. `Cache-Control: no-cache` makes the
+browser revalidate, while content-hash query URLs ensure the reviewed resources
+are fetched as new URLs. The current pages request
+styles.css?v=c72ff9dc0188 and the homepage requests site.js?v=d5ec1f88508d.
+Apex and www GET readbacks returned 200 with `Cache-Control: no-cache` for all
+three HTML pages and all 19 asset paths. Both versioned CSS/JS URLs returned 200
+on both hosts and their bodies matched the full source SHA-256 hashes. Both HTTP
+hostnames still redirect to their matching HTTPS host with 301.
 
-A normal Safari Cmd+R reload then showed the five controls; selecting the Ribera 46
-dot changed the image, and autoplay continued between Hotel and Mirador. The
-full browser capture is `arroyo-safari-cache-fixed.png` in the Codex task artifacts.
-
-The 2026-10-24 predeployment snapshot is
-/var/backups/arroyo.ing/20261023223207Z. The complete live file-level manifest,
-versioned URL checks and rollback command are recorded in
+The full predeployment snapshot is
+/var/backups/arroyo.ing/20261024083832Z. Restore the complete saved tree with
+`ssh pink-sudo 'sudo rsync -a --delete /var/backups/arroyo.ing/20261024083832Z/ /var/www/arroyo.ing/'`.
+The complete file manifest and public readbacks are recorded in
 `arroyo-deployment-readback.md` in the Codex task artifacts.
 
 The earlier 2026-10-23 rollback restored commit c0cc2e6 from
