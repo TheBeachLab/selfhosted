@@ -2,3 +2,5 @@
 
 .status.degraded{color:#a76b17}.status.degraded i{background:#d39a35}
 .control-hint{margin:0;padding:0 20px 14px 106px;color:#53627c;font-size:12px;line-height:1.6;overflow-wrap:anywhere}.nested .control-hint{padding-left:121px}@media(max-width:650px){.control-hint,.nested .control-hint{padding:0 16px 14px 49px;font-size:11px}}
+
+.backup-controls{display:flex;align-items:center;gap:20px;padding:4px 20px 16px 106px}.backup-controls button{flex-shrink:0}.backup-controls p{margin:0 0 5px;color:var(--muted);font-size:12px;line-height:1.5}.backup-controls span{font-size:12px;color:#34445f}@media(max-width:650px){.backup-controls{align-items:flex-start;flex-direction:column;gap:10px;padding:4px 16px 16px 49px}}

@@ -109,8 +109,8 @@ class Handler(BaseHTTPRequestHandler):
         except cookies.CookieError:return self.response(403,{'error':'Vuelve a cargar el panel.'})
         token=self.headers.get('X-CSRF-Token',''); cookie=jar.get(COOKIE)
         if not cookie or not hmac.compare_digest(cookie.value,token) or not valid_token(token,user,self.server.secret):return self.response(403,{'error':'Vuelve a cargar el panel antes de continuar.'})
-        m=re.fullmatch(r'/api/services/([a-z]+)/(?P<action>start|stop)',urlsplit(self.path).path)
-        if not m or m[1] not in BY_ID:return self.response(404,{'error':'Operación no encontrada.'})
+        m=re.fullmatch(r'/api/services/([a-z]+)/(?P<action>start|stop|backup)',urlsplit(self.path).path)
+        if not m or m[1] not in BY_ID or m['action']=='backup' and m[1]!='minecraft':return self.response(404,{'error':'Operación no encontrada.'})
         try:
             size=int(self.headers.get('Content-Length','0'))
             if size<0 or size>1024:raise ValueError

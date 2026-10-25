@@ -45,6 +45,8 @@ for service in SERVICES:
 BY_ID = {s['id']: s for s in SERVICES}
 AI_IDS = {s['id'] for s in SERVICES if s['group'] == 'ai'}
 BUSY = {'active','activating','reloading','deactivating'}
+BACKUP_UNIT = 'mc-usb-backup-manual.service'
+BACKUP_UNITS = [BACKUP_UNIT, 'mc-usb-backup.service']
 
 class ControlError(Exception):
     pass
@@ -60,8 +62,8 @@ def run(args, timeout=8, check=False):
     return p
 
 def unit_states():
-    units=[s['unit'] for s in SERVICES if 'unit' in s]+['docker.service','remote-browser-firewall.service']
-    p=run(['/usr/bin/systemctl','show',*units,'--property=Id,LoadState,ActiveState,SubState,Result'])
+    units=[s['unit'] for s in SERVICES if 'unit' in s]+['docker.service','remote-browser-firewall.service',*BACKUP_UNITS]
+    p=run(['/usr/bin/systemctl','show',*units,'--property=Id,LoadState,ActiveState,SubState,Result,ExecMainExitTimestampMonotonic'])
     if p.returncode: raise ControlError('No se pudo consultar systemd.')
     return {d['Id']:d for block in p.stdout.strip().split('\n\n') if (d:=dict(l.split('=',1) for l in block.splitlines() if '=' in l)) and 'Id' in d}
 
@@ -111,6 +113,11 @@ def snapshot():
             else:state='active'
             detail=(health if running else None) or st.get('Status','not-created'); ready=running and state=='active'
         item.update(state=state,detail=detail,running=running,ready=ready,installed=installed,blocked=None)
+        if s['id']=='minecraft':
+            item['backup']={'busy':any(us.get(u,{}).get('ActiveState') in BUSY for u in BACKUP_UNITS),
+                            'installed':us.get(BACKUP_UNIT,{}).get('LoadState')=='loaded',
+                            'failed':us.get(BACKUP_UNIT,{}).get('Result','success')!='success',
+                            'completed':int(us.get(BACKUP_UNIT,{}).get('ExecMainExitTimestampMonotonic','0'))>0 and us.get(BACKUP_UNIT,{}).get('Result')=='success'}
         rows.append(item)
     active_gpu=[x['name'] for x in rows if x['id'] in AI_IDS and x['running']]
     for item in rows:
@@ -124,8 +131,13 @@ def snapshot():
     return {'services':rows,'dependencies':deps,'host':os.uname().nodename,'metrics':{'load':round(os.getloadavg()[0],2),'cpus':os.cpu_count(),'memoryUsed':(mem['MemTotal']-mem['MemAvailable'])*1024,'memoryTotal':mem['MemTotal']*1024,'diskUsed':disk.used,'diskTotal':disk.total},'updatedAt':time.time()}
 
 def plan(action,id,state):
-    if id not in BY_ID or action not in ('start','stop'): raise ControlError('Servicio u operación no permitidos.')
+    if id not in BY_ID or action not in ('start','stop','backup') or action=='backup' and id!='minecraft': raise ControlError('Servicio u operación no permitidos.')
     rows={x['id']:x for x in state['services']}; row=rows[id]; s=BY_ID[id]
+    if id=='minecraft' and row.get('backup',{}).get('busy'):raise ControlError('Espera a que termine el backup de Minecraft.')
+    if action=='backup':
+        if not row.get('backup',{}).get('installed'):raise ControlError('El backup manual no está instalado.')
+        if row.get('state') not in ('active','inactive','failed'):raise ControlError('Espera a que Minecraft termine de arrancar o apagarse.')
+        return [['/usr/bin/systemctl','start','--no-block',BACKUP_UNIT]]
     if action=='start' and row['blocked']:raise ControlError(row['blocked'])
     if action=='stop':
         dependents=[x['name'] for x in state['services'] if id in x['dependencies'] and x['running']]
@@ -144,12 +156,13 @@ def main():
     if os.geteuid()!=0:raise ControlError('El controlador requiere su autorización de sistema.')
     args=sys.argv[1:]
     if args==['status']:return snapshot()
-    if len(args)!=2 or args[0] not in ('start','stop') or args[1] not in BY_ID:raise ControlError('Servicio u operación no permitidos.')
+    if len(args)!=2 or args[0] not in ('start','stop','backup') or args[1] not in BY_ID or args[0]=='backup' and args[1]!='minecraft':raise ControlError('Servicio u operación no permitidos.')
     with open('/run/beachlab-admin-control.lock','w') as lock:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise ControlError('Hay otra operación en curso.') from None
         state=snapshot(); commands=plan(*args,state)
         for command in commands:run(command,timeout=150,check=True)
+        if args[0]=='backup':return {'ok':True,'service':'minecraft','state':'backup-requested'}
         # Return success only when the service actually reached its requested state.
         current={x['id']:x for x in snapshot()['services']}[args[1]]
         if args[0]=='start' and not current['running']:raise ControlError('El servicio no ha arrancado. Consulta su diario.')

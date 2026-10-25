@@ -18,21 +18,25 @@ readonly LOCK_FILE="/run/lock/minecraft-usb-backup.lock"
 readonly DISCORD_ENV="/home/pink/.openclaw/credentials/minecraft-discord-watchdog.env"
 
 force=0
+manual=0
 case "${1:-}" in
   "") ;;
   --force) force=1 ;;
-  *) echo "Usage: $0 [--force]" >&2; exit 2 ;;
+  --manual) force=1; manual=1 ;;
+  *) echo "Usage: $0 [--force|--manual]" >&2; exit 2 ;;
 esac
 
 install -d -m 0700 "${STATE_DIR}" "${LOCAL_DIR}"
 exec 9>"${LOCK_FILE}"
-flock -n 9 || { echo "Another Minecraft backup is already running."; exit 0; }
+flock -n 9 || { echo "Another Minecraft backup is already running." >&2; exit 1; }
 
 notify_failure() {
+  (( manual )) && return 0
   /usr/local/bin/notify.sh "Minecraft USB backup failed" "Check mc-usb-backup.service" || true
 }
 
 send_discord() {
+  (( manual )) && return 0
   content=$1
   [[ -f "${DISCORD_ENV}" ]] || return 0
   # shellcheck disable=SC1090
@@ -118,6 +122,19 @@ usb_fstype=$(findmnt -M "${USB_MOUNT}" -n -t exfat -o FSTYPE)
 }
 
 mkdir -p "${USB_DIR}"
+# Pin the mounted filesystem for the operation; ordinary unmounts must wait.
+cd "${USB_DIR}"
+world_bytes=$(du -sb "${WORLD_DIR}" | awk '{print $1}')
+for destination in "${USB_DIR}" "${LOCAL_DIR}"; do
+  available=$(df -B1 --output=avail "${destination}" | tail -1)
+  (( available > world_bytes + 1073741824 )) || { echo "Insufficient space for a new verified backup." >&2; exit 1; }
+done
+server_state=$(systemctl show minecraft-java.service -p ActiveState --value)
+case "${server_state}" in
+  active) live=1 ;;
+  inactive|failed) live=0 ;;
+  *) echo "Minecraft is changing state; retry when settled." >&2; exit 1 ;;
+esac
 
 rcon_port=$(property rcon.port)
 rcon_password=$(property rcon.password)
@@ -133,12 +150,16 @@ local_final="${LOCAL_DIR}/${archive}"
 usb_tmp="${USB_DIR}/.${archive}.partial"
 usb_final="${USB_DIR}/${archive}"
 
-rcon "save-off" >/dev/null
-save_disabled=1
-rcon "save-all flush" >/dev/null
+if (( live )); then
+  save_disabled=1
+  rcon "save-off" >/dev/null
+  rcon "save-all flush" >/dev/null
+fi
 tar --zstd -cf "${local_tmp}" -C "$(dirname "${WORLD_DIR}")" "$(basename "${WORLD_DIR}")"
-rcon "save-on" >/dev/null
-save_disabled=0
+if (( live )); then
+  rcon "save-on" >/dev/null
+  save_disabled=0
+fi
 
 zstd -q -t "${local_tmp}"
 tar --zstd -tf "${local_tmp}" >/dev/null
@@ -160,7 +181,7 @@ rotate() {
   directory=$1
   keep=$2
   mapfile -t files < <(
-    find "${directory}" -maxdepth 1 -type f -name 'world-*.tar.zst' -printf '%f\n' | sort -r
+    find "${directory}" -maxdepth 1 -type f -regextype posix-extended -regex '.*/world-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}Z\.tar\.zst' -printf '%f\n' | sort -r
   )
   for ((i=keep; i<${#files[@]}; i++)); do
     [[ "${files[i]}" =~ ^world-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}Z\.tar\.zst$ ]] || continue

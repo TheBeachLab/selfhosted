@@ -62,6 +62,39 @@ Minecraft uses `minecraft-java.service`, SIGINT and up to 120 seconds to save
 the world. The old `minecraftjava.service` is not used. The game port is 25565.
 Stopping Minecraft, Transmission or the browser requires confirmation.
 
+### Minecraft USB backup button
+
+The implementation adds **Guardar backup en USB** to Minecraft. Deployment is
+pending: install the updated panel/controller/sudoers, the updated
+`services/mc-usb-backup` as `/usr/local/sbin/mc-usb-backup`, and
+`services/admin-panel/mc-usb-backup-manual.service` under `/etc/systemd/system/`.
+Validate sudoers, reload systemd and restart only `beachlab-admin.service`.
+Preserve the existing scheduled-backup unit and its stop-respecting drop-in.
+
+The authenticated, CSRF-protected `POST /api/services/minecraft/backup` starts
+the manual oneshot asynchronously. It uses the existing USB routine with
+`--manual`, bypasses the activity check and reports progress/failure/completion
+through systemd. This mode does not send external notifications. The manual
+unit shares the panel control lock; the backup script also locks against the
+scheduled job. Minecraft stays stopped when already stopped; a running server
+uses RCON save-off/flush/save-on, including save-on on failure.
+
+The destination is the exFAT drive with UUID `FEF9-F572`, mounted at
+`/mnt/minecraft-backups`, in its `minecraft/` directory. On 2026-10-25, live
+`lsblk`, `findmnt`, `df` and file listing confirmed LEFTUSB, approximately 19 GiB
+free, two `world-*.tar.zst` rotation archives and a separate historical
+`pre26.3-...-world.tar.zst` archive. Only timestamped rotation archives and their
+checksums are pruned. The historical archive remains separate. A new archive
+must pass compression/tar validation and the copied USB SHA-256 comparison
+before pruning to the two newest; one local staging/archive copy remains as
+in the existing backup workflow. Insufficient space or a wrong/missing USB
+fails without pruning old copies.
+
+Validation: panel/API unit tests, Linux fixture tests in
+`tests/test_mc_usb_backup.py`, frontend production build and local Playwright
+desktop/mobile interaction checks. The UI fixture verifies queued, running and
+completed states; a real production backup remains a deployment check.
+
 A running container with a failed healthcheck shows **Revisar salud** and can
 still be stopped. Check the application's logs to find the failure.
 

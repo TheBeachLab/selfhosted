@@ -1,4 +1,5 @@
 # Root-owned helper validates action and service ID; never accepts a command/path.
+beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control backup minecraft
 beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control status
 beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start comfyui
 beachlab-admin ALL=(root) NOPASSWD: /usr/local/sbin/beachlab-admin-control start qwen

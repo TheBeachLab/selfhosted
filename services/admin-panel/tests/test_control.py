@@ -39,6 +39,26 @@ class ControllerTests(unittest.TestCase):
   s=state();next(r for r in s['services'] if r['id']=='minecraft')['running']=True
   self.assertEqual(c.plan('stop','minecraft',s),[['/usr/bin/systemctl','stop','minecraft-java.service']])
 
+class BackupControlTests(unittest.TestCase):
+ def ready(self):
+  s=state();r=next(r for r in s['services'] if r['id']=='minecraft')
+  r.update(state='inactive',backup={'installed':True,'busy':False})
+  return s,r
+ def test_backup_is_async_and_does_not_start_minecraft(self):
+  s,r=self.ready()
+  self.assertEqual(c.plan('backup','minecraft',s),[['/usr/bin/systemctl','start','--no-block',c.BACKUP_UNIT]])
+ def test_backup_only_available_for_minecraft(self):
+  with self.assertRaises(c.ControlError):c.plan('backup','grafana',state())
+ def test_busy_backup_blocks_toggle_and_duplicate(self):
+  s,r=self.ready();r['backup']['busy']=True
+  for action in ['backup','start','stop']:
+   with self.assertRaises(c.ControlError):c.plan(action,'minecraft',s)
+ def test_uninstalled_or_transitioning_rejected(self):
+  s,r=self.ready();r['state']='deactivating'
+  with self.assertRaises(c.ControlError):c.plan('backup','minecraft',s)
+  r['state']='inactive';r['backup']['installed']=False
+  with self.assertRaises(c.ControlError):c.plan('backup','minecraft',s)
+
 class ContainerStatusTests(unittest.TestCase):
  def snapshot(self,docker_state):
   units={'docker.service':{'ActiveState':'active'}}
