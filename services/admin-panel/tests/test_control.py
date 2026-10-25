@@ -61,12 +61,17 @@ class BackupControlTests(unittest.TestCase):
 
 class ContainerStatusTests(unittest.TestCase):
  def snapshot(self,docker_state):
-  units={'docker.service':{'ActiveState':'active'}}
+  units={'docker.service':{'ActiveState':'active'},c.BACKUP_UNIT:{'LoadState':'loaded','ActiveState':'inactive','Result':'success','ExecMainExitTimestampMonotonic':'0'}}
   containers={'transmission-vpn':{'State':docker_state}}
   with patch.object(c,'unit_states',return_value=units), patch.object(c,'containers',return_value=containers), patch.object(c,'gpu',return_value={'state':'active'}), patch.object(c.Path,'read_text',return_value='MemTotal: 16384000 kB\nMemAvailable: 8192000 kB\n'):
    return c.snapshot()
  def transmission(self,snapshot):
   return next(row for row in snapshot['services'] if row['id']=='transmission')
+ def test_backup_completion_survives_systemd_job_collection(self):
+  with patch.object(c.Path,'is_file',return_value=True):
+   snapshot=self.snapshot({'Running':False})
+  row=next(r for r in snapshot['services'] if r['id']=='minecraft')
+  self.assertTrue(row['backup']['completed']);self.assertFalse(row['backup']['busy'])
  def test_stopped_container_ignores_cached_health(self):
   for health in ['unhealthy','healthy','starting']:
    with self.subTest(health=health):

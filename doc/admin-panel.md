@@ -64,8 +64,8 @@ Stopping Minecraft, Transmission or the browser requires confirmation.
 
 ### Minecraft USB backup button
 
-The implementation adds **Guardar backup en USB** to Minecraft. Deployment is
-pending: install the updated panel/controller/sudoers, the updated
+**Guardar backup en USB** is deployed in Minecraft (2026-10-25). To deploy
+updates, install the panel/controller/sudoers, the updated
 `services/mc-usb-backup` as `/usr/local/sbin/mc-usb-backup`, and
 `services/admin-panel/mc-usb-backup-manual.service` under `/etc/systemd/system/`.
 Validate sudoers, reload systemd and restart only `beachlab-admin.service`.
@@ -93,7 +93,27 @@ fails without pruning old copies.
 Validation: panel/API unit tests, Linux fixture tests in
 `tests/test_mc_usb_backup.py`, frontend production build and local Playwright
 desktop/mobile interaction checks. The UI fixture verifies queued, running and
-completed states; a real production backup remains a deployment check.
+completed states. The deployed API accepted the authenticated backup request,
+reported `busy=true` during the copy, and kept Minecraft stopped. Anonymous
+public API access returned HTTP 401. Deployment recovery files are retained
+privately at `/var/backups/beachlab-admin/minecraft-button-20261025/`.
+
+The real manual run completed successfully and retained exactly these rotation
+archives on LEFTUSB: `world-2026-10-14_024629Z.tar.zst` and
+`world-2026-10-25_192215Z.tar.zst`, each with its `.sha256` file. The October 4
+archive and checksum were removed; the historical pre-26.3 archive was retained.
+The new archive is 3,868,314,580 bytes and its verified SHA-256 is
+`7abc9824c3372caeefc8cc34089122408579a7c061676fd1a18509e7f10b62d3`.
+Evidence: `mc-usb-backup-manual.service` journal success, USB inventory and
+matching local/USB checksum manifests. No partial archive remained.
+
+Successful manual runs persist their receipt at
+`/var/lib/minecraft-usb-backup/manual-last-success`; systemd may garbage-collect
+an inactive oneshot's exit timestamp. The initial receipt was reconstructed
+from the verified completed run and its journal after this behavior was found.
+The API then reported `completed=true`, `busy=false`, `failed=false`. Tests
+cover successful receipt creation and status after systemd job collection.
+
 
 A running container with a failed healthcheck shows **Revisar salud** and can
 still be stopped. Check the application's logs to find the failure.

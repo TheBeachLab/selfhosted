@@ -63,7 +63,7 @@ def run(args, timeout=8, check=False):
 
 def unit_states():
     units=[s['unit'] for s in SERVICES if 'unit' in s]+['docker.service','remote-browser-firewall.service',*BACKUP_UNITS]
-    p=run(['/usr/bin/systemctl','show',*units,'--property=Id,LoadState,ActiveState,SubState,Result,ExecMainExitTimestampMonotonic'])
+    p=run(['/usr/bin/systemctl','show',*units,'--property=Id,LoadState,ActiveState,SubState,Result'])
     if p.returncode: raise ControlError('No se pudo consultar systemd.')
     return {d['Id']:d for block in p.stdout.strip().split('\n\n') if (d:=dict(l.split('=',1) for l in block.splitlines() if '=' in l)) and 'Id' in d}
 
@@ -117,7 +117,7 @@ def snapshot():
             item['backup']={'busy':any(us.get(u,{}).get('ActiveState') in BUSY for u in BACKUP_UNITS),
                             'installed':us.get(BACKUP_UNIT,{}).get('LoadState')=='loaded',
                             'failed':us.get(BACKUP_UNIT,{}).get('Result','success')!='success',
-                            'completed':int(us.get(BACKUP_UNIT,{}).get('ExecMainExitTimestampMonotonic','0'))>0 and us.get(BACKUP_UNIT,{}).get('Result')=='success'}
+                            'completed':Path('/var/lib/minecraft-usb-backup/manual-last-success').is_file() and us.get(BACKUP_UNIT,{}).get('Result')=='success'}
         rows.append(item)
     active_gpu=[x['name'] for x in rows if x['id'] in AI_IDS and x['running']]
     for item in rows:

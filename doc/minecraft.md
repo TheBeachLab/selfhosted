@@ -110,8 +110,8 @@ The USB backup timer `mc-usb-backup.timer` is active (live systemd check on
 2026-10-25). It checks for player activity and respects a stopped server through
 its `10-respect-server-stop.conf` drop-in. See [Minecraft USB backups](backups.md#minecraft-usb-backups)
 for the verified USB destination and two-copy retention. The admin panel's
-[manual backup button](admin-panel.md#minecraft-usb-backup-button) is implemented
-and awaiting deployment.
+[manual backup button](admin-panel.md#minecraft-usb-backup-button) was deployed on
+2026-10-25 and can also copy a stopped world without starting the game server.
 
 The former script remains available for a manual backup if needed:
 

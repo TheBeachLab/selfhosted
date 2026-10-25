@@ -195,6 +195,11 @@ rotate "${LOCAL_DIR}" 1
 printf '%s\n' "${now}" >"${CHECKPOINT}.tmp"
 mv "${CHECKPOINT}.tmp" "${CHECKPOINT}"
 
+if (( manual )); then
+  printf '%s\n' "${archive}" >"${STATE_DIR}/manual-last-success.tmp"
+  mv "${STATE_DIR}/manual-last-success.tmp" "${STATE_DIR}/manual-last-success"
+fi
+
 echo "Backup complete: ${usb_final}"
 ls -lh "${usb_final}"
 archive_size=$(numfmt --to=iec-i --suffix=B "$(stat -c %s "${usb_final}")")

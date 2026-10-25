@@ -68,6 +68,7 @@ elif name=='cp':
         result = self.run_backup()
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(len(self.archives()),2)
+        self.assertEqual((self.root/'state/manual-last-success').read_text().strip(),self.archives()[-1])
         self.assertTrue(self.archives()[0].startswith('world-2026-10-14'))
         self.assertTrue((self.files/'pre26.3-world.tar.zst').exists())
         self.assertNotIn('mcrcon ',self.log.read_text())
