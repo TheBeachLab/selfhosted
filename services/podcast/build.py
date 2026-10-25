@@ -119,10 +119,12 @@ def build(content, media, output):
     # Upcoming copy is explicitly public metadata, independent from private draft manifests.
     upcoming = show.get('upcoming')
     if not cards and upcoming:
-        body = (f'<article class="episode"><p class="episode-status">{int(upcoming["number"]):02d} / In Vorbereitung</p>'
+        premiere = datetime.strptime(upcoming["premiere_date"], "%Y-%m-%d")
+        status = f'Premiere am {premiere:%d.%m.%Y}'
+        body = (f'<article class="episode"><p class="episode-status">{int(upcoming["number"]):02d} / {status}</p>'
                 f'<div class="episode-copy"><h2>{escape(upcoming["title"])}</h2>'
                 f'<p>{escape(upcoming["description"])}</p>'
-                '<p class="availability">Die Aufnahme folgt. Noch kein Audio verfügbar.</p></div></article>')
+                '</div></article>')
     elif not cards:
         body = '<p>Die erste Folge ist in Vorbereitung.</p>'
     template = Template(Path(__file__).with_name('page.html').read_text())
