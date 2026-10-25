@@ -58,6 +58,8 @@ and the legacy kernel's package requirements.
 
 ### Services
 
+- [Small-space housing podcast](services/podcast/README.md)
+
 - [Das Werklab voice receptionist (ES/EN/DE)](doc/daswerklab-voice.md)
 - [Vaultwarden password manager](doc/vaultwarden.md)
 - [Buchhaltung: repositorio propio privado](doc/buchhaltung.md)

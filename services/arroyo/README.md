@@ -118,3 +118,11 @@ and independent Cloudflare DDNS readback.
 
 Official API: https://developers.cloudflare.com/api/resources/dns/subresources/records/
 DDNS: https://developers.cloudflare.com/dns/manage-dns-records/how-to/managing-dynamic-ip-addresses/
+
+## Podcast URL
+
+Since 2026-10-25, `/podcast/` is served by the dedicated
+`/etc/nginx/snippets/housing-podcast.conf` include, from
+`/var/www/podcast/current/`. It is separate from the main website's file
+allowlist. Keep this include when updating the virtual host. See
+[the podcast runtime and publishing workflow](../podcast/README.md).
