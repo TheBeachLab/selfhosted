@@ -103,3 +103,23 @@ drafts/001-de.md, content/show.json and incoming/ returned 404. The live RSS
 parsed successfully and contained zero items; the page/feed body sizes were
 933 and 711 bytes. Private backups have configured coverage, not a verified
 new snapshot or restore.
+
+## Cover and page update — 2026-10-25
+
+The show name is now **Klein wohnen, gut leben**. The approved cover is tracked
+in assets/cover-20261025.jpg and copied byte-for-byte from the final Downloads
+export. `page.html` is the static template beside build.py; install and back up
+both together. The page uses the existing Arroyo wordmark and system fonts,
+a brief German description and an explicitly public upcoming-episode summary.
+The user removed the proposed Quellen and promotional sections. Internal
+provenance and the revised visual spec are in DESIGN.md.
+
+Episode 001 remains a private draft, excluded from RSS. `show.upcoming` is
+separate public preview copy. The feed now carries the approved title, description
+and cover. Site/feed remain noindex until the first actual episode is released.
+
+Published release: `20261025T183117Z-1049414`. Pre-change content/runtime backup:
+`/var/backups/housing-podcast/20261025T183117Z`. Prior release:
+`releases/20261025T164611Z-917057`. Independent live HTML, RSS and cover hashes
+match the local build; public image MIME is image/jpeg. Existing main-site,
+legal and Orbita links return 200. Desktop/mobile IAB review passed.

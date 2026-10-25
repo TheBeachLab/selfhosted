@@ -21,6 +21,7 @@ class PublicationBoundaries(unittest.TestCase):
         self.media = self.root / 'media'
         self.media.mkdir()
         self.show = json.loads(Path(__file__).with_name('content').joinpath('show.json').read_text())
+        self.show.update(cover=None, provisional_title=True)
         self.episode = json.loads(Path(__file__).with_name('content').joinpath('episodes/001.json').read_text())
 
     def run_build(self):

@@ -1,12 +1,17 @@
 {
-  "title": "Micro Housing",
-  "provisional_title": true,
-  "description": "Kleine Wohnungen, Tiny Houses und gutes Wohnen für eine Person. Ein Podcast mit Fran.",
+  "title": "Klein wohnen, gut leben",
+  "provisional_title": false,
+  "description": "Kleine Wohnungen und Tiny Houses für eine Person. Grundrisse, Konstruktion, Technik und der Alltag auf wenig Raum.",
   "author": "Fran",
   "language": "de-DE",
   "category": "Leisure",
   "subcategory": "Home & Garden",
   "explicit": false,
   "base_url": "https://arroyo.ing/podcast/",
-  "cover": null
+  "cover": "cover-20261025.jpg",
+  "upcoming": {
+    "number": 1,
+    "title": "Wie viel Platz braucht ein Mensch zum Leben?",
+    "description": "Schlafen, arbeiten, kochen: Welche Räume brauchen wir im Alltag? Die erste Folge fragt, wie Grundriss und Gewohnheiten unseren Platzbedarf verändern."
+  }
 }

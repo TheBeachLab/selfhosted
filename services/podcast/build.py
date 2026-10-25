@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from string import Template
 import xml.etree.ElementTree as ET
 
 ITUNES = 'http://www.itunes.com/dtds/podcast-1.0.dtd'
@@ -108,16 +109,27 @@ def build(content, media, output):
     ET.indent(root)
     ET.ElementTree(root).write(output / 'feed.xml', encoding='utf-8', xml_declaration=True)
     title = escape(show['title'])
-    label = '<p>Arbeitstitel · Podcast in Vorbereitung</p>' if show.get('provisional_title') else ''
-    body = ''.join(cards) or '<p>Die erste Folge ist in Vorbereitung.</p>'
-    (output / 'index.html').write_text(f'''<!doctype html>
-<html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex"><title>{title} — Podcast</title>
-<link rel="alternate" type="application/rss+xml" title="Podcast" href="feed.xml">
-<style>body{{font:18px/1.6 system-ui,sans-serif;max-width:720px;margin:60px auto;padding:0 24px;color:#24352d;background:#faf9f5}}a{{color:#265b47}}audio{{width:100%}}article{{border-top:1px solid #ddd;padding:24px 0}}footer{{margin-top:60px;font-size:14px}}</style>
-<main>{label}<h1>{title}</h1><p>{escape(show['description'])}</p>{body}
-<p><a href="feed.xml">RSS-Feed</a></p></main>
-<footer><a href="/">Arroyo</a> · <a href="/impressum.html">Impressum</a> · <a href="/datenschutz.html">Datenschutz</a></footer></html>''')
+    cover_name = show.get('cover')
+    cover_image = (f'<img class="cover" src="media/{escape(cover_name, quote=True)}" '
+                   f'width="3000" height="3000" alt="{title} – Podcast-Cover mit Fran und einer kleinen Hütte im Schnee" '
+                   'fetchpriority="high">') if cover_name else ''
+    og_image = (f'<meta property="og:image" content="{escape(base + "media/" + cover_name, quote=True)}">'
+                if cover_name else '')
+    body = '<div class="published">' + ''.join(cards) + '</div>' if cards else ''
+    # Upcoming copy is explicitly public metadata, independent from private draft manifests.
+    upcoming = show.get('upcoming')
+    if not cards and upcoming:
+        body = (f'<article class="episode"><p class="episode-status">{int(upcoming["number"]):02d} / In Vorbereitung</p>'
+                f'<div class="episode-copy"><h2>{escape(upcoming["title"])}</h2>'
+                f'<p>{escape(upcoming["description"])}</p>'
+                '<p class="availability">Die Aufnahme folgt. Noch kein Audio verfügbar.</p></div></article>')
+    elif not cards:
+        body = '<p>Die erste Folge ist in Vorbereitung.</p>'
+    template = Template(Path(__file__).with_name('page.html').read_text())
+    (output / 'index.html').write_text(template.substitute(
+        title=title, display_title=title.replace(", ", ",<br>"), description=escape(show['description'], quote=True),
+        base_url=escape(base, quote=True), cover_image=cover_image,
+        og_image=og_image, episodes=body))
     return len(cards)
 
 
