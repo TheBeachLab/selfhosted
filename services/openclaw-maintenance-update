@@ -163,10 +163,15 @@ write_backup_manifest() {
 wait_for_rpc() {
   expected=$1
   for _ in $(seq 1 "${RPC_ATTEMPTS}"); do
-    status_output=$("${TIMEOUT_BIN}" 15 "${OPENCLAW_BIN}" gateway status 2>&1 || true)
+    # Human-readable probe labels change between releases. Require the CLI's
+    # RPC exit status instead; a running process alone is not readiness.
+    rpc_ready=0
+    if status_output=$("${TIMEOUT_BIN}" 15 "${OPENCLAW_BIN}" gateway status --require-rpc 2>&1); then
+      rpc_ready=1
+    fi
     gateway_state=$(systemctl_user is-active "${GATEWAY_UNIT}" 2>/dev/null || true)
     if [[ "${gateway_state}" == "active" ]] &&
-      grep -Fq 'Connectivity probe: ok' <<<"${status_output}" &&
+      (( rpc_ready == 1 )) &&
       grep -Fq "Gateway version: ${expected}" <<<"${status_output}"; then
       return 0
     fi

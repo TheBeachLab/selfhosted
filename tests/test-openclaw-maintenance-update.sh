@@ -68,10 +68,12 @@ case "${1:-}" in
   gateway)
     case "${2:-}" in
       status)
+        [[ "${3:-}" == --require-rpc ]] || exit 2
         if [[ "$(<"${TEST_RPC_MODE_FILE}")" == ready ]]; then
-          printf "Gateway version: %s\nConnectivity probe: ok\n" "$(<"${TEST_TARGET_FILE}")"
+          printf "Gateway version: %s\nConnectivity check: ok\n" "$(<"${TEST_TARGET_FILE}")"
         else
-          printf "Connectivity probe: failed\n"
+          # A version and stale success text must not override a failed RPC exit.
+          printf "Gateway version: %s\nConnectivity probe: ok\n" "$(<"${TEST_TARGET_FILE}")"
           exit 1
         fi
         ;;

@@ -77,6 +77,31 @@ Never start the Gateway after a failed migration. Keep its protected backup,
 inspect the exact error, and verify every SQLite database with
 `PRAGMA quick_check` before any retry.
 
+### Recovery and readiness check (2026-10-25)
+
+The automatic 2026.10.6 → 2026.10.7 update stopped a healthy Gateway because
+the maintenance script required the literal `Connectivity probe: ok`. The
+04:29:58 UTC runtime log instead reported `Connectivity check: ok`, version
+2026.10.7 and an active process; maintenance stopped it at 04:30 UTC. The
+updater now requires a successful `gateway status --require-rpc` exit code,
+an active service and the expected Gateway version. Tests cover the renamed
+label and a failed RPC exit even when output contains a success-looking label.
+
+Recovery retained the original pre-update backup and a full private state
+archive, ran `openclaw update repair --yes --no-restart`, then
+`openclaw doctor --fix --non-interactive --yes`. The standalone Doctor completed
+the pending plugin migrations and restarted the Gateway. Config validation
+passed, all 33 resulting SQLite databases passed `quick_check`, and Doctor's
+final log contained no unfinished data/settings migration warnings.
+
+A Gateway agent turn returned `WATSON_OK` with status `ok`, runtime `codex`
+and effective response model `gpt-6.1-sol` (run
+`05e88577-65bf-42bc-957b-5363354fa91b`). Telegram's channel probe reported
+connected and working. WhatsApp reported logged out; its direct messages
+remain disabled and reconnecting requires interactive login.
+Private recovery logs, the response receipt and backups are under
+`~/.openclaw-backups/updates/20261025-manual-repair-190334/` on Watson.
+
 ### OpenClaw 2026.8.1 migration notes
 
 OpenClaw's official issue tracker records two relevant 2026.8.1 regressions:
