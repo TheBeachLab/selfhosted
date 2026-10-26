@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tarfile
 import tempfile
@@ -21,6 +22,11 @@ def archive(name="zod", target="4.6.6", dependencies=None, unsafe=False):
         member = tarfile.TarInfo("../escape" if unsafe else "package/package.json")
         member.size = len(data)
         tar.addfile(member, io.BytesIO(data))
+        if not unsafe:
+            member = tarfile.TarInfo("package/lib/index.js")
+            data = b"module.exports = true;\n"
+            member.size = len(data)
+            tar.addfile(member, io.BytesIO(data))
     return stream.getvalue()
 
 
@@ -64,6 +70,20 @@ class BackportTests(unittest.TestCase):
         (self.root / ".security-backport-in-progress").write_text("interrupted")
         with self.assertRaisesRegex(ValueError, "Interrupted"):
             m.pending(self.root)
+
+    def test_public_vendor_files_remain_readable_under_private_umask(self):
+        raw = archive()
+        self.policy(raw)
+        cache = self.cache(raw)
+        previous = os.umask(0o077)
+        try:
+            m.apply(self.root, cache)
+        finally:
+            os.umask(previous)
+        self.assertEqual(self.package.stat().st_mode & 0o777, 0o755)
+        self.assertEqual((self.package / "package.json").stat().st_mode & 0o777, 0o644)
+        self.assertEqual((self.package / "lib").stat().st_mode & 0o777, 0o755)
+        self.assertEqual((self.package / "lib/index.js").stat().st_mode & 0o777, 0o644)
 
     def test_safe_newer_version_is_not_downgraded(self):
         (self.package / "package.json").write_text('{"name":"zod","version":"4.7.0"}')

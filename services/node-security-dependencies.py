@@ -71,6 +71,14 @@ def unpack(raw, destination, expected_name, expected_version, old):
     for field in ("dependencies", "optionalDependencies", "peerDependencies"):
         if metadata.get(field, {}) != old.get(field, {}):
             raise ValueError("Dependency contract changed: " + field)
+    # npm archives need not contain explicit directory members. With a private
+    # maintenance umask, tarfile otherwise creates those parents as 0700 and
+    # a non-root Gateway cannot load them. These are verified public vendor
+    # files only; state, configuration and existing nested dependencies are not
+    # normalized here.
+    for path in [package, *package.rglob("*")]:
+        mode = path.stat().st_mode
+        path.chmod(0o755 if path.is_dir() or mode & 0o111 else 0o644)
     return package
 
 

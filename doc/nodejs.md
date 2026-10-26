@@ -67,7 +67,9 @@ with affected exact dependency pins. The NUC uses these reviewed local backports
 `services/node-security-dependencies.py` checks every installed copy, including
 npm's nested dependencies. It uses fixed vendor tarball SHA-512 values, validates
 package identity, rejects links/path traversal and changed dependency contracts,
-and adjusts exact consumer pins to match. Newer safe versions and other majors
+and adjusts exact consumer pins to match. Verified public vendor files are
+normalized to 0644/0755 even under a private umask; state and configuration
+permissions are preserved. Newer safe versions and other majors
 are preserved. A transaction marker and unfinished-swap detection fail closed
 on interruption; restore the protected code backup before retrying. The policy
 covers the listed reviewed majors, not advisories published in the future.

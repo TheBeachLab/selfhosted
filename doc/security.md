@@ -53,6 +53,29 @@ Watson code/state were retained. Signed full-source APT refresh succeeded; no
 newer Ubuntu security-pocket package or machine reboot was pending. The VPS was
 not modified in this activation.
 
+### VPS security activation, 2026-10-26
+
+On Liderflor, restarting only unattended-upgrades activated installed zlib
+`1:1.3.dfsg-3.1ubuntu2.3`; the new process has no deleted zlib mapping.
+Redirection 5.8.0 → 5.10.1 passed WordPress.org checksums and database checks;
+PHP-FPM reloaded and public WordPress, API, shop and admin requests passed.
+Flora OpenClaw 2026.10.7 now uses the same reviewed dependency floors as Watson.
+Its canonical updater reapplies them before Doctor/start after every core install.
+
+A full private code/configuration/state archive remains on the VPS under
+`/var/backups/lider-ops/security-20261026/`. All 16 SQLite checks passed and
+configuration content was preserved. A restrictive-umask extraction initially
+blocked Flora from reading package files; validation kept the Gateway stopped.
+The helper now normalizes only public vendor files, and the regression passes
+on Mac and Linux. Flora's actual user passed library controls, config validation
+and independent Gateway RPC; no restart loop remained.
+
+The final Linux source snapshot passed 784 tests. Functional health ran all 46
+checks: 44 passed, with the existing disk-capacity and October 14 snapshot alerts
+remaining. Global health is not green; capacity/snapshot maintenance is separate
+from the applied security corrections. The disputed npm cache advisory described
+in [Node maintenance](nodejs.md) is still tracked without an invented patch.
+
 The 2026-10-22 NUC recovery directory is
 `/var/backups/selfhosted/services-security-20261022/`. Stop SQLite-backed
 services before archiving their data; use native PostgreSQL dumps and validate
