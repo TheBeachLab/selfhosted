@@ -19,7 +19,7 @@ URL: `https://cloud.beachlab.org`
 
 | Item | Value |
 |---|---|
-| Version | 33.0.10 (live `occ status` and HTTPS status, 2026-10-22) |
+| Version | 33.0.10 (live `occ status` and HTTPS status, 2026-10-26) |
 | URL | https://cloud.beachlab.org |
 | Files | `/var/www/nextcloud` |
 | Data dir | `/var/www/nextcloud/data` |
@@ -53,6 +53,22 @@ Private recovery copies are in
 `nextcloud-code.tgz` precede 32.0.15; `nextcloud-pre33.dump` and
 `nextcloud-code-pre33.tgz` precede 33. Data is covered by the successful NAS
 Restic backup. Restore code, database and data from a consistent point together.
+
+### Forms security update, 2026-10-26
+
+Forms 5.4.0 → [5.4.1](https://github.com/nextcloud/forms/releases/tag/v5.4.1)
+corrects shared-file access and respondent checks. Nextcloud remains 33.0.10.
+Maintenance mode was enabled before a PostgreSQL custom-format dump and archive
+of Forms/config; `pg_restore --list` validated the dump. `occ app:update forms`
+verified and installed the app. Recovery copies are
+`/var/backups/selfhosted/security-20261026/nextcloud-preforms541.dump` and
+`nextcloud-forms540.tgz`.
+
+After disabling maintenance mode, `occ status` was current while the existing
+FPM workers still reported `needsDbUpgrade=true` over HTTPS. `php-fpm8.4 -t`
+passed; reloading FPM activated the app code and public status then confirmed
+`maintenance=false` and `needsDbUpgrade=false`. Forms integrity check returned
+no errors. Check both CLI and actual web workers after future app updates.
 
 ## Quick checks
 

@@ -65,6 +65,16 @@ was unchanged and the restarted Gateway passed `status --require-rpc`.
 The NUC's separate Node-RED runtime is `22.23.4`. See the
 [Node security procedure and validation](nodejs.md#security-updates).
 
+The 2026-10-26 dependency security repair keeps core 2026.10.7 and Node 24.22.1.
+The updater now invokes the root-owned `node-security-dependencies.py` helper
+before its current-version exit and after each package replacement. A repair of
+the same core version stops writers, backs up code/state, checks SQLite, applies
+integrity-pinned compatible dependencies, validates config and restarts with the
+existing RPC readiness requirement. It skips core/plugin migrations and unit
+regeneration when only dependencies change. Safe newer dependencies are retained;
+interrupted replacements are an error, never a clean result. See the
+[dependency policy and regression checks](nodejs.md#dependency-security-backports-2026-10-26).
+
 Run and inspect maintenance manually:
 
 ```bash

@@ -2,7 +2,7 @@
 
 ## Managed runtimes
 
-Live verification on 2026-10-22:
+Runtime inventory verified on 2026-10-26:
 
 | Host / consumer | Executable | Node version |
 | --- | --- | --- |
@@ -10,9 +10,9 @@ Live verification on 2026-10-22:
 | NUC / Watson OpenClaw | `/home/pink/.local/share/openclaw-node/current/bin/node` | `24.22.1` |
 | Liderflor VPS / Flora OpenClaw | `/usr/bin/node` | `24.22.1` (`24.22.1-1nodesource1`) |
 
-Node-RED is `5.0.9`; both OpenClaw deployments remain `2026.10.5`.
-Their installed package metadata declares Node `>=22.9.0` and
-`>=24.16.0 <25 || >=26.1.0`, respectively. The system and private NUC runtimes
+Node-RED is `5.0.9`; the NUC and VPS OpenClaw inventories were `2026.10.7`.
+Their installed package metadata declares Node `>=22.9` and
+`>=24.22.1 <25 || >=26.12.1`, respectively. The system and private NUC runtimes
 serve different applications; keep that separation when applying updates.
 See [Watson maintenance](watson-openclaw-runtime.md).
 
@@ -48,6 +48,59 @@ deprecated; 3.6.6 preserves the existing dashboard nodes. Its
 [changelog](https://github.com/node-red/node-red-dashboard/blob/master/CHANGELOG.md)
 records removal of old bundled jQuery files in 3.6.5. A future dashboard
 replacement needs its own UI migration.
+
+## Dependency security backports, 2026-10-26
+
+Latest vendor applications were still Node-RED 5.0.9 and OpenClaw 2026.10.7,
+with affected exact dependency pins. The NUC uses these reviewed local backports:
+
+| Dependency | Corrected version | Official fix |
+| --- | --- | --- |
+| body-parser | 1.20.9 | [CVE-2026-111181](https://github.com/expressjs/body-parser/security/advisories/GHSA-27r3-jxmh-p828) |
+| multer | 2.5.0 | [CVE-2026-113872](https://github.com/expressjs/multer/security/advisories/GHSA-q7qp-rjg7-q26m) |
+| undici | 6.29.1 / 8.12.2, retaining each major | [CVE-2026-109869](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c), [CVE-2026-109924](https://github.com/nodejs/undici/security/advisories/GHSA-4qv8-2p9j-2685) |
+| zod | 4.6.6 | [Collection-size fix](https://github.com/colinhacks/zod/pull/6652) |
+| ip-address | 10.7.4 minimum; existing 10.7.5 retained | [CVE-2026-111997](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-rxp7-6hxx-x8q5) |
+| brace-expansion | 5.0.12 | [CPU/recursion fixes](https://github.com/juliangruber/brace-expansion/security/advisories/GHSA-q2hr-2g5m-vwhr) |
+| postcss-selector-parser | 7.1.6 | [CVE-2026-104844](https://github.com/postcss/postcss-selector-parser/security/advisories/GHSA-rj75-hqrm-r3gf) |
+
+`services/node-security-dependencies.py` checks every installed copy, including
+npm's nested dependencies. It uses fixed vendor tarball SHA-512 values, validates
+package identity, rejects links/path traversal and changed dependency contracts,
+and adjusts exact consumer pins to match. Newer safe versions and other majors
+are preserved. A transaction marker and unfinished-swap detection fail closed
+on interruption; restore the protected code backup before retrying. The policy
+covers the listed reviewed majors, not advisories published in the future.
+
+Run without `--apply` to inspect a tree (exit 0 = current, 10 = pending; any other
+failure needs investigation). Apply only to a private staging copy or a stopped
+service with code/state backups. Never replace libraries in a running process.
+The installed root-owned helper is
+`/usr/local/libexec/selfhosted/node-security-dependencies.py`.
+
+Staging used private copies, complete `npm ls --all --omit=dev` checks, and
+`tests/node-security-runtime.cjs`. Node-RED bound HTTPS to 127.0.0.1:1881 in safe
+mode, with no started flows or missing node types. Isolated old-library processes
+crashed on compressed trailing bytes and pending multipart filters; patched
+processes passed both regression cases plus JSON/gzip/uploads and fetch controls.
+Zod's old version visited oversized collections; its replacement rejected them
+before any element transform. No exploit request was sent to production services.
+After activation Node-RED started flows/MQTT, public HTTPS returned 200, and
+Watson passed config/SQLite checks and Gateway RPC. Configuration was unchanged.
+
+Node-RED's full production tree returned zero npm advisories. OpenClaw's remaining
+`http-cache-semantics` 4.2.0 alert, CVE-2026-93748, is explicitly
+[disputed by its maintainer](https://github.com/kornelski/http-cache-semantics/issues/56#issuecomment-5975759591):
+Set-Cookie alone does not prohibit shared caching. It is in npm's fetch tooling;
+no confirmed security patch was identified. Track the dispute rather than claim
+an unverified corrected version or alter cache behavior without evidence.
+
+Backups and private comparison logs are under
+`/var/backups/selfhosted/security-20261026/`; Watson's transactional backup is
+`~pink/.openclaw-backups/updates/20261026T092153Z-pre-2026.10.7-to-2026.10.7/`.
+The current daily updater checks these floors before its no-update exit and
+reapplies them after a core replacement, under the existing lock. A Node-incompatible
+future core does not suppress a compatible repair of the current version.
 
 ## Security updates
 

@@ -46,6 +46,10 @@ setup_case() {
   tmux_state="${case_dir}/tmux-state"
   doctor_rc_file="${case_dir}/doctor-rc"
   rpc_mode_file="${case_dir}/rpc-mode"
+  dependency_mode_file="${case_dir}/dependency-mode"
+  package_dir="${case_dir}/openclaw"
+  mkdir -p "${package_dir}"
+  printf 'safe\n' >"${dependency_mode_file}"
   mkdir -p "${state_dir}/state" "${state_dir}/agents/main/sessions" "${fake_bin}" "${home_dir}/backups"
   printf '{}\n' >"${state_dir}/openclaw.json"
   printf 'sqlite fixture\n' >"${state_dir}/state/openclaw.sqlite"
@@ -87,7 +91,11 @@ esac'
 echo "npm $*" >>"${TEST_COMMAND_LOG}"
 if [[ "${1:-}" == view ]]; then
   if [[ "${3:-}" == engines.node ]]; then
-    cat "${TEST_NODE_ENGINE_FILE}"
+    if [[ "${2:-}" == "openclaw@$(cat "${TEST_INSTALLED_FILE}")" ]]; then
+      echo ">=18"
+    else
+      cat "${TEST_NODE_ENGINE_FILE}"
+    fi
   else
     cat "${TEST_TARGET_FILE}"
   fi
@@ -100,7 +108,7 @@ echo "node $*" >>"${TEST_COMMAND_LOG}"
 if [[ "${1:-}" == --version ]]; then
   echo v22.0.0
 else
-  cat "${TEST_NODE_COMPATIBLE_FILE}"
+  if [[ "${*: -1}" == ">=99" ]]; then echo false; else cat "${TEST_NODE_COMPATIBLE_FILE}"; fi
 fi'
 
   make_fake "${fake_bin}/sudo" '
@@ -140,6 +148,15 @@ elif [[ "${last}" == .backup* ]]; then
   cp "$3" "${destination}"
 fi'
 
+  make_fake "${fake_bin}/security-dependencies" '
+echo "security $*" >>"${TEST_COMMAND_LOG}"
+if [[ "${2:-}" == --apply ]]; then
+  [[ "$(<"${TEST_DEPENDENCY_MODE_FILE}")" != failed ]] || exit 7
+  echo safe >"${TEST_DEPENDENCY_MODE_FILE}"
+elif [[ "$(<"${TEST_DEPENDENCY_MODE_FILE}")" != safe ]]; then
+  exit 10
+fi'
+
   make_fake "${fake_bin}/lsof" 'exit 1'
   make_fake "${fake_bin}/flock" 'exit 0'
   make_fake "${fake_bin}/timeout" 'shift; exec "$@"'
@@ -163,6 +180,9 @@ run_case() {
   TEST_TMUX_STATE="${tmux_state}" \
   TEST_DOCTOR_RC_FILE="${doctor_rc_file}" \
   TEST_RPC_MODE_FILE="${rpc_mode_file}" \
+  TEST_DEPENDENCY_MODE_FILE="${dependency_mode_file}" \
+  OPENCLAW_MAINTENANCE_SECURITY_BIN="${fake_bin}/security-dependencies" \
+  OPENCLAW_MAINTENANCE_PACKAGE_ROOT="${package_dir}" \
   OPENCLAW_MAINTENANCE_EXPECTED_USER="$(id -un)" \
   OPENCLAW_MAINTENANCE_STATE_DIR="${state_dir}" \
   OPENCLAW_MAINTENANCE_BACKUP_ROOT="${home_dir}/backups" \
@@ -255,8 +275,55 @@ test_rpc_failure_stops_gateway_and_skips_tui() {
   rm -rf "${case_dir}"
 }
 
+test_current_core_repairs_dependencies_without_migration() {
+  setup_case
+  cp "${installed_file}" "${target_file}"
+  printf 'pending\n' >"${dependency_mode_file}"
+  run_case
+  [[ "${case_rc}" -eq 0 ]] || fail "dependency repair failed"
+  assert_contains "${command_log}" "security ${package_dir} --apply"
+  assert_contains "${command_log}" "systemctl --user restart openclaw-gateway.service"
+  assert_not_contains "${command_log}" "npm install"
+  assert_not_contains "${command_log}" "openclaw doctor"
+  assert_not_contains "${command_log}" "openclaw gateway install"
+  [[ "$(<"${dependency_mode_file}")" == safe ]] || fail "dependencies remain pending"
+  rm -rf "${case_dir}"
+}
+
+test_unavailable_core_does_not_suppress_dependency_repair() {
+  setup_case
+  printf 'pending\n' >"${dependency_mode_file}"
+  printf '>=99\n' >"${node_engine_file}"
+  # RPC must verify the retained core version in this dependency-only run.
+  make_fake "${fake_bin}/npm" '
+echo "npm $*" >>"${TEST_COMMAND_LOG}"
+if [[ "${1:-}" == view && "${3:-}" == engines.node ]]; then
+  if [[ "${2:-}" == openclaw@1.0.0 ]]; then echo ">=18"; else echo ">=99"; fi
+elif [[ "${1:-}" == view ]]; then echo 2.0.0; fi'
+  cp "${installed_file}" "${target_file}"
+  run_case
+  [[ "${case_rc}" -eq 0 ]] || fail "current dependency repair blocked by unavailable core"
+  assert_contains "${command_log}" "security ${package_dir} --apply"
+  assert_not_contains "${command_log}" "npm install"
+  [[ "$(<"${dependency_mode_file}")" == safe ]] || fail "dependencies remain pending"
+  rm -rf "${case_dir}"
+}
+
+test_dependency_failure_keeps_gateway_stopped() {
+  setup_case
+  printf 'failed\n' >"${dependency_mode_file}"
+  run_case
+  [[ "${case_rc}" -ne 0 ]] || fail "dependency failure unexpectedly succeeded"
+  assert_not_contains "${command_log}" "systemctl --user restart openclaw-gateway.service"
+  [[ "$(<"${systemd_state}")" == inactive ]] || fail "gateway was not left stopped"
+  rm -rf "${case_dir}"
+}
+
 bash -n "${SCRIPT}"
 test_no_update_is_non_mutating
+test_current_core_repairs_dependencies_without_migration
+test_dependency_failure_keeps_gateway_stopped
+test_unavailable_core_does_not_suppress_dependency_repair
 test_incompatible_node_keeps_gateway_and_tui_running
 test_successful_update_orders_maintenance
 test_doctor_failure_keeps_gateway_stopped

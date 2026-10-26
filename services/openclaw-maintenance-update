@@ -15,6 +15,9 @@ readonly RPC_INTERVAL_SECONDS="${OPENCLAW_MAINTENANCE_RPC_INTERVAL_SECONDS:-2}"
 readonly -a VERSION_LOCKED_CHANNEL_PLUGINS=("@openclaw/whatsapp")
 
 readonly OPENCLAW_BIN="${OPENCLAW_MAINTENANCE_OPENCLAW_BIN:-/usr/bin/openclaw}"
+readonly SECURITY_BIN="${OPENCLAW_MAINTENANCE_SECURITY_BIN:-/usr/local/libexec/selfhosted/node-security-dependencies.py}"
+readonly PACKAGE_ROOT="${OPENCLAW_MAINTENANCE_PACKAGE_ROOT:-/usr/lib/node_modules/openclaw}"
+readonly TAR_BIN="${OPENCLAW_MAINTENANCE_TAR_BIN:-/usr/bin/tar}"
 readonly NPM_BIN="${OPENCLAW_MAINTENANCE_NPM_BIN:-/usr/bin/npm}"
 readonly NODE_BIN="${OPENCLAW_MAINTENANCE_NODE_BIN:-/usr/bin/node}"
 readonly NODE_PATH="$(dirname "${NODE_BIN}"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -186,7 +189,7 @@ wait_for_rpc() {
 [[ -d "${STATE_DIR}" ]] || fail "OpenClaw state directory is unavailable: ${STATE_DIR}"
 
 for executable in \
-  "${OPENCLAW_BIN}" "${NPM_BIN}" "${NODE_BIN}" "${SUDO_BIN}" "${SYSTEMCTL_BIN}" \
+  "${SECURITY_BIN}" "${TAR_BIN}" "${OPENCLAW_BIN}" "${NPM_BIN}" "${NODE_BIN}" "${SUDO_BIN}" "${SYSTEMCTL_BIN}" \
   "${TMUX_BIN}" "${SQLITE3_BIN}" "${LSOF_BIN}" "${FLOCK_BIN}" \
   "${SHA256SUM_BIN}" "${TIMEOUT_BIN}" "${SLEEP_BIN}"; do
   require_command "${executable}"
@@ -204,7 +207,17 @@ exec 9>"${LOCK_FILE}"
 current=$(installed_version)
 target=$(latest_version)
 [[ -n "${current}" && -n "${target}" ]] || fail "Could not resolve installed/latest OpenClaw versions."
-if [[ "${current}" == "${target}" ]]; then
+dependencies_pending=0
+if "${SECURITY_BIN}" "${PACKAGE_ROOT}"; then
+  :
+else
+  dependency_status=$?
+  [[ "${dependency_status}" -eq 10 ]] || fail "Could not inspect security dependencies."
+  dependencies_pending=1
+fi
+core_changed=0
+[[ "${current}" == "${target}" ]] || core_changed=1
+if (( core_changed == 0 && dependencies_pending == 0 )); then
   log "OpenClaw ${current} is current; no maintenance required."
   maintenance_complete=1
   exit 0
@@ -215,8 +228,17 @@ required_engine=$(required_node_engine "${target}")
 node_supported=$(node_satisfies_engine "${required_engine}") || fail "Could not check the Node requirement for OpenClaw ${target}."
 if [[ "${node_supported}" != true ]]; then
   log "OpenClaw ${target} requires Node ${required_engine}; installed $("${NODE_BIN}" --version). Keeping OpenClaw ${current} and the Gateway running."
-  maintenance_complete=1
-  exit 0
+  if (( dependencies_pending == 0 )); then
+    maintenance_complete=1
+    exit 0
+  fi
+  # A blocked core upgrade must not suppress a repair of the current package.
+  target=${current}
+  core_changed=0
+  required_engine=$(required_node_engine "${current}")
+  [[ -n "${required_engine}" ]] || fail "Could not check current OpenClaw Node requirement."
+  [[ "$(node_satisfies_engine "${required_engine}")" == true ]] || fail "Current OpenClaw security repair needs a supported Node runtime."
+  log "Repairing current OpenClaw ${current} dependencies without the unavailable core upgrade."
 fi
 
 log "Preparing OpenClaw update ${current} -> ${target}."
@@ -237,27 +259,39 @@ backup_dir="${BACKUP_ROOT}/${stamp}-pre-${current}-to-${target}"
 install -d -m 0700 "${backup_dir}" "${backup_dir}/sqlite"
 copy_non_database_state
 copy_sqlite_databases
+
+# Preserve the exact code as well as state before a dependency-only backport.
+"${TAR_BIN}" -czf "${backup_dir}/openclaw-package.tgz" -C "$(dirname "${PACKAGE_ROOT}")" "$(basename "${PACKAGE_ROOT}")"
 write_backup_manifest
 log "Protected backup complete: ${backup_dir}"
+if (( core_changed == 1 )); then
+  log "Installing exact OpenClaw package version ${target}."
+  "${SUDO_BIN}" -n env "PATH=${NODE_PATH}" "${NPM_BIN}" install -g --prefix /usr "openclaw@${target}" --silent
+  [[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
 
-log "Installing exact OpenClaw package version ${target}."
-"${SUDO_BIN}" -n env "PATH=${NODE_PATH}" "${NPM_BIN}" install -g --prefix /usr "openclaw@${target}" --silent
-[[ "$(installed_version)" == "${target}" ]] || fail "Installed OpenClaw version does not match ${target}."
+  for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do
+    plugin_target=$("${NPM_BIN}" view "${plugin_package}@${target}" version --silent | awk 'NF {print; exit}')
+    [[ "${plugin_target}" == "${target}" ]] || fail "No matching ${plugin_package} package exists for OpenClaw ${target}."
+    log "Aligning ${plugin_package} with OpenClaw ${target}."
+    "${OPENCLAW_BIN}" plugins install "${plugin_package}@${target}" --force --pin --accept-capabilities
+  done
+fi
 
-for plugin_package in "${VERSION_LOCKED_CHANNEL_PLUGINS[@]}"; do
-  plugin_target=$("${NPM_BIN}" view "${plugin_package}@${target}" version --silent | awk 'NF {print; exit}')
-  [[ "${plugin_target}" == "${target}" ]] || fail "No matching ${plugin_package} package exists for OpenClaw ${target}."
-  log "Aligning ${plugin_package} with OpenClaw ${target}."
-  "${OPENCLAW_BIN}" plugins install "${plugin_package}@${target}" --force --pin --accept-capabilities
-done
-
-log "Applying non-interactive OpenClaw migrations."
-"${OPENCLAW_BIN}" doctor --fix --non-interactive --yes
+# Bundled npm has its own nested copies. Reapply reviewed security backports
+# after every core replacement, including when the core version is unchanged.
+"${SUDO_BIN}" -n "${SECURITY_BIN}" "${PACKAGE_ROOT}" --apply
+"${SECURITY_BIN}" "${PACKAGE_ROOT}"
+if (( core_changed == 1 )); then
+  log "Applying non-interactive OpenClaw migrations."
+  "${OPENCLAW_BIN}" doctor --fix --non-interactive --yes
+fi
 "${OPENCLAW_BIN}" config validate
 check_all_databases
 
-log "Regenerating the managed Gateway unit from OpenClaw ${target}."
-"${OPENCLAW_BIN}" gateway install --force
+if (( core_changed == 1 )); then
+  log "Regenerating the managed Gateway unit from OpenClaw ${target}."
+  "${OPENCLAW_BIN}" gateway install --force
+fi
 systemctl_user daemon-reload
 systemctl_user reset-failed "${GATEWAY_UNIT}" || true
 systemctl_user restart "${GATEWAY_UNIT}"

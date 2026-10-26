@@ -14,7 +14,7 @@ refresh, set `APT::Get::List-Cleanup=false` to preserve other cached indexes.
 | Nginx | 1.31.8 | [Security advisories](https://nginx.org/en/security_advisories.html): CVE-2026-15176, 93479, 95101, 97629 and 97205 |
 | Docker / containerd | 29.9.2 / 2.4.2 | [Docker 29 notes](https://docs.docker.com/engine/release-notes/29/): containerd CVE-2026-95839, Go HTTP/2 and CA revocation fixes |
 | Tailscale | 1.104.2 | [Changelog](https://tailscale.com/changelog): TS-2026-013; also applied on the VPS |
-| Headscale | 0.29.5 / Go 1.26.10 | [Sequential migrations and runtime rebuild](headscale.md) |
+| Headscale | 0.29.6 / Go 1.27.3 | [Sequential migrations and runtime rebuild](headscale.md) |
 | openHAB | 5.2.3 | [Core advisories](https://github.com/openhab/openhab-core/security/advisories): SSRF, forwarded-IP authentication, OAuth redirect/PKCE and XSS fixes in 5.2.2; 5.2.3 fixes the proxy regression |
 | Nextcloud / PHP | 33.0.10 / 8.4.27 | [Deployment and recovery](cloud.md) |
 | Node-RED | 5.0.9 | [Runtime and custom dependency maintenance](nodejs.md) |
@@ -23,18 +23,48 @@ refresh, set `APT::Get::List-Cleanup=false` to preserve other cached indexes.
 | Gotify | 3.1.1 | [iGotify compatibility and recovery](igotify.md) |
 | TimescaleDB / PgBouncer | 2.31.0 / 1.26.1 | [Database migration and recovery](postgres.md) |
 
-The private NUC recovery directory is
+### NUC security activation, 2026-10-26
+
+OpenVPN `2.5.11-0ubuntu0.22.04.6` was already installed, but
+`openvpn-server@server.service` still used the deleted `.5` executable. Restarting
+that exact unit activated [CVE-2026-84790](https://ubuntu.com/security/CVE-2026-84790).
+The new process matched the installed SHA-256 and logged initialization complete.
+
+Headscale advanced to the verified official 0.29.6 package, including Go 1.27.3
+and patched HTTP/2, gRPC and text dependencies. Both client IDs and the approved
+route were retained; configuration, executable digest and public health passed.
+Forms advanced 5.4.0 → 5.4.1 on Nextcloud 33.0.10; app integrity and public
+status passed after reloading PHP-FPM. See [Headscale](headscale.md) and
+[Nextcloud](cloud.md).
+
+[Reviewed dependency backports](nodejs.md#dependency-security-backports-2026-10-26)
+removed the affected copies from Node-RED 5.0.9 and Watson OpenClaw 2026.10.7,
+including their bundled npm trees. Isolated processes reproduced the old
+body-parser and multer crashes and Zod's late collection-size check; corrected
+copies passed those cases and legitimate controls. Node-RED safe staging loaded
+all types with no errors, then production started flows and MQTT. Watson's
+maintenance completed with a ready RPC Gateway and unchanged configuration.
+The updater now reapplies the backports even when the core version is unchanged.
+
+Recovery is private under `/var/backups/selfhosted/security-20261026/` and
+`~pink/.openclaw-backups/updates/20261026T092153Z-pre-2026.10.7-to-2026.10.7/`.
+Headscale/Forms database backups were consistent; Node-RED code and user data and
+Watson code/state were retained. Signed full-source APT refresh succeeded; no
+newer Ubuntu security-pocket package or machine reboot was pending. The VPS was
+not modified in this activation.
+
+The 2026-10-22 NUC recovery directory is
 `/var/backups/selfhosted/services-security-20261022/`. Stop SQLite-backed
 services before archiving their data; use native PostgreSQL dumps and validate
 their table of contents. The NAS Restic job completed successfully, including
 its repository check, before the Nextcloud 33 migration.
 
-The NUC reboot at 08:59 UTC activated the updated libraries across services.
+On 2026-10-22 the NUC reboot at 08:59 UTC activated the updated libraries across services.
 After boot, systemd reported `running` with no failed units, all ten containers
 returned, the NAS mounted, Node-RED started its flows and MQTT connection, and
 Watson's Gateway passed its read-only RPC check. Public Nextcloud, Authentik,
 Grafana, Gotify, Node-RED, Vaultwarden, Headscale and openHAB endpoints responded.
-`needrestart` still lists PHP 8.4 because OPcache maps an executable
+During that verification `needrestart` listed PHP 8.4 because OPcache maps an executable
 `/anon_hugepage (deleted)` segment. Inspection found only anonymous shared memory,
 no deleted file-backed libraries, and the active FPM executable matched the
 installed package SHA-256. Repeated restarts are not a remedy for that mapping.

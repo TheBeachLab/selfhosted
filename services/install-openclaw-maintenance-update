@@ -19,6 +19,9 @@ readonly BASH_ALIASES="${HOME}/.bash_aliases"
   exit 1
 }
 
+sudo -n install -d -m 0755 /usr/local/libexec/selfhosted
+sudo -n install -o root -g root -m 0755 "${SOURCE_DIR}/node-security-dependencies.py" /usr/local/libexec/selfhosted/node-security-dependencies.py
+
 install -d -m 0700 "${USER_BIN}"
 install -d -m 0755 "${USER_SYSTEMD}" "${GATEWAY_DROPIN}"
 install -m 0755 "${SOURCE_DIR}/openclaw-maintenance-update" "${USER_BIN}/openclaw-maintenance-update"
