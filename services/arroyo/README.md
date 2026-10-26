@@ -2,11 +2,11 @@
 
 Live since 2026-10-22: https://arroyo.ing/ and https://www.arroyo.ing/.
 The approved site was recovered from the chat "Crear web de Arroyo Bauingenieur".
-Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 6095520bf7231022438b3ff44580d6e00b19abd4. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
+Current published source: /Users/Papi/Repositories/strategy/websites/arroyo, commit 29808ffb79627e8e753415a540691df2f2fd2d4e. The original site was recovered from the chat "Crear web de Arroyo Bauingenieur".
 
 ## Runtime
 
-Nginx serves /var/www/arroyo.ing. Only index.html, impressum.html,
+Nginx serves /var/www/arroyo.ing. Only index.html, hotel-mim-sitges.html, impressum.html,
 datenschutz.html, styles.css, site.js and assets/ are public. Internal source
 and design documentation are excluded. The privacy and imprint pages describe
 the live hosting. Both HTTP and HTTPS visitor access/error logging are disabled.
@@ -54,7 +54,7 @@ with cp -a. The full snapshot made immediately before the 2026-10-24 site public
 public root as it existed immediately before deployment.
 
 Stage the exact authorized source commit into a clean directory containing only
-the five top-level allowlisted files and assets/. Copy the five files in one
+the six top-level allowlisted files and assets/. Copy the six files in one
 rsync call, then copy the assets tree in a separate call to the explicit remote
 assets/ directory. Never pass assets/ as a peer source with the top-level files:
 that flattens its contents into the web root. These commands preserve existing
@@ -64,7 +64,8 @@ files alone:
 ```sh
 rsync -a --no-perms --no-owner --no-group --omit-dir-times \
   --rsync-path='sudo rsync' -e 'ssh -o BatchMode=yes -o ConnectTimeout=12' \
-  <staging-root>/index.html <staging-root>/impressum.html \
+  <staging-root>/index.html <staging-root>/hotel-mim-sitges.html \
+  <staging-root>/impressum.html \
   <staging-root>/datenschutz.html <staging-root>/styles.css \
   <staging-root>/site.js pink-sudo:/var/www/arroyo.ing/
 
@@ -82,30 +83,30 @@ that full snapshot.
 
 ## Current published version and verification
 
-Published 2026-10-24 from strategy commit
-6095520bf7231022438b3ff44580d6e00b19abd4. The public root has the five
-allowlisted top-level files and 19 files under assets/ (24 files total); every
+Published 2026-10-26 from strategy commit
+29808ffb79627e8e753415a540691df2f2fd2d4e. The public root has six
+allowlisted top-level files and 19 files under assets/ (25 files total); every
 live SHA-256 matches the staged source with no missing, extra or mismatched
-files. The published homepage includes the five-image project gallery, the
-Bauleitung/Projektmanagement/Wohnimmobilien service tabs and their concept image,
-the unaccented Orbita destination link, and the exact footer portrait with its
-biography. The legal pages carry the same versioned stylesheet reference.
+files. The homepage distinguishes Bauleitung, Projektmanagement and
+Machbarkeit & Projektstart, with agreed-scope task lists. Digital tools appear
+in the project-management detail. The gallery links to hotel-mim-sitges.html,
+which presents Fran's historical responsibilities and the documented LEED result.
 
-The prior Safari issue came from a browser reusing old CSS and JavaScript under
-unchanged URLs after it received newer HTML. `Cache-Control: no-cache` makes the
-browser revalidate, while content-hash query URLs ensure the reviewed resources
-are fetched as new URLs. The current pages request
-styles.css?v=c72ff9dc0188 and the homepage requests site.js?v=d5ec1f88508d.
-Apex and www GET readbacks returned 200 with `Cache-Control: no-cache` for all
-three HTML pages and all 19 asset paths. Both versioned CSS/JS URLs returned 200
-on both hosts and their bodies matched the full source SHA-256 hashes. Both HTTP
-hostnames still redirect to their matching HTTPS host with 301.
+The pages request styles.css?v=0853dd1a3614; the homepage
+requests site.js?v=6423e8b143f7. Hash-based query URLs continue to
+prevent the mixed-version Safari issue recorded in the website README.
+All 25 file paths, the root homepage and both versioned resource URLs returned
+200 with Cache-Control: no-cache on apex and www (56 HTTPS readbacks), with
+bodies matching the source hashes. Both HTTP hostnames redirect to their matching
+HTTPS host with 301. The published page and mobile service controls were also
+inspected in the in-app browser without console errors or warnings.
 
 The full predeployment snapshot is
-/var/backups/arroyo.ing/20261024083832Z. Restore the complete saved tree with
-`ssh pink-sudo 'sudo rsync -a --delete /var/backups/arroyo.ing/20261024083832Z/ /var/www/arroyo.ing/'`.
-The complete file manifest and public readbacks are recorded in
-`arroyo-deployment-readback.md` in the Codex task artifacts.
+/var/backups/arroyo.ing/20261026180621Z. Restore the complete saved tree with
+`ssh pink-sudo 'sudo rsync -a --delete /var/backups/arroyo.ing/20261026180621Z/ /var/www/arroyo.ing/'`.
+This restores the earlier 24-file version and removes the new case-study page.
+The manifest and public readbacks are recorded in
+`/Users/Papi/.codex/visualizations/2026/10/26/01a17924-05a6-7163-a658-02d5efb6713e/arroyo-services-hotel-deployment.json`.
 
 The earlier 2026-10-23 rollback restored commit c0cc2e6 from
 /var/backups/arroyo.ing/20261023114001Z before the later publications. The earlier
