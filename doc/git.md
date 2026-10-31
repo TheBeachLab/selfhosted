@@ -1,5 +1,21 @@
 # Git server
 
+The host in the examples is `thebeachlab`, which is the Intel NUC. The Git
+remote name `suitcase` below is the old server's name. That hardware is
+retired. See the [README](../README.md).
+
+On 2026-10-23 the Beach Lab site was still published by its existing Git
+post-receive hook ([Orbita](../services/orbita/README.md)). The hook in this
+page checks out to `/var/www/beachlab.org`.
+
+Admin SSH to the NUC was verified on port 622 on 2026-10-08
+([README](../README.md)). The clone URLs below still use port 22222, which is
+also what the original [SSH guide](security.md) picked. Port 22222 is the NAS
+SSH port ([NAS](nas.md)).
+
+> **Open question.** There is no later check that `https://git.beachlab.org`
+> (gitweb) is still served, or that Git SSH is still port 22222.
+
 <!-- vim-markdown-toc GFM -->
 
 - [Gitlab? No, thanks](#gitlab-no-thanks)

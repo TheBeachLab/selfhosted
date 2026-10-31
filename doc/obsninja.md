@@ -1,5 +1,9 @@
 # WIP. OBS ninja
 
+WIP. On 2026-02-08 the public webrtc vhost and coturn were removed
+([safeguards](server-safeguards.md)). The steps below are the unfinished
+setup.
+
 Only God knows how much I hate Zoom and it's lack of support for Linux. This is day and night for streaming.
 
 Create a CNAME in your DNS server, e.g. `webrtc.example.org`.

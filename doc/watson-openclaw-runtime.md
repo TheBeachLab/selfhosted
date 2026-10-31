@@ -1,8 +1,17 @@
 # OpenClaw runtime maintenance
 
-The self-hosted OpenClaw agent is a separate deployment from other agents. Do
-not copy configuration, credentials, state or repair operations between hosts
-without verifying the target first.
+The self-hosted OpenClaw agent on the NUC is Watson. Flora is the separate
+OpenClaw deployment on the Liderflor VPS ([Node.js](nodejs.md),
+[security](security.md)). Do not copy configuration, credentials, state or
+repair operations between hosts without verifying the target first.
+
+This page is how that runtime is updated. The TUI session is
+`agent:main:main` ([TUI](openclaw-tui.md)). The updater keeps the official
+WhatsApp channel plugin matched to the OpenClaw release. Watson can call
+Msgvault through a local MCP client ([Msgvault](msgvault.md)).
+
+> **Open question.** What is Watson for, beyond this runtime, the TUI, the
+> WhatsApp plugin pin and the Msgvault MCP client?
 
 ## Upgrade and migration procedure
 

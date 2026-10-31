@@ -50,6 +50,18 @@ root commands.
 | iGotify | igotify container | Docker + Gotify |
 | TiTiler | titiler container | Docker |
 
+TiTiler's catalog text is "Procesamiento de mapas" (`control.py`). Grafana's
+row in that catalog has a public URL. TiTiler's row has none. A security note
+records the installed rio-tiler version ([security](security.md)). Orbita still
+depends on a map service at `maps.beachlab.org`
+([Orbita](../services/orbita/README.md)). The public Apache tileserver on port
+10000 was removed ([safeguards](server-safeguards.md)). `maps.beachlab.org`,
+the TiTiler container and the [aviation API](../aviation/README.md) are three
+separate names here. No page links them together.
+
+> **Open question.** What is TiTiler's public hostname, and which maps does it
+> serve?
+
 Docker and the eGPU are displayed without a global switch. The panel allows
 [one AI workload at a time](gpu-services.md), but cannot see GPU jobs started
 manually outside its catalog.

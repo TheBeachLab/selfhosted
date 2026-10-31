@@ -3,7 +3,14 @@
 The NUC runs **Headscale 0.29.6 with Go 1.27.3** (activated 2026-10-26) at `https://hs.beachlab.org`, with SQLite state in
 `/var/lib/headscale/db.sqlite` and configuration in `/etc/headscale/config.yaml`.
 The NUC's own Tailscale client belongs to the official tailnet; SSH maintenance
-does not depend on this Headscale instance.
+does not depend on this Headscale instance. The client change is the
+2026-10-08 note in the [README](../README.md). The server check is separate:
+the activation below had this Headscale process running on 2026-10-26, with
+client IDs 1 and 2 and one approved route. The [Restic set](backups.md) still
+includes Headscale files.
+
+> **Open question.** The repo does not name clients 1 and 2, and it does not
+> say whether anyone still uses this tailnet day to day.
 
 ## Security maintenance
 

@@ -94,7 +94,7 @@ Cooldown default: 30 minutes to avoid notification spam.
 
 ## 4) Postfix decommissioned
 
-Postfix was previously adjusted to reduce lookup noise, but was later removed from exposure and disabled due to spam-risk concerns.
+Postfix was previously adjusted to reduce lookup noise, but was later removed from exposure and disabled due to spam-risk concerns. The decommission was recorded on 2026-02-08 (commit `ee6a26b`). The text does not give a separate earlier disable date. Dovecot and OpenDKIM were never written up ([mail](mail.md)). Public mail for `beachlab.org` is iCloud ([Cloudflare DNS](../services/cloudflare-ddns/README.md)).
 
 Applied:
 
@@ -224,6 +224,11 @@ Current API exposure state:
 - `/air/` disabled (pending DB/API setup)
 - `/data/` disabled (legacy target unknown)
 - default response is `403` until explicit upstreams are defined
+
+> **Open question.** What the pending `/air/` setup is, and what `/data/` used
+> to target, are not in this repo. A SQL snippet in [PostgreSQL](postgres.md)
+> loads `territories` into a database named `air`; that database is not in the
+> current list.
 
 ### Firewall hardening applied (UFW)
 

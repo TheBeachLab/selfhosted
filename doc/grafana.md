@@ -1,7 +1,9 @@
 # Grafana
 
 Grafana OSS visualizes read-only TimescaleDB data behind the server's TLS reverse
-proxy.
+proxy. The public hostname is `https://grafana.beachlab.org/`. The same URL is
+in the [administration catalog](../services/admin-panel/control.py). On
+2026-10-22, `https://grafana.beachlab.org/api/health` returned database `ok`.
 
 Current deployment (2026-10-22): **13.0.11**, pinned in
 `/srv/grafana/docker-compose.yml` to
@@ -17,7 +19,7 @@ Stop Grafana before archiving its SQLite data and deployment configuration.
 The pre-update copy is
 `/var/backups/selfhosted/services-security-20261022/grafana.tgz`.
 After migration the database retained one user, one data source and zero saved
-dashboards; `https://grafana.beachlab.org/api/health` returned database `ok`.
+dashboards. The health URL above returned database `ok`.
 
 ## Architecture
 

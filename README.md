@@ -27,11 +27,25 @@ Source: live NUC `tailscale status --json`, `tailscale debug prefs`,
 Mac `tailscale ping 100.91.63.61`
 and successful OpenSSH access to `100.91.63.61:622` with the existing host key.
 
-**RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Runs Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry. Connects to server via Starlink + Tailscale.
+**RPi 5 (pibot1):** Mounted in the G Mobile Lab (vehicle). Its recorded job is the Bluetti BLE bridge, I2C sensors (CO2, temp, humidity, pressure), GPS NEO-6M, IMU MPU-6050, and Starlink gRPC telemetry, with the path to the server written as Starlink + Tailscale. On 2026-09-12 the Pi's SSH endpoint timed out and the stored attitude was a repeated cache. The server ingest written after that left the Pi's power and connection state unverified. See [Bluetti telemetry](doc/bluetti-telemetry.md) and [pibot1](doc/rpi.md).
 
 **NAS:** Synology DS411slim, DSM 6.2.4-25556 Update 8. See
 [NAS access and Tailscale compatibility](doc/nas.md) for the verified configuration
-and the legacy kernel's package requirements.
+and the legacy kernel's package requirements. Named shares are on that page.
+
+**Liderflor VPS:** A separate host from the NUC, the NAS and the Pi. [Node.js](doc/nodejs.md)
+and [security maintenance](doc/security.md) record Flora OpenClaw there, plus a
+public WordPress site, API and shop. `liderflorapi.beachlab.org` is a fixed
+DNS record ([Cloudflare DNS](services/cloudflare-ddns/README.md)).
+
+**Remote access today:** The NUC and the NAS are on the GitHub tailnet, as
+written above. When checked on 2026-10-08 the NUC client had left Headscale at
+`https://hs.beachlab.org`. [Headscale](doc/headscale.md) still records that
+server running on the NUC on 2026-10-26, with client IDs 1 and 2 kept.
+[OpenVPN](doc/vpn.md)'s server unit was restarted the same day
+([security](doc/security.md)). The [WireGuard](doc/wireguard.md) page is the
+hub setup guide; the Pi's recorded path is Tailscale. Who still uses
+Headscale, OpenVPN or WireGuard is an open question below.
 
 **Previous servers (non-operational):**
 
@@ -51,8 +65,9 @@ and the legacy kernel's package requirements.
 - [Service administration](doc/admin-panel.md)
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
-- [VPN Server (OpenVPN)](doc/vpn.md)
-- [WireGuard VPN](doc/wireguard.md)
+- [Headscale](doc/headscale.md) (server on the NUC as of 2026-10-26; NUC client uses the GitHub tailnet)
+- [VPN Server (OpenVPN)](doc/vpn.md) (unit restarted 2026-10-26; daily use not recorded)
+- [WireGuard VPN](doc/wireguard.md) (setup guide; no later check that it still runs)
 - [Server Safeguards (resource limits + alerts)](doc/server-safeguards.md)
 - [Troubleshooting](doc/troubleshooting.md)
 
@@ -66,15 +81,15 @@ and the legacy kernel's package requirements.
 - [Msgvault communications archive](doc/msgvault.md)
 - [Taskwarrior and Nextcloud Tasks sync](doc/taskserver.md)
 - [Transmission Daemon (NordVPN)](doc/transmission.md)
-- [Mumble voice server](doc/mumble.md)
+- [Mumble voice server](doc/mumble.md) (setup guide; no later check that it is running)
 - [iOS Push Notifications (iGotify)](doc/igotify.md)
 - [Drop (protected URL downloads)](doc/drop.md)
 - [Remote browser](doc/browser.md)
-- [n8n automation](doc/n8n.md) (removed)
+- [n8n automation](doc/n8n.md) (removed 2026-02-08)
 - [Auto USB copy](doc/transfer2usb.md)
 - [Node.js / PM2](doc/nodejs.md)
 - [OpenClaw TUI Quick Access (tmux)](doc/openclaw-tui.md)
-- [OpenClaw runtime maintenance](doc/watson-openclaw-runtime.md)
+- [OpenClaw runtime maintenance](doc/watson-openclaw-runtime.md) (how Watson is updated; what the agent is for is not written here)
 
 ### Monitoring
 
@@ -92,7 +107,7 @@ and the legacy kernel's package requirements.
 
 - [PostgreSQL](doc/postgres.md)
   - [TimescaleDB](doc/timescaledb.md)
-  - [Strapi CMS](doc/strapi.md)
+  - [Strapi CMS](doc/strapi.md) (install guide; `sisterapi` is not in the current database list)
   - [PostgREST API](doc/postgrest.md)
   - [PostgREST JWT Gateway](doc/postgrest-jwt.md)
 
@@ -100,7 +115,7 @@ and the legacy kernel's package requirements.
 
 - [Personal knowledge: Strategy, sources and recovery](doc/personal-knowledge.md)
   - [Obsidian](doc/obsidian.md)
-- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) (experiments)
+- [Knowledge graphs and agent loops](doc/knowledge-graphs.md) (experiments; LangGraph, Graphiti and Neo4j are not deployed on the NUC)
   - [LangGraph](doc/langgraph.md)
   - [Graphiti](doc/graphiti.md)
   - [Neo4j Community and Browser](doc/neo4j.md)
@@ -115,13 +130,31 @@ and the legacy kernel's package requirements.
 
 ### WIP / archived
 
-- [Understanding DNS](doc/dns.md) (WIP)
-- [OBS ninja (WebRTC)](doc/obsninja.md) (WIP)
-- [STUN/TURN Server](doc/turn.md) (WIP)
+- [Understanding DNS](doc/dns.md) (WIP; not the current public DNS)
+- [OBS ninja (WebRTC)](doc/obsninja.md) (WIP; public exposure removed 2026-02-08)
+- [STUN/TURN Server](doc/turn.md) (WIP; public coturn exposure removed 2026-02-08)
 - [Minecraft server](doc/minecraft.md)
 - [Nextcloud](doc/cloud.md)
-- [Mail server (Postfix)](doc/mail.md) (incomplete)
+- [Mail server (Postfix)](doc/mail.md) (Postfix disabled, recorded 2026-02-08; Dovecot and OpenDKIM never written up)
 - [openHAB (BTicino/OpenWebNet and Apple Home)](doc/openhab.md)
+
+## Open questions
+
+Unanswered in the repo:
+
+- How `https://beachlab.org/apps/hariburi/rates.json` is produced. [Web](doc/web.md), [Minecraft](doc/minecraft.md).
+- Whether the scheduled Namecheap ddclient retirement finished. [Cloudflare DNS](services/cloudflare-ddns/README.md).
+- Whether gitweb at `git.beachlab.org` is still served, and whether the NUC still listens on SSH port 22222 (verified admin access is port 622). [Git](doc/git.md), [SSH](doc/security.md).
+- Which database uses PostGIS; the table lists behind the short database names; whether `air` and `sisterapi` exist. [PostgreSQL](doc/postgres.md).
+- Who Headscale clients 1 and 2 are, and whether anyone still uses Headscale, OpenVPN or WireGuard day to day. [Headscale](doc/headscale.md), [OpenVPN](doc/vpn.md), [WireGuard](doc/wireguard.md).
+- Whether a house sensor replaced the Sitges Open-Meteo readings after 2026-09-12. [Telemetry columns](doc/mqtt-timescale-postgrest.md).
+- Whether the vehicle Pi is online now. [pibot1](doc/rpi.md).
+- Whether Mumble at `walkie.beachlab.org` is running. [Mumble](doc/mumble.md).
+- What Deutsch Sprint is. [Authentik](doc/authentik.md).
+- TiTiler's public hostname, and which maps it serves. [Administration](doc/admin-panel.md).
+- What the Watson OpenClaw agent is for. [Runtime maintenance](doc/watson-openclaw-runtime.md).
+- What `/data/` on `api.beachlab.org` used to target, and what the pending `/air/` setup is. [Safeguards](doc/server-safeguards.md).
+- Which NAS volumes exist besides the backup paths named in the docs, and whether those two backup paths are the same share. [NAS](doc/nas.md).
 
 ## Mebuko
 

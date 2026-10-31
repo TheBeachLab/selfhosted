@@ -1,5 +1,10 @@
 # n8n
 
+Removed on 2026-02-08. The Nginx site was unlinked and `n8n` was disabled
+([safeguards](server-safeguards.md), section "Legacy exposure cleanup"). The
+Compose notes at the bottom were never finished. The commands below are the
+old setup.
+
 ```bash
 docker run -it --rm \
  --name n8n \
@@ -61,4 +66,5 @@ sudo systemctl reload nginx
 
 With docker compose:
 
-WIP
+The Compose write-up stopped here. The service was removed on 2026-02-08, as
+noted at the top.

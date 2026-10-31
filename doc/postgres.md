@@ -26,12 +26,30 @@ Databases:
 
 | Database | Purpose |
 |----------|---------|
-| `sensors` | Telemetry: `telemetry_stats`, `bluetti_stats` (TimescaleDB hypertables) |
-| `orbita` | Orbita web app |
-| `nextcloud` | Nextcloud file sync |
-| `iot` | IoT data |
-| `misc_data` | Misc lookup tables (countries, territories, etc.) |
-| `fmcu` | FMCU project |
+| `sensors` | Telemetry. Named hypertables: `telemetry_stats` ([MQTT to Timescale](mqtt-timescale-postgrest.md)), `bluetti_stats` ([Bluetti](bluetti-telemetry.md)). The Timescale notes also create a `sensors` hypertable ([TimescaleDB](timescaledb.md)). |
+| `orbita` | Orbita web app. The public site is `https://orbita.arroyo.ing/`. Nginx sends `/api/` to PostgREST on `127.0.0.1:3011` and `/auth/` to `127.0.0.1:8100` ([Orbita](../services/orbita/README.md), `services/orbita/orbita.arroyo.ing.conf`). No table list is in the repo. |
+| `nextcloud` | Nextcloud file sync. See [Nextcloud](cloud.md). |
+| `iot` | IoT data. The TimescaleDB extension is installed here. The 2026-10-22 migration kept 0 hypertables in `iot` (and in the `postgres` database) and 3 in `sensors`. No table names for `iot` are written down. |
+| `misc_data` | Lookup tables. The only table this page attaches to `misc_data` by name is `territories` (the `pg_dump` below). |
+| `fmcu` | FMCU project. [IoT](iot.md) uses `fmcu` as a Mosquitto username in a block labelled "a sample" (`fmcu/id`, `fmcu/sun`, `fmcu/online`). |
+
+The `postgres` database has the TimescaleDB extension and had 0 hypertables at
+the 2026-10-22 migration. The table above lists the application databases.
+
+PostGIS 3.6.2 is installed for PostgreSQL 18 (`postgresql-18-postgis-3`). Which
+database has `CREATE EXTENSION postgis` is not stated.
+
+`sisterapi` is created only in the [Strapi](strapi.md) install guide. It is not
+in the list above. A snippet below loads `territories` into a database named
+`air`. `air` is not in the list either. The `/air/` path on `api.beachlab.org`
+is disabled pending setup ([safeguards](server-safeguards.md)).
+
+> **Open question.** Which database uses PostGIS? What are the tables in
+> `orbita`, `iot`, `fmcu` and `misc_data`? The SQL tips further down show
+> `countries`, `countries_view`, `regions`, `interests` and `interest_group`
+> without naming a database: are they in `misc_data`? What are the three
+> hypertable names retained in `sensors` on 2026-10-22? Do `air` and
+> `sisterapi` exist?
 
 Config path: `/etc/postgresql/18/main/`
 

@@ -1,5 +1,11 @@
 # WireGuard Setup: Raspberry Pi (Starlink) ↔ Server (beachlab.org) ↔ Laptop
 
+This is a setup guide for a hub on `wg0`, port 51820. The Pi's recorded path
+is Starlink plus Tailscale ([README](../README.md), [pibot1](rpi.md)).
+
+> **Open question.** Is the WireGuard hub still running, and does any peer
+> still use it?
+
 This guide describes how to configure a private, persistent WireGuard VPN between:
 - Server: beachlab.org (10.10.10.1)
 - Raspberry Pi: behind Starlink (10.10.10.2)

@@ -1,5 +1,13 @@
 # VPN Server
 
+This is the original OpenVPN setup. On 2026-10-26
+`openvpn-server@server.service` was still installed. It had been running the
+deleted previous executable; restarting that unit finished initialization
+([security](security.md)). The NUC and the NAS reach the tailnet with
+Tailscale ([README](../README.md)).
+
+> **Open question.** Are OpenVPN clients still used, beside Tailscale?
+
 The VPN server allows me to teleport home and access the LAN even when I am traveling
 
 - [Install the server in Ubuntu Server](#install-the-server-in-ubuntu-server)

@@ -25,7 +25,7 @@ source and remember when things changed.
 The agent-loop setup is still WIP. Graphviz and Node-RED are on the NUC.
 Obsidian opens local files on the Mac; the NUC runs its CouchDB sync backend,
 not the desktop app. LangGraph, Graphiti and Neo4j have not been deployed there
-as this integrated agent loop.
+as this integrated agent loop. The install pages are plans, not live services.
 
 ## The pieces
 

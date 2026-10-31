@@ -1,5 +1,20 @@
 # Synology DiskStation
 
+## Shares named in this repo
+
+- Time Machine uses the SMB share `backups`, path `/volume1/backups`. On
+  2026-10-08 TCP 445 was reachable. SMB login and file access were not checked.
+  See "Mac Time Machine backup" below.
+- The old rsnapshot guide mounts
+  `192.168.1.100:/volume1/backups/ubuntu-server` ([backups](backups.md)).
+- Current Restic storage is the NUC mount `/mnt/nas-downloads/backups/`, which
+  [personal knowledge](personal-knowledge.md) maps to
+  `/volume1/synology/backups/`.
+
+> **Open question.** Other NAS volumes are not described. The repo also does
+> not say whether `/volume1/backups` and `/volume1/synology/backups` are the
+> same share.
+
 ## Hardware and DSM
 
 Verified by SSH on 2026-10-08: DS411slim (`DS411slimv10-j`), DSM
