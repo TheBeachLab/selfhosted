@@ -78,6 +78,10 @@ before manually starting the retirement service. Do not restore old nameservers
 without reconciling current DNS records at the old provider first. NUC SSH access
 through Tailscale is independent of this public DNS delegation.
 
+> **Open question.** This page schedules the Namecheap retirement and says how
+> to check `/var/lib/cloudflare-namecheap-retired`. It does not record whether
+> that file was created.
+
 ## Validation and provenance
 
 On 2026-10-23 both Cloudflare authoritative nameservers returned every imported

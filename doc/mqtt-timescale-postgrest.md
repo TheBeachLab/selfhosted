@@ -413,7 +413,14 @@ sudo systemctl restart telemetry-ingest
 
 ### Environment data (building sensors + Open-Meteo)
 
-`telemetry_stats` and `telemetry_latest` now include environment columns:
+`telemetry_stats` and `telemetry_latest` include environment columns. The
+2026-09-12 publisher note ([server telemetry](mqtt-telemetry.md)) calls the
+`building` keys weather-model output from Open-Meteo for Sitges. The vehicle
+Pi's BME280 is a different pipeline ([pibot1](rpi.md),
+[Bluetti](bluetti-telemetry.md)). The "replace with a physical sensor" notes
+below are still the instruction. No later page records a house sensor.
+
+> **Open question.** Was a physical house sensor added after 2026-09-12?
 
 | Column | Source | Notes |
 |---|---|---|

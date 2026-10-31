@@ -1,5 +1,11 @@
 # Nginx web server
 
+Beach Lab's web server is the Intel NUC, hostname `thebeachlab`. The suitcase
+in the old caption is a previous server. See the [README](../README.md).
+Public DNS for `beachlab.org` is Cloudflare. The Namecheap dynamic record
+further down is the old setup. See
+[Cloudflare DNS](../services/cloudflare-ddns/README.md).
+
 <!-- vim-markdown-toc GFM -->
 
 - [Nginx web server](#nginx-web-server)
@@ -13,7 +19,7 @@
     - [Stream with OBS](#stream-with-obs)
     - [Watch on VLC](#watch-on-vlc)
   - [The result](#the-result)
-  - [Not yet: Apache 2](#not-yet-apache-2)
+  - [Apache](#apache)
 
 <!-- vim-markdown-toc -->
 
@@ -48,6 +54,13 @@ Create a link to enable the site: `sudo ln -s /etc/nginx/sites-available/mydomai
 Finally reload nginx `sudo systemctl reload nginx`
 
 ## Point your domain to your machine
+
+The steps below are the old Namecheap + `ddclient` setup. On 2026-10-23
+Cloudflare became authoritative for `beachlab.org`, and the NUC updates that
+zone with `cloudflare-nuc-ddns.timer`. A one-shot timer was set to remove the
+Namecheap sections from `ddclient` on 2026-10-25. This page does not record
+whether that timer finished. See
+[Cloudflare DNS](../services/cloudflare-ddns/README.md).
 
 Note: This will not work if you connect to NordVPN
 
@@ -168,12 +181,26 @@ Launch VLC, open your stream by clicking on Media > Open Network Stream. Enter t
 
 ## The result
 
-My proud website hosted in my suitcase:
+The site in this screenshot is the Beach Lab website. It is served from the
+NUC. The old caption called the machine the suitcase; that hardware is retired.
 
 ![screenshot](../img/tbl.png)
 
-To deploy your website with git check the [git](git.md) section.
+On 2026-10-23 Beach Lab was still published through its existing Git
+post-receive hook. See [git](git.md) and the note in
+[Orbita](../services/orbita/README.md).
 
-## Not yet: Apache 2
+> **Open question.** How is `https://beachlab.org/apps/hariburi/rates.json`
+> produced? This repo has no `rates.json` and no currency or exchange-rate
+> notes. Hariburi is the Minecraft Java world name ([Minecraft](minecraft.md))
+> and a Mac vault path ([personal knowledge](personal-knowledge.md)).
 
-My initial intention was to run all my web services through nginx. But there are still some software that require you to run apache. In fact, the reason my Nextcloud server is broken is probably related to refusing to install Apache 2.
+## Apache
+
+Nextcloud runs on Nginx and PHP-FPM. The live version is 33. See
+[Nextcloud](cloud.md). The upgrade to Nextcloud 31 is dated 2026-03-30 on that
+page. On 2026-10-21 that same page records Nginx as the Nextcloud route.
+
+Apache remains the local pgAdmin backend on port 5050, behind Nginx. Public
+Apache exposure was removed. See [PostgreSQL](postgres.md) and
+[server safeguards](server-safeguards.md).

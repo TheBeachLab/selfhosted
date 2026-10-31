@@ -357,6 +357,11 @@ Result: if any sensor breaks, that field becomes `null` in the dashboard; all ot
 
 ## Adding physical sensors (BME280 + K30 CO2)
 
+This section is a setup guide. The 2026-09-12 freshness note further down, and
+[MQTT to Timescale](mqtt-timescale-postgrest.md), still treat the website's
+temperature, humidity and pressure as Open-Meteo for Sitges. The vehicle Pi's
+BME280 is a separate pipeline ([pibot1](rpi.md)).
+
 Physical sensors publish to `alpha/sensors/<device_id>` via MQTT. The server subscribes and writes each reading to the `sensors` table, which triggers the SSE bridge for real-time frontend updates.
 
 ### MQTT payload format

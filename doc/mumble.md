@@ -1,5 +1,10 @@
 # Mumble Server (murmur)
 
+Setup guide for host `walkie.beachlab.org`, port 50000. No later page records
+a live check.
+
+> **Open question.** Is Mumble at `walkie.beachlab.org` still running?
+
 Mumble is a low latency voice chat service. Before you start, decide the host (walkie.beachlab.org) and the port (50000) and modify your `/etc/hosts/`, add an CNAME record, set up NAT port forwarding and create a firewall rule.
 
 ```bash

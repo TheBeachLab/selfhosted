@@ -11,7 +11,11 @@
 
 ## Overview
 
-pibot1 is a Raspberry Pi 5 mounted in the G Mobile Lab (vehicle). It runs sensor collection, a Bluetti BLE bridge, Starlink monitoring, and publishes everything to the server via MQTT.
+pibot1 is a Raspberry Pi 5 mounted in the G Mobile Lab (vehicle). The job recorded here is sensor collection, a Bluetti BLE bridge, Starlink monitoring, and MQTT to the server.
+
+On 2026-09-12 the Pi's SSH endpoint timed out. The stored attitude that day was a repeated cache: 2,879 rows and one distinct pitch value. A freshness-aware ingest was added on the server afterwards. It checked code compatibility with the Pi publisher and left the Pi's power and connection state unverified. See [Bluetti telemetry](bluetti-telemetry.md).
+
+> **Open question.** Whether the vehicle is online now is not in this repo.
 
 ## Hardware
 
@@ -77,7 +81,7 @@ journalctl -u pibot-sensors -n 20 --no-pager
 
 - Server-side telemetry pipeline: see [bluetti-telemetry.md](bluetti-telemetry.md)
 - MQTT broker setup: see [iot.md](iot.md)
-- WireGuard tunnel: see [wireguard.md](wireguard.md)
+- WireGuard hub guide: [wireguard.md](wireguard.md). That page has no later check. The network section above is Tailscale.
 
 ## MAVROS Docker (legacy)
 

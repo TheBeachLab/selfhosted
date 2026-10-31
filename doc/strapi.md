@@ -1,5 +1,10 @@
 # Strapi CMS
 
+Install guide only. The database it creates, `sisterapi`, is absent from the
+[current database list](postgres.md).
+
+> **Open question.** Was `sisterapi` ever created, and is Strapi installed?
+
 - [Strapi CMS](#strapi-cms)
   - [Install](#install)
 

@@ -3,6 +3,10 @@
 Nextcloud 33 running on Nginx + PHP 8.4 FPM + PostgreSQL.
 URL: `https://cloud.beachlab.org`
 
+Nginx and PHP-FPM serve it. The [Nginx page](web.md) used to say Nextcloud was
+broken for lack of Apache. This page is the current record: version 33 on
+Nginx. The upgrade to Nextcloud 31 is dated 2026-03-30 in the history below.
+
 <!-- vim-markdown-toc GFM -->
 
 - [Current state](#current-state)

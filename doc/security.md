@@ -1,5 +1,12 @@
 # Setup and secure remote ssh access
 
+The examples below use SSH port 22222. On 2026-10-08 the NUC was reached on
+port 622 ([README](../README.md)). Port 22222 remains the NAS SSH port
+([NAS](nas.md)).
+
+> **Open question.** Does the NUC `sshd` still listen on 22222 as well as 622?
+> The Git examples use 22222 ([Git](git.md)).
+
 ## Service maintenance
 
 Security maintenance on 2026-10-22 used complete signed APT indexes and the

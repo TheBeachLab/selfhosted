@@ -31,6 +31,14 @@ Open [auth.beachlab.org](https://auth.beachlab.org/) to sign in.
 | Msgvault (Fran only) | https://msgvault.beachlab.org/ |
 | Passwords (Fran only, native SSO) | https://passwords.beachlab.org/ |
 
+Deutsch Sprint is an Authentik application at `https://beachlab.org/deutsch/`.
+The Nginx switch counts two auth blocks in
+`/etc/nginx/snippets/deutsch-sprint.conf`
+(`services/authentik/switch-nginx.py`).
+
+> **Open question.** What is Deutsch Sprint? The repo names the application
+> and the URL only.
+
 Transmission keeps its own web and RPC login so Remote GUI can connect over
 HTTPS. The public websites keep their existing access.
 
