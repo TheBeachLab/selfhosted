@@ -33,15 +33,22 @@ and successful OpenSSH access to `100.91.63.61:622` with the existing host key.
 [NAS access and Tailscale compatibility](doc/nas.md) for the verified configuration
 and the legacy kernel's package requirements. Named shares are on that page.
 
+**Grok Bot box (verified 2026-11-01):** Fran's AI assistant Linux machine.
+`grokbot-box` is on the GitHub tailnet at `100.65.1.62` (Tailscale 1.104.4
+static binaries, no systemd). Its ed25519 key logs in to the NUC, the
+Liderflor VPS, pibot1, the NAS and lider-server. laborpc-1 and x220 were
+offline, so the key is not there yet. See [grokbot-box](doc/grokbot-box.md).
+
 **Liderflor VPS:** A separate host from the NUC, the NAS and the Pi. [Node.js](doc/nodejs.md)
 and [security maintenance](doc/security.md) record Flora OpenClaw there, plus a
 public WordPress site, API and shop. `liderflorapi.beachlab.org` is a fixed
 DNS record ([Cloudflare DNS](services/cloudflare-ddns/README.md)).
 
-**Remote access today:** The NUC and the NAS are on the GitHub tailnet, as
-written above. When checked on 2026-10-08 the NUC client had left Headscale at
-`https://hs.beachlab.org`. [Headscale](doc/headscale.md) still records that
-server running on the NUC on 2026-10-26, with client IDs 1 and 2 kept.
+**Remote access today:** The NUC, the NAS and grokbot-box are on the GitHub
+tailnet, as written above. When checked on 2026-10-08 the NUC client had left
+Headscale at `https://hs.beachlab.org`. [Headscale](doc/headscale.md) still
+records that server running on the NUC on 2026-10-26, with client IDs 1 and 2
+kept.
 [OpenVPN](doc/vpn.md)'s server unit was restarted the same day
 ([security](doc/security.md)). The [WireGuard](doc/wireguard.md) page is the
 hub setup guide; the Pi's recorded path is Tailscale. Who still uses
@@ -67,6 +74,7 @@ Headscale, OpenVPN or WireGuard is an open question below.
 - [Git server](doc/git.md)
 - [SFTP server](doc/sftp.md)
 - [Headscale](doc/headscale.md) (server on the NUC as of 2026-10-26; NUC client uses the GitHub tailnet)
+- [Grok Bot box](doc/grokbot-box.md) (on the GitHub tailnet as of 2026-11-01)
 - [VPN Server (OpenVPN)](doc/vpn.md) (unit restarted 2026-10-26; daily use not recorded)
 - [WireGuard VPN](doc/wireguard.md) (setup guide; no later check that it still runs)
 - [Server Safeguards (resource limits + alerts)](doc/server-safeguards.md)
@@ -155,6 +163,7 @@ Unanswered in the repo:
 - What the Watson OpenClaw agent is for. [Runtime maintenance](doc/watson-openclaw-runtime.md).
 - What `/data/` on `api.beachlab.org` used to target, and what the pending `/air/` setup is. [Safeguards](doc/server-safeguards.md).
 - Which NAS volumes exist besides the backup paths named in the docs, and whether those two backup paths are the same share. [NAS](doc/nas.md).
+- Why port 22 on the NAS Tailscale IP answers SSH with the same ed25519 host key as the documented DSM port 22222, and rejects the `unix` key. [NAS](doc/nas.md).
 
 ## Mebuko
 

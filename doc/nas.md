@@ -34,7 +34,8 @@ Connected and verified on 2026-10-08 in tailnet `thebeachlab.github`:
 - IPv4: `100.92.107.45`
 - DSM: <http://diskstation.tail520737.ts.net:5000/>
 - SMB: `smb://100.92.107.45`
-- Existing DSM SSH: `ssh -p 22222 unix@100.92.107.45`
+- Existing DSM SSH: `ssh -p 22222 unix@100.92.107.45`. On 2026-11-01 the
+  [grokbot-box](grokbot-box.md) key logged in as `unix` on this port.
 
 Sources: NAS `tailscale status --json` reported `Running`, `Online: true`,
 and an empty health list; the Mac's peer list reported the same DNS name
@@ -60,6 +61,12 @@ connected afterward. The temporary root task `Tailscale install b23718af`
 remains in DSM Task Scheduler, disabled and prefixed with `exit 0`;
 both settings were read back from DSM after saving. It cannot run the
 installation commands in that state.
+
+> **Open question.** On 2026-11-01, port 22 on the Tailscale IP also answered
+> SSH, with the same ed25519 host key as port 22222
+> (`SHA256:rm4rDc+jLvgXDfHOCTxpREusLsLsh0K/H/KVMuINM04`), but it rejected the
+> `unix` user's key. The documented DSM SSH port is 22222. Why port 22 is
+> also open, and why it refuses that user, is not known.
 
 ## Tailscale compatibility
 
