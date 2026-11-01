@@ -30,7 +30,7 @@ Databases:
 | `orbita` | Orbita web app. The public site is `https://orbita.arroyo.ing/`. Nginx sends `/api/` to PostgREST on `127.0.0.1:3011` and `/auth/` to `127.0.0.1:8100` ([Orbita](../services/orbita/README.md), `services/orbita/orbita.arroyo.ing.conf`). No table list is in the repo. |
 | `nextcloud` | Nextcloud file sync. See [Nextcloud](cloud.md). |
 | `iot` | IoT data. The TimescaleDB extension is installed here. The 2026-10-22 migration kept 0 hypertables in `iot` (and in the `postgres` database) and 3 in `sensors`. No table names for `iot` are written down. |
-| `misc_data` | Lookup tables. The only table this page attaches to `misc_data` by name is `territories` (the `pg_dump` below). |
+| `misc_data` | Lookup tables. Named here: `territories` (the `pg_dump` below) and `public.currency_rates`, written hourly by [Hariburi currency rates](hariburi-rates.md). |
 | `fmcu` | FMCU project. [IoT](iot.md) uses `fmcu` as a Mosquitto username in a block labelled "a sample" (`fmcu/id`, `fmcu/sun`, `fmcu/online`). |
 
 The `postgres` database has the TimescaleDB extension and had 0 hypertables at
@@ -45,7 +45,8 @@ in the list above. A snippet below loads `territories` into a database named
 is disabled pending setup ([safeguards](server-safeguards.md)).
 
 > **Open question.** Which database uses PostGIS? What are the tables in
-> `orbita`, `iot`, `fmcu` and `misc_data`? The SQL tips further down show
+> `orbita`, `iot` and `fmcu`? Which other tables are in `misc_data` besides
+> `territories` and `currency_rates`? The SQL tips further down show
 > `countries`, `countries_view`, `regions`, `interests` and `interest_group`
 > without naming a database: are they in `misc_data`? What are the three
 > hypertable names retained in `sensors` on 2026-10-22? Do `air` and

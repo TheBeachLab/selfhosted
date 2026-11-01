@@ -190,10 +190,8 @@ On 2026-10-23 Beach Lab was still published through its existing Git
 post-receive hook. See [git](git.md) and the note in
 [Orbita](../services/orbita/README.md).
 
-> **Open question.** How is `https://beachlab.org/apps/hariburi/rates.json`
-> produced? This repo has no `rates.json` and no currency or exchange-rate
-> notes. Hariburi is the Minecraft Java world name ([Minecraft](minecraft.md))
-> and a Mac vault path ([personal knowledge](personal-knowledge.md)).
+`https://beachlab.org/apps/hariburi/rates.json` is written by an hourly
+systemd timer on the NUC. See [Hariburi currency rates](hariburi-rates.md).
 
 ## Apache
 
