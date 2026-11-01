@@ -3,12 +3,12 @@
 This host currently runs:
 
 - Java server: Fabric `26.2`, world `Hariburi-World`, service-managed
+- Bedrock server: separate `bedrock.service`
 
 Hariburi here is the Java world name. A separate Mac vault also uses that
-name ([personal knowledge](personal-knowledge.md)). How
-`https://beachlab.org/apps/hariburi/rates.json` is produced is an open
-question on the [Nginx page](web.md). Nothing in this repo mentions that file.
-- Bedrock server: separate `bedrock.service`
+name ([personal knowledge](personal-knowledge.md)). The website file
+`https://beachlab.org/apps/hariburi/rates.json` is a separate hourly job.
+See [Hariburi currency rates](hariburi-rates.md).
 
 ## Current state
 

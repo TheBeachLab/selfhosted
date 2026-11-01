@@ -60,6 +60,7 @@ Headscale, OpenVPN or WireGuard is an open question below.
 - [Securing SSH access](doc/security.md)
 - [Backups](doc/backups.md)
 - [Web server (Nginx)](doc/web.md)
+- [Hariburi currency rates](doc/hariburi-rates.md)
 - [Cloudflare DNS and NUC dynamic IP updates](services/cloudflare-ddns/README.md)
 - [Passkey access (Authentik)](doc/authentik.md)
 - [Service administration](doc/admin-panel.md)
@@ -142,7 +143,6 @@ Headscale, OpenVPN or WireGuard is an open question below.
 
 Unanswered in the repo:
 
-- How `https://beachlab.org/apps/hariburi/rates.json` is produced. [Web](doc/web.md), [Minecraft](doc/minecraft.md).
 - Whether the scheduled Namecheap ddclient retirement finished. [Cloudflare DNS](services/cloudflare-ddns/README.md).
 - Whether gitweb at `git.beachlab.org` is still served, and whether the NUC still listens on SSH port 22222 (verified admin access is port 622). [Git](doc/git.md), [SSH](doc/security.md).
 - Which database uses PostGIS; the table lists behind the short database names; whether `air` and `sisterapi` exist. [PostgreSQL](doc/postgres.md).

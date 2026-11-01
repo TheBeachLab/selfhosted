@@ -20,6 +20,10 @@
 
 ## Node Red
 
+The editor at `nodered.beachlab.org` has an Exchange Rates tab. Its hourly
+inject is disabled and labelled `rates handled by systemd`. The current job
+is [Hariburi currency rates](hariburi-rates.md).
+
 > I installed node red as a root service
 
 ### Prepare
